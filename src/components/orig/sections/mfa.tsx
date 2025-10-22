@@ -1,8 +1,8 @@
 "use client";
 
+import { showErrorToast } from "@/components/orig/ui/custom-toast";
 import { useMfaEnrollment } from "@privy-io/react-auth";
 import Section from "../reusables/section";
-import { showErrorToast } from "@/components/ui/custom-toast";
 
 const MFA = () => {
   const { showMfaEnrollmentModal } = useMfaEnrollment();

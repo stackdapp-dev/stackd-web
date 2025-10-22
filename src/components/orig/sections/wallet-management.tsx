@@ -1,5 +1,8 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@/components/orig/ui/custom-toast";
 import {
   useImportWallet as useImportWalletEvm,
   usePrivy,
@@ -7,11 +10,11 @@ import {
   useWallets,
 } from "@privy-io/react-auth";
 import {
-  useImportWallet as useImportWalletSolana,
   useExportWallet as useExportWalletSolana,
+  useImportWallet as useImportWalletSolana,
 } from "@privy-io/react-auth/solana";
+import { useEffect, useMemo, useState } from "react";
 import Section from "../reusables/section";
-import { showSuccessToast, showErrorToast } from "@/components/ui/custom-toast";
 
 type WalletInfo = {
   address: string;
@@ -29,12 +32,14 @@ const WalletManagement = () => {
   const { importWallet: importWalletSolana } = useImportWalletSolana();
 
   const allWallets = useMemo((): WalletInfo[] => {
-    const evmWallets: WalletInfo[] = walletsEvm.filter((wallet) => wallet.walletClientType === "privy").map((wallet) => ({
-      address: wallet.address,
-      type: "ethereum" as const,
-      name: wallet.address,
-      isPrivy: wallet.walletClientType === "privy",
-    }));
+    const evmWallets: WalletInfo[] = walletsEvm
+      .filter((wallet) => wallet.walletClientType === "privy")
+      .map((wallet) => ({
+        address: wallet.address,
+        type: "ethereum" as const,
+        name: wallet.address,
+        isPrivy: wallet.walletClientType === "privy",
+      }));
 
     const solanaWallets: WalletInfo[] = walletsSolana.map((wallet) => ({
       address: wallet.address,

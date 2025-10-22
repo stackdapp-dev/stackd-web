@@ -1,7 +1,10 @@
 "use client";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@/components/orig/ui/custom-toast";
 import { usePrivy } from "@privy-io/react-auth";
 import Section from "../reusables/section";
-import { showSuccessToast, showErrorToast } from "@/components/ui/custom-toast";
 
 const UnlinkAccounts = () => {
   const {

@@ -1,28 +1,31 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
 import {
-  useWallets,
+  showErrorToast,
+  showSuccessToast,
+} from "@/components/orig/ui/custom-toast";
+import {
   useSendTransaction as useSendTransactionEvm,
   useSignMessage as useSignMessageEvm,
   useSignTransaction as useSignTransactionEvm,
   useSignTypedData,
+  useWallets,
 } from "@privy-io/react-auth";
 import {
+  useConnectedStandardWallets,
   useSendTransaction as useSendTransactionSolana,
   useSignMessage as useSignMessageSolana,
   useSignTransaction as useSignTransactionSolana,
-  useConnectedStandardWallets,
 } from "@privy-io/react-auth/solana";
-import bs58 from "bs58";
 import {
   Connection,
   PublicKey,
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
+import bs58 from "bs58";
+import { useEffect, useMemo, useState } from "react";
 import Section from "../reusables/section";
-import { showSuccessToast, showErrorToast } from "@/components/ui/custom-toast";
 
 type WalletInfo = {
   address: string;

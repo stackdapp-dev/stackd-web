@@ -1,7 +1,6 @@
 "use client";
 
 import { PrivyProvider } from "@privy-io/react-auth";
-import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -12,12 +11,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           ethereum: {
             createOnLogin: "users-without-wallets",
           },
-          solana: {
-            createOnLogin: "users-without-wallets",
-          },
         },
-        appearance: { walletChainType: "ethereum-and-solana" },
-        externalWallets: { solana: { connectors: toSolanaWalletConnectors() } },
+        appearance: { walletChainType: "ethereum-only", theme: "#000000" },
       }}
     >
       {children}

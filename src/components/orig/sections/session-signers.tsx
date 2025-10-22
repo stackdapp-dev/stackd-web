@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import {
+  showErrorToast,
+  showSuccessToast,
+} from "@/components/orig/ui/custom-toast";
 import { useSessionSigners, useWallets } from "@privy-io/react-auth";
+import { useEffect, useMemo, useState } from "react";
 import Section from "../reusables/section";
-import { showSuccessToast, showErrorToast } from "@/components/ui/custom-toast";
 
 type WalletInfo = {
   address: string;
