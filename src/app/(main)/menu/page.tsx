@@ -1,9 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ChatBubbleLeftIcon } from "@heroicons/react/16/solid";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { ArrowRightIcon, CircleDollarSignIcon, UserIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  CircleDollarSignIcon,
+  MessageSquareIcon,
+  UserIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -30,7 +34,7 @@ const Menu = () => {
             href="#"
             className="border-1 rounded border-neutral-500 flex gap-2 items-center py-2 px-4 hover:bg-foreground/10"
           >
-            <ChatBubbleLeftIcon className="h-4 w-4 text-primary" />
+            <MessageSquareIcon className="h-4 w-4 text-primary" />
             <span className="flex flex-1">Contact Us</span>
             <ArrowRightIcon className="h-4 w-4" />
           </Link>
