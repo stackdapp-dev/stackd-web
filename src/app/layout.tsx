@@ -12,12 +12,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Stack'd",
   description: "Spend BTC Without Selling",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    viewportFit: "cover",
-  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -27,13 +28,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+      </head>
       <body
         className={
           `${inter.variable} antialiased ` +
-          `w-full h-screen bg-black md:max-w-sm md:mx-auto`
+          `w-full h-[100dvh] bg-black md:max-w-sm md:mx-auto overflow-hidden`
         }
       >
-        <div className="bg-[url('/bg.jpg')] bg-cover bg-bottom bg-no-repeat w-full h-full">
+        <div className="bg-[url('/bg.jpg')] bg-cover bg-bottom bg-no-repeat w-full h-full overflow-y-auto pb-[calc(56px+env(safe-area-inset-bottom))]">
           <Providers>{children}</Providers>
         </div>
       </body>

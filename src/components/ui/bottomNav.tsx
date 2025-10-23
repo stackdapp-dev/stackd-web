@@ -15,7 +15,7 @@ const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-14 w-full md:w-sm md:mx-auto md:left-auto md:right-auto items-center justify-around bg-background shadow-[0_-2px_4px_rgba(0,0,0,0.1)] pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-[calc(56px+env(safe-area-inset-bottom))] w-full md:w-sm md:mx-auto md:left-auto md:right-auto items-center justify-around bg-background shadow-[0_-2px_4px_rgba(0,0,0,0.1)] pb-[env(safe-area-inset-bottom)]">
       {navItems.map(({ href, icon: Icon, label }) => {
         const isActive = pathname === href;
         return (

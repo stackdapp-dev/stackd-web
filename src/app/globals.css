@@ -45,8 +45,6 @@
 
 body {
   background-color: black;
-  /* Support for iOS safe areas */
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 :root {
