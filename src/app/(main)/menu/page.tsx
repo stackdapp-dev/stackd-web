@@ -18,6 +18,7 @@ const Menu = () => {
   return (
     <div className="p-6 flex flex-col gap-8">
       <h1 className="text-center text-2xl font-bold">Menu</h1>
+
       <ul className="flex flex-col gap-4">
         <li>
           <Link
@@ -50,6 +51,7 @@ const Menu = () => {
           </Link>
         </li>
       </ul>
+
       <div>
         <div className="wrap-anywhere">
           Wallet: {wallets.length ? wallets[0].address : "Loading..."}
