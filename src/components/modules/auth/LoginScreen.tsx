@@ -9,7 +9,11 @@ const LoginScreen = () => {
     <div className="flex pt-24 flex-col gap-16 items-center px-8">
       <Image src="/login-logo.png" alt="Stack'd Logo" width={164} height={26} />
       <Image src="/login-art.png" alt="Stack BTC" width={194} height={254} />
-      <Button className="w-full" onClick={() => login()}>
+      <Button
+        className="w-full text-lg font-semibold"
+        size="lg"
+        onClick={() => login()}
+      >
         Get Started
       </Button>
       <p className="text-center text-white/75">

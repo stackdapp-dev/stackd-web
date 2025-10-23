@@ -1,20 +1,25 @@
 "use client";
 
 import LoginScreen from "@/components/modules/auth/LoginScreen";
-import WalletScreen from "@/components/modules/wallet/WalletScreen";
 import { FullScreenLoader } from "@/components/orig/ui/fullscreen-loader";
 import { usePrivy } from "@privy-io/react-auth";
+import { redirect } from "next/navigation";
 import { ToastContainer } from "react-toastify";
 
 function Home() {
   const { ready, authenticated } = usePrivy();
+
   if (!ready) {
     return <FullScreenLoader />;
   }
 
+  if (authenticated) {
+    redirect("/wallet");
+  }
+
   return (
     <div>
-      {authenticated ? <WalletScreen /> : <LoginScreen />}
+      <LoginScreen />
 
       <ToastContainer
         position="top-center"
