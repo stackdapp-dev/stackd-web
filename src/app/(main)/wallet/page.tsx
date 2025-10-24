@@ -1,12 +1,33 @@
 "use client";
 
+import { Loading } from "@/components/ui/loading";
+import { Balance } from "@/components/wallet";
+import Assets from "@/components/wallet/Assets";
+import LoanInfo from "@/components/wallet/LoanInfo";
+import { useCompound } from "@/hooks/useCompound";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useTokenPrices } from "@/providers/TokenPriceProvider";
+
 const Wallet = () => {
-  return (
-    <div className="flex flex-col gap-8 items-center p-3 pt-12">
-      <h1 className="text-center text-4xl font-bold">$1,519.99</h1>
-      <div className="w-full bg-foreground/10 px-3 py-4 rounded-xl">
-        Loan info to be displayed here
+  const { tokenPrices } = useTokenPrices();
+  const { assets, totalBalance, isLoading } = useWalletBalance(tokenPrices);
+  const { suppliedAssets, borrowedAssets} = useCompound();
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-8 items-center p-6 pt-12">
+        <Loading size="lg" />
       </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-8 items-center p-6 pt-12">
+      <>
+        <Balance amount={totalBalance} />
+        <Assets items={assets} />
+        <LoanInfo supplied={suppliedAssets} borrowed={borrowedAssets} />
+      </>
     </div>
   );
 };

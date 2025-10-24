@@ -1,6 +1,10 @@
 "use client";
 
 import { PrivyProvider } from "@privy-io/react-auth";
+import { arbitrum } from "viem/chains";
+import { TokenPriceProvider } from "./TokenPriceProvider";
+import VisibilityProvider from "./visibility";
+import { Web3Provider } from "./Web3Provider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -12,10 +16,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             createOnLogin: "users-without-wallets",
           },
         },
+        defaultChain: arbitrum,
         appearance: { walletChainType: "ethereum-only", theme: "#000000" },
       }}
     >
-      {children}
+      <VisibilityProvider>
+        <TokenPriceProvider>
+          <Web3Provider>{children}</Web3Provider>
+        </TokenPriceProvider>
+      </VisibilityProvider>
     </PrivyProvider>
   );
 }
