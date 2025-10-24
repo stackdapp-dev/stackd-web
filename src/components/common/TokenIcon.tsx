@@ -30,7 +30,6 @@ export default function TokenIcon({ symbol, width = 32, height = 32, className }
       width={width}
       height={height}
       className={`rounded-full ${className}`}
-      style={{ width: 32, height: 32}}
     />
   );
 }

@@ -38,7 +38,7 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
   const assets: Asset[] = useMemo(() => {
     return Object.entries(TOKEN_METADATA).map(([key, meta]) => {
       const amount = key === "ETH" ? ethBalance : tokenBalances[key]?.balance;
-      const usdValue = amount * (tokenPrices[key]?.usd);
+      const usdValue = amount * (tokenPrices[key]?.usd ?? 0);
       return {
         symbol: meta.symbol,
         name: meta.name,

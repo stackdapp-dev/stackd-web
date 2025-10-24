@@ -12,7 +12,7 @@ interface AssetItem {
   symbol: string;
   amount?: number;
   icon?: React.ReactNode;
-  usdValue: number | string;
+  usdValue: number;
   actionLabel?: string;
   onAction?: (id?: string) => void;
 }
@@ -24,7 +24,7 @@ interface AssetsProps {
 export default function Assets({ items }: AssetsProps) {
   return (
     <div className={`w-full`}>
-      <div className="grid grid-cols-3 items-center mb-3">
+      <div className="grid grid-cols-3 items-center mb-1">
         <div className="text-center">
           <Text size="sm" weight="semibold" case="upper" tone="white">
             ASSETS
@@ -49,7 +49,7 @@ export default function Assets({ items }: AssetsProps) {
                     {it.symbol}
                   </Text>
                   <div className="text-xs text-muted/70">
-                    <MaskedValue value={it.amount?.toFixed(4) ?? "-"} mask="short" />
+                    <MaskedValue value={it.amount} mask="short" />
                   </div>
                 </div>
               </div>

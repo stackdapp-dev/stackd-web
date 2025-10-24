@@ -3,7 +3,7 @@
 import MaskedValue from "@/components/ui/maskedValue";
 
 interface BalanceProps {
-  amount: number | string;
+  amount: number ;
   visible?: boolean;
   onToggleVisibility?: () => void;
 }

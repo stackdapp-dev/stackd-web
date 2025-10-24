@@ -34,15 +34,23 @@ export const TokenPriceProvider: React.FC<TokenPriceProviderProps> = ({ children
   const [tokenPrices, setTokenPrices] = useState<TokenPrices>({});
 
   const fetchTokenPrices = useCallback(async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_TOKEN_PRICE_API_BASE_URL;
+    if (!baseUrl) {
+      console.error("NEXT_PUBLIC_TOKEN_PRICE_API_BASE_URL is not defined");
+      return;
+    }
+
     try {
       const prices: TokenPrices = {};
       const fetchPromises = Object.entries(TOKEN_METADATA).map(async ([tokenSymbol, { coingeckoSymbol }]) => {
-        const response = await fetch(`https://bv2cfyq9q7.execute-api.us-east-1.amazonaws.com/token_price/${coingeckoSymbol}/usd`);
+        const response = await fetch(`${baseUrl}/token-prices/${coingeckoSymbol}/usd`);
         if (response.ok) {
           const data = await response.json();
           if (data[coingeckoSymbol]) {
             prices[tokenSymbol] = { usd: data[coingeckoSymbol].usd };
           }
+        } else {
+          console.error(`Failed to fetch price for ${tokenSymbol}`);
         }
       });
       await Promise.all(fetchPromises);

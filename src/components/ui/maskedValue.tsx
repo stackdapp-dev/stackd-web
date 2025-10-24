@@ -22,7 +22,7 @@ const valueVariants = cva("", {
 type Mask = "short" | "long";
 
 export interface MaskedValueProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof valueVariants> {
-  value?: number | string;
+  value?: number;
   mask?: Mask;
   showToggle?: boolean;
   visible?: boolean;
