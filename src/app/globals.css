@@ -51,7 +51,7 @@ body {
   --radius: 0.625rem;
   --background: black;
   --foreground: white;
-  --card: black;
+  --card: #333333;
   --card-foreground: white;
   --popover: black;
   --popover-foreground: white;
