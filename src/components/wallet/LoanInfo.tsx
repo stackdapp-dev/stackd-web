@@ -53,7 +53,7 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
       </div>
 
       <Card>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Text size="sm" weight="semibold" case="upper" tone="white">SUPPLIED</Text>
             <div className="flex flex-col gap-2">
@@ -96,6 +96,7 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
             </div>
           </div>
 
+       
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Text className="mb-2">LTV</Text>
@@ -113,15 +114,16 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
               <Text size="sm" weight="semibold" tone="whiteStrong" className="text-right">{maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}</Text>
             </div>
           </div>
-
-          <div className="mt-4 flex gap-3 w-full">
-            <Button onClick={onBorrow} className="flex-1" type="button">
-              Borrow
-            </Button>
-            <Button onClick={onRepay} className="flex-1" type="button">
-              Repay
-            </Button>
-          </div>
+          
+        </div>
+        
+        <div className="mt-4 flex gap-3 w-full">
+          <Button onClick={onBorrow} className="flex-1" type="button">
+            Borrow
+          </Button>
+          <Button onClick={onRepay} className="flex-1" type="button">
+            Repay
+          </Button>
         </div>
       </Card>
     </div>
