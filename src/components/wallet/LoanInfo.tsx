@@ -7,6 +7,7 @@ import Text from "@/components/ui/text";
 import { useLoanCalculations } from "@/hooks/useLoanCalculations";
 import { formatAmount, formatCurrency, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
+import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 
 
@@ -30,6 +31,7 @@ interface LoanInfoProps {
 
 export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRepay }: LoanInfoProps) {
   const visibility = useVisibility();
+  const router = useRouter();
 
   const {
     ltv,
@@ -118,10 +120,10 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
         </div>
         
         <div className="mt-4 flex gap-3 w-full">
-          <Button onClick={onBorrow} className="flex-1" type="button">
+          <Button onClick={onBorrow ?? (() => router.push("/wallet/tx/borrow"))} className="flex-1" type="button">
             Borrow
           </Button>
-          <Button onClick={onRepay} className="flex-1" type="button">
+          <Button onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))} className="flex-1" type="button">
             Repay
           </Button>
         </div>
