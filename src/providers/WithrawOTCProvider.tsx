@@ -31,7 +31,9 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [available, setAvailable] = useState<number>(0);
   const [handleMax] = useState<() => void>(() => () => {});
-  const [exchangeRate, setExchangeRate] = useState<RateData>({});
+  const [exchangeRate, setExchangeRate] = useState<RateData | undefined>(
+    undefined
+  );
 
   const { publicClient } = useWeb3();
   const { wallets } = useWallets();
@@ -39,8 +41,12 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
-      const rate = await getExchangeRate("USDT", "PHP");
-      setExchangeRate(rate);
+      try {
+        const rate = await getExchangeRate("USDT", "PHP");
+        setExchangeRate(rate);
+      } catch (error) {
+        console.error("Failed to fetch exchange rate:", error);
+      }
     };
     fetchExchangeRate();
   }, []);
@@ -68,11 +74,13 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsValidAmount(false);
     } else {
       setIsValidAmount(Number(amount) <= available);
-      setConvertedAmount(
-        (Number(amount) * Number(exchangeRate.data)).toFixed(2)
-      );
+      if (exchangeRate) {
+        setConvertedAmount(
+          (Number(amount) * Number(exchangeRate.data)).toFixed(2)
+        );
+      }
     }
-  }, [amount, available, exchangeRate.data]);
+  }, [amount, available, exchangeRate]);
 
   return (
     <WithdrawOTCContext.Provider

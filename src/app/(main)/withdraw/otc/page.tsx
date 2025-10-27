@@ -25,7 +25,7 @@ const WithdrawViaOTC = () => {
       <PageHeader title="Withdraw via OTC" backHref="/withdraw" />
 
       <div className="flex flex-col gap-4">
-        {exchangeRate.data ? (
+        {exchangeRate?.data ? (
           <span className="text-sm text-muted">
             1 USDT ≈ {exchangeRate.data} PHP as of{" "}
             {exchangeRate.updatedAt && formatDate(exchangeRate.updatedAt)}
@@ -49,23 +49,26 @@ const WithdrawViaOTC = () => {
             </span>
           )}
         </div>
-        <div className="mx-auto">
-          <ArrowLongDownIcon className="w-6 h-6" />
-        </div>
         <div>
-          <div className="text-sm text-muted mb-2">To</div>
-          <Card
-            className="flex flex-row justify-between"
-            appearance="container"
-          >
-            <input
-              type="text"
-              disabled
-              placeholder="0.00"
-              value={formatCurrency(Number(convertedAmount), 2, "", false)}
-            />
-            <label className="font-semibold">PHP</label>
-          </Card>
+          <div className="flex justify-center">
+            <ArrowLongDownIcon className="w-6 h-6" />
+          </div>
+
+          <div>
+            <div className="text-sm text-muted mb-2">To</div>
+            <Card
+              className="flex flex-row justify-between"
+              appearance="container"
+            >
+              <input
+                type="text"
+                disabled
+                placeholder="0.00"
+                value={formatCurrency(Number(convertedAmount), 2, "", false)}
+              />
+              <label className="font-semibold">PHP</label>
+            </Card>
+          </div>
         </div>
       </div>
 
@@ -97,7 +100,7 @@ const WithdrawViaOTC = () => {
         </ul>
       </div>
 
-      <Button disabled={!isValidAmount}>Choose Payment Method</Button>
+      <Button disabled={false /*!isValidAmount*/}>Choose Payment Method</Button>
     </div>
   );
 };
