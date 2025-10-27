@@ -1,0 +1,103 @@
+"use client";
+
+import { getTokenMetadata, TOKEN_ADDRESSES } from "@/constants/Tokens";
+import { getExchangeRate, RateData } from "@/lib/api/rates";
+import { useWeb3 } from "@/providers/Web3Provider";
+import { useWallets } from "@privy-io/react-auth";
+import { createContext, useContext, useEffect, useState } from "react";
+import { erc20Abi, formatUnits } from "viem";
+
+type WithdrawOTCValue = {
+  exchangeRate: RateData;
+  amount: string;
+  setAmount: (amount: string) => void;
+  convertedAmount: string;
+  isValidAmount: boolean;
+  isProcessing: boolean;
+  available: number;
+  handleMax: () => void;
+};
+
+const WithdrawOTCContext = createContext<WithdrawOTCValue | undefined>(
+  undefined
+);
+
+export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [amount, setAmount] = useState<string>("");
+  const [convertedAmount, setConvertedAmount] = useState<string>("");
+  const [isValidAmount, setIsValidAmount] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [available, setAvailable] = useState<number>(0);
+  const [handleMax] = useState<() => void>(() => () => {});
+  const [exchangeRate, setExchangeRate] = useState<RateData>({});
+
+  const { publicClient } = useWeb3();
+  const { wallets } = useWallets();
+  const walletAddress = wallets.length > 0 ? wallets[0].address : undefined;
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      const rate = await getExchangeRate("USDT", "PHP");
+      setExchangeRate(rate);
+    };
+    fetchExchangeRate();
+  }, []);
+
+  useEffect(() => {
+    if (!publicClient || !walletAddress) return;
+
+    const fetchUSDTBalance = async () => {
+      const balance = await publicClient.readContract({
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        address: TOKEN_ADDRESSES.USDT,
+        args: [walletAddress as `0x${string}`],
+      });
+      setAvailable(
+        Number(formatUnits(balance, getTokenMetadata("USDT").decimals))
+      );
+    };
+
+    fetchUSDTBalance();
+  }, [walletAddress, publicClient]);
+
+  useEffect(() => {
+    if (amount === "") {
+      setIsValidAmount(false);
+    } else {
+      setIsValidAmount(Number(amount) <= available);
+      setConvertedAmount(
+        (Number(amount) * Number(exchangeRate.data)).toFixed(2)
+      );
+    }
+  }, [amount, available, exchangeRate.data]);
+
+  return (
+    <WithdrawOTCContext.Provider
+      value={{
+        exchangeRate,
+        amount,
+        setAmount,
+        convertedAmount,
+        isValidAmount,
+        isProcessing,
+        available,
+        handleMax,
+      }}
+    >
+      {children}
+    </WithdrawOTCContext.Provider>
+  );
+};
+
+export const useWithdrawOTC = (): WithdrawOTCValue => {
+  const ctx = useContext(WithdrawOTCContext);
+  if (!ctx) {
+    throw new Error("useWithdrawOTC must be used within a WithdrawOTC");
+  }
+  return ctx;
+};
+
+export default WithdrawOTCProvider;

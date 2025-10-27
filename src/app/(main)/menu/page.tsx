@@ -1,14 +1,13 @@
 "use client";
 
+import MenuItem from "@/components/common/MenuItem";
 import { Button } from "@/components/ui/button";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
-  ArrowRightIcon,
   CircleDollarSignIcon,
   MessageSquareIcon,
   UserIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 const Menu = () => {
@@ -21,34 +20,25 @@ const Menu = () => {
 
       <ul className="flex flex-col gap-4">
         <li>
-          <Link
-            href="#"
-            className="border-1 rounded border-neutral-500 flex gap-2 items-center py-2 px-4 hover:bg-foreground/10"
-          >
-            <CircleDollarSignIcon className="h-4 w-4 text-primary" />
-            <span className="flex flex-1">Withdraw</span>
-            <ArrowRightIcon className="h-4 w-4" />
-          </Link>
+          <MenuItem
+            href="/withdraw"
+            leading={<CircleDollarSignIcon className="h-4 w-4 text-primary" />}
+            label="Withdraw"
+          />
         </li>
         <li>
-          <Link
+          <MenuItem
             href="#"
-            className="border-1 rounded border-neutral-500 flex gap-2 items-center py-2 px-4 hover:bg-foreground/10"
-          >
-            <MessageSquareIcon className="h-4 w-4 text-primary" />
-            <span className="flex flex-1">Contact Us</span>
-            <ArrowRightIcon className="h-4 w-4" />
-          </Link>
+            leading={<MessageSquareIcon className="h-4 w-4 text-primary" />}
+            label="Contact Us"
+          />
         </li>
         <li>
-          <Link
+          <MenuItem
             href="#"
-            className="border-1 rounded border-neutral-500 flex gap-2 items-center py-2 px-4 hover:bg-foreground/10"
-          >
-            <UserIcon className="h-4 w-4 text-primary" />
-            <span className="flex flex-1">Profile</span>
-            <ArrowRightIcon className="h-4 w-4" />
-          </Link>
+            leading={<UserIcon className="h-4 w-4 text-primary" />}
+            label="Profile"
+          />
         </li>
       </ul>
 

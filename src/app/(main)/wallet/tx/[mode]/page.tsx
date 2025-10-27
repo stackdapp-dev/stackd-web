@@ -1,6 +1,7 @@
 "use client";
 
 import InputAmountCard from "@/components/common/InputAmountCard";
+import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import TransactionOverview from "@/components/wallet/TransactionOverview";
 import useTxMode from "@/hooks/useTxMode";
@@ -12,7 +13,7 @@ export default function TxModePage() {
   const router = useRouter();
   const params = useParams();
   const modeParam = (params?.mode || "borrow") as string;
-  const mode = modeParam === "repay" ? "repay" : "borrow"; 
+  const mode = modeParam === "repay" ? "repay" : "borrow";
 
   const tx = useTxMode(mode === "repay" ? "repay" : "borrow");
   const { amount, availableForRepay, setAmount, isProcessing, available, handleMax, handleAction, title, btnText, previewAmount } = tx;
@@ -41,7 +42,7 @@ export default function TxModePage() {
 
       <TransactionOverview previewAmount={previewAmount} />
 
-      <div className="flex items-center justify-center gap-3 mb-4">
+      <div className="flex items-center justify-center gap-3">
         <input
           type="checkbox"
           id="ack"
