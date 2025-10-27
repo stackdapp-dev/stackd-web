@@ -5,6 +5,7 @@ import Card from "@/components/ui/card";
 import Text from "@/components/ui/text";
 import { useCompound } from "@/hooks/useCompound";
 import { useLoanCalculations } from "@/hooks/useLoanCalculations";
+import useTxMode from "@/hooks/useTxMode";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { AlertTriangle, ArrowLeftRight, ArrowRight } from "lucide-react";
 import { useState } from "react";
@@ -24,6 +25,7 @@ export default function TransactionOverview({
 }: TransactionOverviewProps) {
   const [showAmount, setshowAmount] = useState(false);
   const { suppliedAssets, borrowedAssets } = useCompound();
+  const { warning } = useTxMode();
   const {
     wbtc,
     usdt,
@@ -99,7 +101,7 @@ export default function TransactionOverview({
       {showWarning && (
         <div className="mb-4 p-3 rounded bg-red-950/80 text-white flex items-center gap-2">
           <AlertTriangle size={18} className="flex-shrink-0 text-red-400" aria-hidden />
-          <Text size="xs" className="text-red-200">Borrowing this amount will reduce your health factor and increase risk of liquidation.</Text>
+          <Text size="xs" className="text-red-200">{warning}</Text>
         </div>
       )}
     </div>

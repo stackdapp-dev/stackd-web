@@ -48,7 +48,7 @@ export default function InputAmountCard({
               <div className="text-sm font-semibold">{tokenSymbol}</div>
             </div>
             <div className="text-sm text-muted flex items-center gap-3">
-              <div>Available {formatAmount(availableAmount)}</div>
+              <div>Balance {formatAmount(availableAmount)}</div>
               <button onClick={onMaxPress} className="text-primary">
                 MAX
               </button>

@@ -15,9 +15,11 @@ export default function TxModePage() {
   const mode = modeParam === "repay" ? "repay" : "borrow"; 
 
   const tx = useTxMode(mode === "repay" ? "repay" : "borrow");
-  const { amount, setAmount, isProcessing, available, handleMax, handleAction, title, btnText, previewAmount } = tx;
+  const { amount, availableForRepay, setAmount, isProcessing, available, handleMax, handleAction, title, btnText, previewAmount } = tx;
 
   const [ackChecked, setAckChecked] = useState(false);
+
+  const isDisabled = Number(availableForRepay) <= 0 || Number(amount) <= 0 || isProcessing || !ackChecked || Number(amount) > available;
 
   return (
     <div className="w-full max-w-xl mx-auto p-4">
@@ -32,7 +34,7 @@ export default function TxModePage() {
         onChangeText={setAmount}
         tokenSymbol="USDT"
         usdValue={Number(amount || 0)}
-        availableAmount={available}
+        availableAmount={availableForRepay}
         onMaxPress={handleMax}
         editable={!isProcessing}
       />
@@ -53,7 +55,7 @@ export default function TxModePage() {
       </div>
 
       <div>
-        <Button onClick={handleAction} className="w-full" disabled={Number(available) <= 0 || Number(amount) <= 0 || isProcessing || !ackChecked}>
+        <Button onClick={handleAction} className="w-full" disabled={isDisabled}>
           {isProcessing ? "Processing..." : btnText}
         </Button>
       </div>
