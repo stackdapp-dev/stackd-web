@@ -17,10 +17,15 @@ const cardVariants = cva("w-full rounded-xl bg-card/30", {
       none: "",
       sm: "shadow-sm",
     },
+    appearance: {
+      default: "",
+      container: "border-1 rounded border-neutral-500 flex flex-col gap-2 py-2 px-4 bg-black",
+    },
   },
   defaultVariants: {
     padding: "default",
     shadow: "none",
+    appearance: "default",
   },
 });
 
@@ -33,14 +38,17 @@ export interface CardProps
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   (
-    { className, asChild = false, padding, shadow, children, ...props },
+    { className, asChild = false, padding, shadow, appearance, children, ...props },
     ref
   ) => {
     const Comp: any = asChild ? Slot : "div";
+
+  const effectivePadding = appearance === "container" && padding === undefined ? "none" : padding;
+
     return (
       <Comp
         ref={ref}
-        className={cn(cardVariants({ padding, shadow }), className)}
+        className={cn(cardVariants({ padding: effectivePadding, shadow, appearance }), className)}
         {...props}
       >
         {children}
