@@ -39,7 +39,7 @@ export function formatCurrency(value: number | null | undefined, decimals: numbe
   return `$${num.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 }
 
-export function formatPercent(value: number | null | undefined, decimals: number = 2) {
+export function formatPercent(value: number | null | undefined, decimals: number = 1) {
   if (value === null || value === undefined) return `0%`;
   return `${Number(value).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%`;
 }

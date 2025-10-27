@@ -29,12 +29,12 @@ export default function Assets({ items }: AssetsProps) {
     <div className={`w-full`}>
       <div className="grid grid-cols-3 items-center mb-1">
         <div className="text-center">
-          <Text size="sm" weight="semibold" case="upper" tone="white">
+          <Text size="sm" weight="semibold" case="upper" >
             ASSETS
           </Text>
         </div>
         <div className="text-left pl-6">
-          <Text size="sm" weight="semibold" case="upper" tone="white">
+          <Text size="sm" weight="semibold" case="upper" >
             USD VALUE
           </Text>
         </div>
@@ -48,7 +48,7 @@ export default function Assets({ items }: AssetsProps) {
               <div className="flex items-center gap-3">
                 <TokenIcon symbol={it.symbol} width={32} height={32} />
                 <div>
-                  <Text size="sm" weight="semibold" tone="white">
+                  <Text size="sm" weight="semibold" >
                     {it.symbol}
                   </Text>
                   <Text size="xs" tone="muted">{maskString(formatAmount(it.amount), visibility.visible, MASK_SHORT)}</Text>

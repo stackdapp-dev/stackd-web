@@ -20,7 +20,7 @@ export function useTxMode(mode: TxMode = "borrow") {
   const getPrice = useGetTokenPrice();
   const autoAttempted = useRef(false);
 
-  const { borrowableAmount, txItems } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
+  const { borrowableAmount } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
   
   // compute available based on mode
   const usdtPrice = getPrice("USDT") || 1;
@@ -110,7 +110,6 @@ export function useTxMode(mode: TxMode = "borrow") {
     title,
     btnText,
     warning,
-    txItems,
   } as const;
 }
 

@@ -2,7 +2,7 @@
 
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { formatAmount, formatCurrency } from "@/lib/utils";
 
 interface InputAmountCardProps {
   label: string;
@@ -48,7 +48,7 @@ export default function InputAmountCard({
               <div className="text-sm font-semibold">{tokenSymbol}</div>
             </div>
             <div className="text-sm text-muted flex items-center gap-3">
-              <div>Available {availableAmount.toFixed(0)}</div>
+              <div>Available {formatAmount(availableAmount)}</div>
               <button onClick={onMaxPress} className="text-primary">
                 MAX
               </button>

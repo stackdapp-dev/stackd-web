@@ -29,7 +29,7 @@ const textVariants = cva("text-xs", {
     size: "xs",
     weight: "normal",
     case: "normal",
-    tone: "muted",
+    tone: "whiteStrong",
   },
 });
 
