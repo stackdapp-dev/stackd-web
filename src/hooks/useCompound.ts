@@ -11,6 +11,9 @@ import type { Address, Hex } from "viem";
 const COLLATERAL_TOKEN = "WBTC";
 const BORROW_TOKEN = "USDT";
 
+// Helper function to convert from wei (10^18) to percentage
+const toPercentage = (value: bigint | number) => (Number(value) / 1e18) * 100;
+
 type Asset = {
   symbol: string;
   amount: number;
@@ -32,7 +35,34 @@ type UseCompoundResult = {
   maxLtv: number;
   liquidationRatio: number;
   borrowApr: number;
+  netLoanValue: number;
 };
+
+const CACHE_KEY = 'compoundData';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function getCache(): { collateralRaw: string; borrowRaw: string; maxLtv: number; liquidationRatio: number; borrowApr: number } | null {
+  try {
+    const item = localStorage.getItem(CACHE_KEY);
+    if (item) {
+      const parsed = JSON.parse(item);
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        return parsed.data;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading compound cache:', err);
+  }
+  return null;
+}
+
+function setCache(data: { collateralRaw: string; borrowRaw: string; maxLtv: number; liquidationRatio: number; borrowApr: number }) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (err) {
+    console.error('Error setting compound cache:', err);
+  }
+}
 
 export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   const { publicClient, walletClient } = useWeb3();
@@ -46,11 +76,12 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   const [borrowApr, setBorrowApr] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoad, setInitialLoad] = useState<boolean>(true);
 
   const fetch = useCallback(async () => {
     if (!publicClient || !acct) return;
-    setIsLoading(true);
     try {
+      if (initialLoad) setIsLoading(true);
       const coll = await userCollateral(publicClient, formatAddress(acct), formatAddress(TOKEN_METADATA.WBTC.address));
       const bor = await borrowBalanceOf(publicClient, formatAddress(acct));
       const assetInfo = await getAssetInfo(publicClient, formatAddress(TOKEN_METADATA.WBTC.address));
@@ -66,17 +97,37 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
 
       setCollateralRaw(coll ?? BigInt(0));
       setBorrowRaw(bor ?? BigInt(0));
-      setMaxLtv((Number(assetInfo.borrowCollateralFactor) / 10 ** 18) * 100);
-      setLiquidationRatio((Number(assetInfo.liquidateCollateralFactor) / 10 ** 18) * 100);
+      setMaxLtv(toPercentage(assetInfo.borrowCollateralFactor));
+      setLiquidationRatio(toPercentage(assetInfo.liquidateCollateralFactor));
+      setCache({
+        collateralRaw: (coll ?? BigInt(0)).toString(),
+        borrowRaw: (bor ?? BigInt(0)).toString(),
+        maxLtv: toPercentage(assetInfo.borrowCollateralFactor),
+        liquidationRatio: toPercentage(assetInfo.liquidateCollateralFactor),
+        borrowApr: apr,
+      });
       setError(null);
+      setIsLoading(false);
+      setInitialLoad(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
       setIsLoading(false);
+      setInitialLoad(false);
     }
-  }, [publicClient, acct]);
+  }, [publicClient, acct, initialLoad]);
 
   useEffect(() => {
+    const cached = getCache();
+    if (cached) {
+      setCollateralRaw(BigInt(cached.collateralRaw));
+      setBorrowRaw(BigInt(cached.borrowRaw));
+      setMaxLtv(cached.maxLtv);
+      setLiquidationRatio(cached.liquidationRatio);
+      setBorrowApr(cached.borrowApr);
+      setInitialLoad(false);
+    } else {
+      setIsLoading(true);
+    }
     void fetch();
   }, [fetch]);
 
@@ -85,6 +136,7 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
 
   const collateralUsd = collateralAmount * getTokenPrice(COLLATERAL_TOKEN);
   const borrowUsd = borrowAmount * getTokenPrice(BORROW_TOKEN);
+  const netLoanValue = collateralUsd - borrowUsd;
 
   const suppliedAssets: Asset[] = [{ symbol: COLLATERAL_TOKEN, amount: collateralAmount, usdValue: collateralUsd, decimals: getTokenMetadata(COLLATERAL_TOKEN)?.decimals }];
   const borrowedAssets: Asset[] = [{ symbol: BORROW_TOKEN, amount: borrowAmount, usdValue: borrowUsd, decimals: getTokenMetadata(BORROW_TOKEN)?.decimals }];
@@ -157,5 +209,6 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
     maxLtv,
     liquidationRatio,
     borrowApr,
+    netLoanValue,
   };
 }

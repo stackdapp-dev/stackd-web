@@ -28,11 +28,38 @@ interface WalletBalance {
   refetchBalances: () => Promise<void>;
 }
 
+const CACHE_KEY = 'walletBalance';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function getCache(): { ethBalance: number; tokenBalances: Record<string, TokenBalance> } | null {
+  try {
+    const item = localStorage.getItem(CACHE_KEY);
+    if (item) {
+      const parsed = JSON.parse(item);
+      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+        return parsed.data;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading cache:', err);
+  }
+  return null;
+}
+
+function setCache(data: { ethBalance: number; tokenBalances: Record<string, TokenBalance> }) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (err) {
+    console.error('Error setting cache:', err);
+  }
+}
+
 export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = {}): WalletBalance {
   const [ethBalance, setEthBalance] = useState<number>(0);
   const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoad, setInitialLoad] = useState<boolean>(true);
   const { publicClient, walletClient } = useWeb3();
 
   const assets: Asset[] = useMemo(() => {
@@ -55,13 +82,14 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
 
   const fetchBalances = useCallback(async () => {
     try {
-      setIsLoading(true);
+      if (initialLoad) setIsLoading(true);
       setError(null);
 
       if (!walletClient?.account?.address) {
         setEthBalance(0);
         setTokenBalances({});
         setIsLoading(false);
+        setInitialLoad(false);
         return;
       }
 
@@ -110,18 +138,29 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
       });
 
       setTokenBalances(balances);
+      setCache({ ethBalance: ethBalanceNumber, tokenBalances: balances });
       setIsLoading(false);
+      setInitialLoad(false);
     } catch (err) {
       console.error("Error fetching balances:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch balances");
       setEthBalance(0);
       setTokenBalances({});
       setIsLoading(false);
+      setInitialLoad(false);
     }
-  }, [walletClient?.account?.address, publicClient]);
+  }, [walletClient?.account?.address, publicClient, initialLoad]);
 
   useEffect(() => {
     if (walletClient?.account?.address) {
+      const cached = getCache();
+      if (cached) {
+        setEthBalance(cached.ethBalance);
+        setTokenBalances(cached.tokenBalances);
+        setInitialLoad(false);
+      } else {
+        setIsLoading(true);
+      }
       fetchBalances();
     }
   }, [walletClient, fetchBalances]);

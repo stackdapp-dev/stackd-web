@@ -1,6 +1,4 @@
-import { getTokenMetadata } from "@/constants/Tokens";
 import { useCompound } from "@/hooks/useCompound";
-import { formatCurrency, formatPercent } from "@/lib/utils";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 
 type Asset = {
@@ -19,41 +17,41 @@ export const useLoanCalculations = (suppliedAssets: Asset[], borrowedAssets: Ass
   const totalSuppliedUsd = calculateTotalUsd(suppliedAssets);
   const totalBorrowedUsd = calculateTotalUsd(borrowedAssets);
 
+  // Current calculations
   const ltv = totalSuppliedUsd > 0 ? (totalBorrowedUsd / totalSuppliedUsd) * 100 : 0;
-  const borrowAprValue = borrowApr;
   const borrowableAmount = Math.max(0, totalSuppliedUsd * (maxLtv / 100) - totalBorrowedUsd);
   const liquidationPrice = totalBorrowedUsd > 0 ? totalBorrowedUsd * (100 / liquidationRatio) : 0;
+  const borrowCapacity = totalSuppliedUsd * (maxLtv / 100);
+  const liquidationPoint = totalSuppliedUsd * (liquidationRatio / 100);
 
   // Preview calculations
   const newBorrowValue = previewBorrowAmount * getPrice("USDT");
   const newTotalBorrow = totalBorrowedUsd + newBorrowValue;
   const newLtv = totalSuppliedUsd > 0 ? (newTotalBorrow / totalSuppliedUsd) * 100 : 0;
   const effectiveNewLtv = Math.min(newLtv, maxLtv);
+  const borrowableAmountNew = Math.max(0, totalSuppliedUsd * (maxLtv / 100) - newTotalBorrow);
 
-  // Formatted display values
-  const wbtcValue = formatCurrency(totalSuppliedUsd, 0);
-  const usdtRange = `${formatCurrency(totalBorrowedUsd, 0)} → ${formatCurrency(newTotalBorrow, 0)}`;
-  const ltvRange = `${formatPercent(ltv, 1)} → ${formatPercent(effectiveNewLtv, 1)}`;
-  const maxLtvValue = formatPercent(maxLtv, 1);
-  const liquidationRatioValue = formatPercent(liquidationRatio, 1);
-  const borrowAprValueStr = formatPercent(borrowAprValue, 2);
+  // Formatted values for display
+  const wbtc = totalSuppliedUsd;
+  const usdt = [totalBorrowedUsd, newTotalBorrow];
+  const borrowable = [borrowableAmount, borrowableAmountNew];
+  const ltvRange = [ltv, effectiveNewLtv];
   const netLoanValue = totalSuppliedUsd - totalBorrowedUsd;
 
-  const txItems = [
-    { key: "wbtc", icon: "WBTC", label: "WBTC Collateral", value: wbtcValue, split: false },
-    { key: "usdt", icon: "USDT", label: `${getTokenMetadata("USDT")?.symbol || "USDT"} Loan`, value: usdtRange, split: false },
-    { key: "ltv", label: "Loan-to-Value ratio", value: ltvRange, split: true },
-    { key: "maxLtv", label: "Max LTV", value: maxLtvValue, split: true },
-    { key: "liq", label: "Liquidation ratio", value: liquidationRatioValue, split: true },
-    { key: "apr", label: "Borrow APR", value: borrowAprValueStr, split: true },
-  ];
 
   return {
     ltv,
-    borrowAprValue,
     borrowableAmount,
     liquidationPrice,
-    txItems,
     netLoanValue,
+    wbtc,
+    usdt,
+    borrowable,
+    ltvRange,
+    maxLtv,
+    borrowCapacity,
+    liquidationRatio,
+    liquidationPoint,
+    borrowApr,
   };
 };

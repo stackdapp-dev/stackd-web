@@ -10,6 +10,8 @@ const textVariants = cva("text-xs", {
     size: {
       xs: "text-xs",
       sm: "text-sm",
+      lg: "text-lg",
+      xl: "text-xl",
     },
     weight: {
       normal: "font-normal",
@@ -29,7 +31,7 @@ const textVariants = cva("text-xs", {
     size: "xs",
     weight: "normal",
     case: "normal",
-    tone: "muted",
+    tone: "whiteStrong",
   },
 });
 

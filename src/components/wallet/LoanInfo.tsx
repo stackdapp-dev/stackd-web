@@ -3,11 +3,14 @@
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
 import MaskedValue from "@/components/ui/maskedValue";
+import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
 import { useLoanCalculations } from "@/hooks/useLoanCalculations";
-import { formatAmount, formatCurrency, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
+import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
+import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "../ui/button";
 
 
@@ -32,21 +35,34 @@ interface LoanInfoProps {
 export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRepay }: LoanInfoProps) {
   const visibility = useVisibility();
   const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
 
   const {
     ltv,
-    borrowAprValue,
+    borrowApr,
     borrowableAmount,
     liquidationPrice,
     netLoanValue,
   } = useLoanCalculations(supplied, borrowed);
+
+  const handleBorrow = () => {
+    if (borrowableAmount > 0) {
+      if (onBorrow) {
+        onBorrow();
+      } else {
+        router.push("/wallet/tx/borrow");
+      }
+    } else {
+      setShowModal(true);
+    }
+  };
 
 
   return (
     <div className={`w-full`}>
       <div className="grid grid-cols-3 items-center mb-1">
         <div className="text-center">
-          <Text size="sm" weight="semibold" case="upper" tone="white">LOAN INFO</Text>
+          <Text size="sm" weight="semibold" case="upper" >LOAN INFO</Text>
         </div>
         <div className="text-left pl-6"/>
         <div className="text-center">
@@ -57,41 +73,41 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
       <Card>
         <div className="grid md:grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Text size="sm" weight="semibold" case="upper" tone="white">SUPPLIED</Text>
+            <Text size="sm" weight="semibold" case="upper" >SUPPLIED</Text>
             <div className="flex flex-col gap-2">
               {supplied.map((s) => (
                 <div key={s.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={s.symbol} width={22} height={22} />
-                    <Text size="sm" weight="semibold" tone="white">{s.symbol}</Text>
+                    <Text size="sm" weight="semibold" >{s.symbol}</Text>
                   </div>
                   <div className="text-center">
                     <Text>AMOUNT</Text>
-                    <Text size="sm" weight="semibold" tone="whiteStrong" className="mt-0">{maskString(formatAmount(s.amount), visibility.visible, MASK_SHORT)}</Text>
+                    <Text size="sm" weight="semibold"  className="mt-0">{maskString(formatAmount(s.amount), visibility.visible, MASK_SHORT)}</Text>
                   </div>
                   <div className="text-right">
                     <Text>USD VALUE</Text>
-                    <Text size="sm" weight="semibold" tone="whiteStrong" className="mt-0 text-right">{maskString(formatCurrency(s.usdValue), visibility.visible, MASK_LONG)}</Text>
+                    <Text size="sm" weight="semibold"  className="mt-0 text-right">{maskString(formatCurrency(s.usdValue), visibility.visible, MASK_LONG)}</Text>
                   </div>
                 </div>
               ))}
             </div>
 
-            <Text size="sm" weight="semibold" case="upper" tone="white" className="mt-2">BORROWED</Text>
+            <Text size="sm" weight="semibold" case="upper"  className="mt-2">BORROWED</Text>
             <div className="flex flex-col gap-2">
               {borrowed.map((b) => (
                 <div key={b.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={b.symbol} width={22} height={22} />
-                    <Text size="sm" weight="semibold" tone="white">{b.symbol}</Text>
+                    <Text size="sm" weight="semibold" >{b.symbol}</Text>
                   </div>
                   <div className="text-center">
                     <Text>AMOUNT</Text>
-                    <Text size="sm" weight="semibold" tone="whiteStrong" className="mt-0">{maskString(formatAmount(b.amount), visibility.visible, MASK_SHORT)}</Text>
+                    <Text size="sm" weight="semibold"  className="mt-0">{maskString(formatAmount(b.amount), visibility.visible, MASK_SHORT)}</Text>
                   </div>
                   <div className="text-right">
                     <Text>USD VALUE</Text>
-                    <Text size="sm" weight="semibold" tone="whiteStrong" className="mt-0 text-right">{maskString(formatCurrency(b.usdValue), visibility.visible, MASK_LONG)}</Text>
+                    <Text size="sm" weight="semibold"  className="mt-0 text-right">{maskString(formatCurrency(b.usdValue), visibility.visible, MASK_LONG)}</Text>
                   </div>
                 </div>
               ))}
@@ -101,26 +117,26 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
        
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Text className="mb-2">LTV</Text>
-              <Text size="sm" weight="semibold" className="mb-3" tone="whiteStrong">{maskString(`${ltv?.toFixed(2)}%`, visibility.visible, MASK_SHORT)}</Text>
+              <Text className="mb-2" tone="white">LTV</Text>
+              <Text size="sm" weight="semibold" className="mb-3" >{maskString(`${formatPercent(ltv)}`, visibility.visible, MASK_SHORT)}</Text>
 
-              <Text className="mb-2">Borrowable Amount</Text>
-              <Text size="sm" weight="semibold" tone="whiteStrong">{maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}</Text>
+              <Text className="mb-2" tone="white">Borrowable Amount</Text>
+              <Text size="sm" weight="semibold" >{maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}</Text>
             </div>
 
             <div>
-              <Text className="mb-2 text-right">Borrow APR</Text>
-              <Text size="sm" weight="semibold" className="mb-4 text-right" tone="whiteStrong">{maskString(`${borrowAprValue?.toFixed ? borrowAprValue.toFixed(2) : borrowAprValue || "-"}%`, visibility.visible, MASK_SHORT)}</Text>
+              <Text className="mb-2 text-right" tone="white">Borrow APR</Text>
+              <Text size="sm" weight="semibold" className="mb-4 text-right" >{maskString(`${formatPercent(borrowApr)}`, visibility.visible, MASK_SHORT)}</Text>
 
-              <Text className="mb-2 text-right">Liquidation Price</Text>
-              <Text size="sm" weight="semibold" tone="whiteStrong" className="text-right">{maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}</Text>
+              <Text className="mb-2 text-right" tone="white">Liquidation Price</Text>
+              <Text size="sm" weight="semibold"  className="text-right">{maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}</Text>
             </div>
           </div>
           
         </div>
         
         <div className="mt-4 flex gap-3 w-full">
-          <Button onClick={onBorrow ?? (() => router.push("/wallet/tx/borrow"))} className="flex-1" type="button">
+          <Button onClick={handleBorrow} className="flex-1" type="button">
             Borrow
           </Button>
           <Button onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))} className="flex-1" type="button">
@@ -128,6 +144,23 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
           </Button>
         </div>
       </Card>
+
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Insufficient Collateral"
+        message={
+          <>
+            <Text tone="muted" className="mb-3">Your WBTC collateral is below the required amount for this action.</Text>
+            <Text tone="muted" className="mb-6">Please deposit more WBTC to borrow USDT.</Text>
+          </>
+        }
+        icon={<AlertTriangle className="text-amber-400" size={28}/>}
+        primaryButtonText="Deposit"
+        primaryButtonAction={() => { setShowModal(false); router.push("/wallet"); }}
+        secondaryButtonText="Go back"
+        secondaryButtonAction={() => setShowModal(false)}
+      />
     </div>
   );
 }

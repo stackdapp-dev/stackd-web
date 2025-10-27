@@ -5,6 +5,7 @@ import { useCompound } from "@/hooks/useCompound";
 import { useLoanCalculations } from "@/hooks/useLoanCalculations";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseUnits } from "viem";
 
@@ -20,7 +21,9 @@ export function useTxMode(mode: TxMode = "borrow") {
   const getPrice = useGetTokenPrice();
   const autoAttempted = useRef(false);
 
-  const { borrowableAmount, txItems } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
+  const router = useRouter();
+
+  const { borrowableAmount } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
   
   // compute available based on mode
   const usdtPrice = getPrice("USDT") || 1;
@@ -82,14 +85,14 @@ export function useTxMode(mode: TxMode = "borrow") {
       }
 
       await Promise.all([refetchBalances(), refetch()]);
-      setAmount("");
+      router.push("/wallet");
     } catch (err) {
       console.error(`${mode} failed:`, err);
       throw err;
     } finally {
       setIsProcessing(false);
     }
-  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetch]);
+  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetch, router]);
 
   useEffect(() => {
     if (!autoAttempted.current) autoAttempted.current = true;
@@ -97,7 +100,7 @@ export function useTxMode(mode: TxMode = "borrow") {
 
   const title = mode === "repay" ? `Repay ${getTokenMetadata("USDT")?.symbol }` : `Borrow ${getTokenMetadata("USDT")?.symbol}`;
   const btnText = mode === "repay" ? `Repay ${getTokenMetadata("USDT")?.symbol}` : `Borrow ${getTokenMetadata("USDT")?.symbol}`;
-  const warning = mode === "repay" ? "Repaying will reduce outstanding borrow and change LTV." : "Borrowing this amount will reduce your health factor and increase risk of liquidation.";
+  const warning = mode === "repay" ? "" : "Borrowing this amount will increase your LTV and the risk of liquidation";
 
   return {
     amount,
@@ -110,7 +113,7 @@ export function useTxMode(mode: TxMode = "borrow") {
     title,
     btnText,
     warning,
-    txItems,
+    availableForRepay
   } as const;
 }
 
