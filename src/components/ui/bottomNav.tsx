@@ -20,7 +20,7 @@ const BottomNav = () => {
       href: "/menu",
       icon: Menu,
       label: "Menu",
-      subHrefs: ["/withdraw", "withdraw/otc", "/profile"],
+      subHrefs: ["/withdraw", "/withdraw/otc", "/profile"],
     },
   ];
 

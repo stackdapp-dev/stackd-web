@@ -8,7 +8,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { erc20Abi, formatUnits } from "viem";
 
 type WithdrawOTCValue = {
-  exchangeRate: RateData;
+  exchangeRate: RateData | undefined;
   amount: string;
   setAmount: (amount: string) => void;
   convertedAmount: string;
