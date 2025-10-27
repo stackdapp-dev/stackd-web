@@ -1,7 +1,6 @@
 "use client";
 
 import InputAmountCard from "@/components/common/InputAmountCard";
-import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import TransactionOverview from "@/components/wallet/TransactionOverview";
 import useTxMode from "@/hooks/useTxMode";
@@ -23,33 +22,22 @@ export default function TxModePage() {
   const isDisabled = Number(availableForRepay) <= 0 || Number(amount) <= 0 || isProcessing || !ackChecked || Number(amount) > available;
 
   return (
-    <div className="w-full max-w-xl mx-auto p-4">
+    <div className="w-full max-w-xl mx-auto p-4 space-y-8">
       <div className="mb-6">
-        <button onClick={() => router.back()} className="text-white mb-4"><ArrowLeft /></button>
+        <button onClick={() => router.back()} className="text-white mb-4">
+          <ArrowLeft />
+        </button>
         <h2 className="text-center text-xl font-bold">{title}</h2>
       </div>
 
-      <InputAmountCard
-        label="Amount"
-        value={amount}
-        onChangeText={setAmount}
-        tokenSymbol="USDT"
-        usdValue={Number(amount || 0)}
-        availableAmount={availableForRepay}
-        onMaxPress={handleMax}
-        editable={!isProcessing}
-      />
+      <div>
+        <InputAmountCard label="Amount" value={amount} onChangeText={setAmount} tokenSymbol="USDT" usdValue={Number(amount || 0)} availableAmount={availableForRepay} onMaxPress={handleMax} editable={!isProcessing} />
+      </div>
 
       <TransactionOverview previewAmount={previewAmount} />
 
       <div className="flex items-center justify-center gap-3">
-        <input
-          type="checkbox"
-          id="ack"
-          checked={ackChecked}
-          onChange={() => setAckChecked((v) => !v)}
-          aria-checked={ackChecked}
-        />
+        <input type="checkbox" id="ack" checked={ackChecked} onChange={() => setAckChecked((v) => !v)} aria-checked={ackChecked} />
         <label htmlFor="ack" className="text-sm text-muted cursor-pointer">
           I acknowledge the risks involved.
         </label>

@@ -74,7 +74,7 @@ export default function TransactionOverview({
         </button>
       </div>
 
-      <Card className="mb-4" appearance="container">
+      <Card className="mb-8" appearance="container">
         <div className="mt-3 space-y-3 w-full">
           {itemsToRender.map((item) => (
             <div key={item.label} className="flex justify-between items-center">
