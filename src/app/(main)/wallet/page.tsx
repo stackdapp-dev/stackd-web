@@ -11,7 +11,8 @@ import { useTokenPrices } from "@/providers/TokenPriceProvider";
 const Wallet = () => {
   const { tokenPrices } = useTokenPrices();
   const { assets, totalBalance, isLoading } = useWalletBalance(tokenPrices);
-  const { suppliedAssets, borrowedAssets } = useCompound();
+  const { suppliedAssets, borrowedAssets, netLoanValue } = useCompound();
+  const walletBalance = totalBalance + netLoanValue;
 
   if (isLoading) {
     return (
@@ -24,7 +25,7 @@ const Wallet = () => {
   return (
     <div className="flex flex-col gap-8 items-center p-6 pt-8">
       <>
-        <Balance amount={totalBalance} />
+        <Balance amount={walletBalance} />
         <Assets items={assets} />
         <LoanInfo supplied={suppliedAssets} borrowed={borrowedAssets} />
       </>

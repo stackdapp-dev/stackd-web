@@ -3,11 +3,14 @@
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
 import MaskedValue from "@/components/ui/maskedValue";
+import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
 import { useLoanCalculations } from "@/hooks/useLoanCalculations";
 import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
+import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "../ui/button";
 
 
@@ -32,6 +35,7 @@ interface LoanInfoProps {
 export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRepay }: LoanInfoProps) {
   const visibility = useVisibility();
   const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
 
   const {
     ltv,
@@ -40,6 +44,18 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
     liquidationPrice,
     netLoanValue,
   } = useLoanCalculations(supplied, borrowed);
+
+  const handleBorrow = () => {
+    if (borrowableAmount > 0) {
+      if (onBorrow) {
+        onBorrow();
+      } else {
+        router.push("/wallet/tx/borrow");
+      }
+    } else {
+      setShowModal(true);
+    }
+  };
 
 
   return (
@@ -120,7 +136,7 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
         </div>
         
         <div className="mt-4 flex gap-3 w-full">
-          <Button onClick={onBorrow ?? (() => router.push("/wallet/tx/borrow"))} className="flex-1" type="button">
+          <Button onClick={handleBorrow} className="flex-1" type="button">
             Borrow
           </Button>
           <Button onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))} className="flex-1" type="button">
@@ -128,6 +144,23 @@ export default function LoanInfo({ supplied = [], borrowed = [], onBorrow, onRep
           </Button>
         </div>
       </Card>
+
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Insufficient Collateral"
+        message={
+          <>
+            <Text tone="muted" className="mb-3">Your WBTC collateral is below the required amount for this action.</Text>
+            <Text tone="muted" className="mb-6">Please deposit more WBTC to borrow USDT.</Text>
+          </>
+        }
+        icon={<AlertTriangle className="text-amber-400" size={28}/>}
+        primaryButtonText="Deposit"
+        primaryButtonAction={() => { setShowModal(false); router.push("/wallet"); }}
+        secondaryButtonText="Go back"
+        secondaryButtonAction={() => setShowModal(false)}
+      />
     </div>
   );
 }
