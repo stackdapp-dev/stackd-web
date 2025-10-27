@@ -2,6 +2,7 @@
 
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
+import Text from "@/components/ui/text";
 import { formatAmount, formatCurrency } from "@/lib/utils";
 
 interface InputAmountCardProps {
@@ -27,7 +28,7 @@ export default function InputAmountCard({
 }: InputAmountCardProps) {
   return (
     <div>
-      <div className="text-sm text-muted mb-2">{label}</div>
+      <Text size="sm" className="mb-2">{label}</Text>
       <Card appearance="container">
         <div className="flex items-start justify-between w-full">
           <div className="flex-1 min-w-0">

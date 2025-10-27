@@ -74,7 +74,7 @@ export default function TransactionOverview({
         </button>
       </div>
 
-      <Card className="mb-8" appearance="container">
+      <Card appearance="container">
         <div className="mt-3 space-y-3 w-full">
           {itemsToRender.map((item) => (
             <div key={item.label} className="flex justify-between items-center">
@@ -101,7 +101,7 @@ export default function TransactionOverview({
       </Card>
 
       {showWarning && (
-        <div className="mb-4 p-3 rounded bg-red-950/80 text-white flex items-center gap-2">
+        <div className="mt-8 p-3 rounded bg-red-950/80 text-white flex items-center gap-2">
           <AlertTriangle size={18} className="flex-shrink-0 text-red-400" aria-hidden />
           <Text size="xs" className="text-red-200">{warning}</Text>
         </div>
