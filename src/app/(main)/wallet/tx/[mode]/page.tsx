@@ -1,15 +1,14 @@
 "use client";
 
 import InputAmountCard from "@/components/common/InputAmountCard";
+import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import TransactionOverview from "@/components/wallet/TransactionOverview";
 import useTxMode from "@/hooks/useTxMode";
-import { ArrowLeft } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 
 export default function TxModePage() {
-  const router = useRouter();
   const params = useParams();
   const modeParam = (params?.mode || "borrow") as string;
   const mode = modeParam === "repay" ? "repay" : "borrow";
@@ -22,17 +21,10 @@ export default function TxModePage() {
   const isDisabled = Number(availableForRepay) <= 0 || Number(amount) <= 0 || isProcessing || !ackChecked || Number(amount) > available;
 
   return (
-    <div className="w-full max-w-xl mx-auto p-4 space-y-8">
-      <div className="mb-6">
-        <button onClick={() => router.back()} className="text-white mb-4">
-          <ArrowLeft />
-        </button>
-        <h2 className="text-center text-xl font-bold">{title}</h2>
-      </div>
+    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+      <PageHeader title={title} backHref="/wallet" />
 
-      <div>
-        <InputAmountCard label="Amount" value={amount} onChangeText={setAmount} tokenSymbol="USDT" usdValue={Number(amount || 0)} availableAmount={availableForRepay} onMaxPress={handleMax} editable={!isProcessing} />
-      </div>
+      <InputAmountCard label="Amount" value={amount} onChangeText={setAmount} tokenSymbol="USDT" usdValue={Number(amount || 0)} availableAmount={availableForRepay} onMaxPress={handleMax} editable={!isProcessing} />
 
       <TransactionOverview previewAmount={previewAmount} />
 
