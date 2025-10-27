@@ -28,7 +28,7 @@ export default function InputAmountCard({
   return (
     <div>
       <div className="text-sm text-muted mb-2">{label}</div>
-      <Card className="mb-4" appearance="container">
+      <Card appearance="container">
         <div className="flex items-start justify-between w-full">
           <div className="flex-1 min-w-0">
             <input
@@ -39,23 +39,27 @@ export default function InputAmountCard({
               disabled={!editable}
               className="w-full bg-transparent border-0 text-white text-2xl font-semibold outline-none"
             />
-            <div className="mt-1 text-sm text-muted">{formatCurrency(Number(usdValue || 0))}</div>
+            <div className="mt-1 text-sm text-muted">
+              {formatCurrency(Number(usdValue || 0))}
+            </div>
           </div>
 
           <div className="flex flex-col items-end gap-2 ml-4 min-w-[6.5rem]">
-            <div className="flex items-center gap-3">
-              <TokenIcon symbol={tokenSymbol} />
-              <div className="text-sm font-semibold">{tokenSymbol}</div>
+            <div className="flex items-center gap-2">
+              <TokenIcon width={24} height={24} symbol={tokenSymbol} />
+              <div className="font-semibold">{tokenSymbol}</div>
             </div>
-            <div className="text-sm text-muted flex items-center gap-3">
+            <div className="text-sm text-muted flex items-center gap-2">
               <div>Available {availableAmount.toFixed(0)}</div>
-              <button onClick={onMaxPress} className="text-primary">
+              <button
+                onClick={onMaxPress}
+                className="text-primary font-semibold"
+              >
                 MAX
               </button>
             </div>
           </div>
         </div>
-
       </Card>
     </div>
   );

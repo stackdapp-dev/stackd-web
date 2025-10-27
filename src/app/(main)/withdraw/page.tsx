@@ -7,7 +7,7 @@ import Image from "next/image";
 
 const Withdraw = () => {
   return (
-    <div className="p-6 flex flex-col gap-8">
+    <div className="p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
       <PageHeader title="Withdraw USDT" backHref="/menu" />
 
       <ul className="flex flex-col gap-4">
