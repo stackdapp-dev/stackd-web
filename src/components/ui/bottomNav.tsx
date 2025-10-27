@@ -9,13 +9,18 @@ const BottomNav = () => {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/wallet", icon: Wallet, label: "Wallet", subHrefs: [] },
+    {
+      href: "/wallet",
+      icon: Wallet,
+      label: "Wallet",
+      subHrefs: ["/wallet/tx/borrow", "/wallet/tx/repay"],
+    },
     { href: "/history", icon: History, label: "History", subHrefs: [] },
     {
       href: "/menu",
       icon: Menu,
       label: "Menu",
-      subHrefs: ["/withdraw", "/profile"],
+      subHrefs: ["/withdraw", "withdraw/otc", "/profile"],
     },
   ];
 
