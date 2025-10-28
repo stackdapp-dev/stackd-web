@@ -10,7 +10,7 @@ import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, mas
 import { useVisibility } from "@/providers/visibility";
 import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 
 type Asset = {
@@ -37,7 +37,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
 
-  const wbtcBalance = assets.find((a) => a.symbol === "WBTC")?.amount || 0;
+  const wbtcBalance = useMemo(() => assets.find((a) => a.symbol === "WBTC")?.amount || 0, [assets]);
 
   const { ltv, borrowApr, borrowableAmount, liquidationPrice, netLoanValue } = useLoanCalculations(supplied, borrowed);
 
@@ -54,6 +54,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
       setShowModal(true);
     }
   };
+
 
   return (
     <div className={`w-full`}>
