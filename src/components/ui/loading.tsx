@@ -1,3 +1,4 @@
+import { LoaderCircle } from 'lucide-react';
 import React from 'react';
 
 interface LoadingProps {
@@ -14,7 +15,7 @@ export const Loading: React.FC<LoadingProps> = ({ size = 'md', className = '' })
 
   return (
     <div className={`flex items-center justify-center py-8 ${className}`}>
-      <div className={`animate-spin rounded-full border-b-2 border-amber-500 ${sizeClasses[size]}`}></div>
+      <LoaderCircle className={`animate-spin text-amber-500 ${sizeClasses[size]}`} />
     </div>
   );
 };

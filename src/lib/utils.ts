@@ -24,6 +24,7 @@ export function formatAmount(
 ) {
   if (value === null || value === undefined) return `0`;
   const num = Number(value);
+  if (!Number.isFinite(num)) return `0`;
   const abs = Math.abs(num);
   // Tiny positive numbers: show '< 0.0001' for values > 0 and < 0.0001
   if (abs > 0 && abs < 0.0001) return `< 0.0001`;
@@ -41,8 +42,9 @@ export function formatCurrency(
   currencySymbol: string = "$",
   abbreviate: boolean = true
 ) {
-  if (value === null || value === undefined) return `$0`;
+  if (value === null || value === undefined) return `${currencySymbol}0`; 
   const num = Number(value);
+  if (!Number.isFinite(num)) return `${currencySymbol}0`; 
   // For large numbers, abbreviate (e.g., 6.11K, 7.1M). Use 1 decimal place for abbreviated values.
   const abs = Math.abs(num);
   if (abs >= 1000 && abbreviate) {
@@ -57,6 +59,8 @@ export function formatCurrency(
 
 export function formatPercent(value: number | null | undefined, decimals: number = 1) {
   if (value === null || value === undefined) return `0%`;
+  const num = Number(value);
+  if (!Number.isFinite(num)) return `0%`; 
   return `${Number(value).toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
