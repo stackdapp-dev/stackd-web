@@ -38,32 +38,6 @@ type UseCompoundResult = {
   netLoanValue: number;
 };
 
-const CACHE_KEY = 'compoundData';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-function getCache(): { collateralRaw: string; borrowRaw: string; maxLtv: number; liquidationRatio: number; borrowApr: number } | null {
-  try {
-    const item = localStorage.getItem(CACHE_KEY);
-    if (item) {
-      const parsed = JSON.parse(item);
-      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
-        return parsed.data;
-      }
-    }
-  } catch (err) {
-    console.error('Error reading compound cache:', err);
-  }
-  return null;
-}
-
-function setCache(data: { collateralRaw: string; borrowRaw: string; maxLtv: number; liquidationRatio: number; borrowApr: number }) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
-  } catch (err) {
-    console.error('Error setting compound cache:', err);
-  }
-}
-
 export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   const { publicClient, walletClient } = useWeb3();
   const getTokenPrice = useGetTokenPrice();
@@ -99,13 +73,6 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
       setBorrowRaw(bor ?? BigInt(0));
       setMaxLtv(toPercentage(assetInfo.borrowCollateralFactor));
       setLiquidationRatio(toPercentage(assetInfo.liquidateCollateralFactor));
-      setCache({
-        collateralRaw: (coll ?? BigInt(0)).toString(),
-        borrowRaw: (bor ?? BigInt(0)).toString(),
-        maxLtv: toPercentage(assetInfo.borrowCollateralFactor),
-        liquidationRatio: toPercentage(assetInfo.liquidateCollateralFactor),
-        borrowApr: apr,
-      });
       setError(null);
       setIsLoading(false);
       setInitialLoad(false);
@@ -117,17 +84,7 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   }, [publicClient, acct, initialLoad]);
 
   useEffect(() => {
-    const cached = getCache();
-    if (cached) {
-      setCollateralRaw(BigInt(cached.collateralRaw));
-      setBorrowRaw(BigInt(cached.borrowRaw));
-      setMaxLtv(cached.maxLtv);
-      setLiquidationRatio(cached.liquidationRatio);
-      setBorrowApr(cached.borrowApr);
-      setInitialLoad(false);
-    } else {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
     void fetch();
   }, [fetch]);
 

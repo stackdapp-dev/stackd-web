@@ -34,6 +34,7 @@ export default function InputAmountCard({
           <div className="flex-1 min-w-0">
             <input
               value={value}
+              type="number"
               onChange={(e) => onChangeText(e.target.value)}
               placeholder="0.00"
               inputMode="decimal"

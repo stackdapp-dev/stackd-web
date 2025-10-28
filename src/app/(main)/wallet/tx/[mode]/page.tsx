@@ -3,15 +3,19 @@
 import InputAmountCard from "@/components/common/InputAmountCard";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/loading";
 import TransactionOverview from "@/components/wallet/TransactionOverview";
+import { useAutoLend } from "@/hooks/useAutoLend";
 import useTxMode from "@/hooks/useTxMode";
-import { useParams } from "next/navigation";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function TxModePage() {
   const params = useParams();
   const modeParam = (params?.mode || "borrow") as string;
   const mode = modeParam === "repay" ? "repay" : "borrow";
+  const router = useRouter();
 
   const tx = useTxMode(mode === "repay" ? "repay" : "borrow");
   const {
@@ -29,27 +33,33 @@ export default function TxModePage() {
 
   const [ackChecked, setAckChecked] = useState(false);
 
-  const isDisabled =
-    Number(availableForRepay) <= 0 ||
-    Number(amount) <= 0 ||
-    isProcessing ||
-    !ackChecked ||
-    Number(amount) > available;
+  const { assets } = useWalletBalance();
+  const wbtcBalance = assets.find((a) => a.symbol === "WBTC")?.amount || 0;
+
+  const { lendProcessing } = useAutoLend({
+    mode,
+    wbtcBalance,
+    onError: () => router.push("/wallet"),
+  });
+
+  const isDisabled = Number(availableForRepay) <= 0 || Number(amount) <= 0 || isProcessing || lendProcessing || !ackChecked || Number(amount) > available;
+
+  if (lendProcessing) {
+    return (
+      <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+        <PageHeader title={title} backHref="/wallet" />
+        <div className="flex justify-center items-center h-64">
+          <Loading size="lg"/>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
       <PageHeader title={title} />
 
-      <InputAmountCard
-        label="Amount"
-        value={amount}
-        onChangeText={setAmount}
-        tokenSymbol="USDT"
-        usdValue={Number(amount || 0)}
-        availableAmount={availableForRepay}
-        onMaxPress={handleMax}
-        editable={!isProcessing}
-      />
+      <InputAmountCard label="Amount" value={amount} onChangeText={setAmount} tokenSymbol="USDT" usdValue={Number(amount || 0)} availableAmount={availableForRepay} onMaxPress={handleMax} editable={!isProcessing && !lendProcessing} />
 
       <TransactionOverview previewAmount={previewAmount} />
 
@@ -68,7 +78,7 @@ export default function TxModePage() {
 
       <div>
         <Button onClick={handleAction} className="w-full" disabled={isDisabled}>
-          {isProcessing ? "Processing..." : btnText}
+          {isProcessing || lendProcessing ? "Processing..." : btnText}
         </Button>
       </div>
     </div>
