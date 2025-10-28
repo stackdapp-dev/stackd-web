@@ -66,7 +66,7 @@ export default function Assets({ items }: AssetsProps) {
                   variant="secondary"
                   onClick={() => {
                     it.onAction?.(it.id);
-                    router.push(`/wallet/deposit?symbol=${encodeURIComponent(it.symbol)}`);
+                    router.push(`/wallet/deposit/${encodeURIComponent(it.symbol)}`);
                   }}
                   className="ml-3"
                 >

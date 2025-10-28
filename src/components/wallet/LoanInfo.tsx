@@ -192,7 +192,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
         icon={<AlertTriangle className="text-amber-400" size={28} />}
         primaryButtonText="Deposit"
         primaryButtonAction={() => {
-          router.push("/wallet/deposit?symbol=WBTC");
+          router.push("/wallet/deposit/WBTC");
         }}
         secondaryButtonText="Go back"
         secondaryButtonAction={() => {

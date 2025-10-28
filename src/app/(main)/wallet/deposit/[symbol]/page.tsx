@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 import Text from "@/components/ui/text";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { Copy } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
+import React from "react";
 import { arbitrum } from "viem/chains";
 
-export default function DepositPage() {
+export default function DepositPage({ params }: { params: Promise<{ symbol?: string }> }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { walletClient } = useWeb3();
 
-  const symbol = searchParams.get("symbol") || "ETH";
+  const symbol = React.use(params).symbol || "ETH";
   const address = walletClient?.account?.address || "-";
 
   const handleCopy = async () => {
