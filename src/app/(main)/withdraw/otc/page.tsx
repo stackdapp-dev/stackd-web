@@ -5,9 +5,11 @@ import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useUser } from "@/providers/UserProvider";
 import { useWithdrawOTC } from "@/providers/WithrawOTCProvider";
 import { ArrowLongDownIcon } from "@heroicons/react/16/solid";
 import { TriangleAlertIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const WithdrawViaOTC = () => {
   const {
@@ -20,9 +22,21 @@ const WithdrawViaOTC = () => {
     handleMax,
   } = useWithdrawOTC();
 
+  const { paymentMethods } = useUser();
+
+  const router = useRouter();
+
+  const choosePayMethod = () => {
+    if (paymentMethods.length > 0) {
+      router.push("/withdraw/otc/pay-methods");
+    } else {
+      router.push("/withdraw/otc/pay-methods/add");
+    }
+  };
+
   return (
     <div className="p-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
-      <PageHeader title="Withdraw via OTC" backHref="/withdraw" />
+      <PageHeader title="Withdraw via OTC" />
 
       <div className="flex flex-col gap-4">
         {exchangeRate?.data ? (
@@ -100,7 +114,9 @@ const WithdrawViaOTC = () => {
         </ul>
       </div>
 
-      <Button disabled={false /*!isValidAmount*/}>Choose Payment Method</Button>
+      <Button disabled={false /*!isValidAmount*/} onClick={choosePayMethod}>
+        Choose Payment Method
+      </Button>
     </div>
   );
 };

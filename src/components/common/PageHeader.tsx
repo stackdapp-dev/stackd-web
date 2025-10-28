@@ -1,16 +1,9 @@
 "use client";
 
 import { ArrowLeftIcon } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const PageHeader = ({
-  title,
-  backHref,
-}: {
-  title: string;
-  backHref: string;
-}) => {
+const PageHeader = ({ title }: { title: string }) => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -44,9 +37,9 @@ const PageHeader = ({
         isScrolled ? "border-b" : ""
       }`}
     >
-      <Link className="absolute left-4" href={backHref}>
+      <button className="absolute left-4" onClick={() => history.back()}>
         <ArrowLeftIcon className="h-7 w-7" />
-      </Link>
+      </button>
       <h1 className="text-center text-2xl font-bold">{title}</h1>
     </div>
   );
