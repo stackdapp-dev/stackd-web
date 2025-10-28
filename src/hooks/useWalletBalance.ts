@@ -28,32 +28,6 @@ interface WalletBalance {
   refetchBalances: () => Promise<void>;
 }
 
-const CACHE_KEY = 'walletBalance';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-function getCache(): { ethBalance: number; tokenBalances: Record<string, TokenBalance> } | null {
-  try {
-    const item = localStorage.getItem(CACHE_KEY);
-    if (item) {
-      const parsed = JSON.parse(item);
-      if (Date.now() - parsed.timestamp < CACHE_DURATION) {
-        return parsed.data;
-      }
-    }
-  } catch (err) {
-    console.error('Error reading cache:', err);
-  }
-  return null;
-}
-
-function setCache(data: { ethBalance: number; tokenBalances: Record<string, TokenBalance> }) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
-  } catch (err) {
-    console.error('Error setting cache:', err);
-  }
-}
-
 export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = {}): WalletBalance {
   const [ethBalance, setEthBalance] = useState<number>(0);
   const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
@@ -138,7 +112,6 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
       });
 
       setTokenBalances(balances);
-      setCache({ ethBalance: ethBalanceNumber, tokenBalances: balances });
       setIsLoading(false);
       setInitialLoad(false);
     } catch (err) {
@@ -153,14 +126,7 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
 
   useEffect(() => {
     if (walletClient?.account?.address) {
-      const cached = getCache();
-      if (cached) {
-        setEthBalance(cached.ethBalance);
-        setTokenBalances(cached.tokenBalances);
-        setInitialLoad(false);
-      } else {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
       fetchBalances();
     }
   }, [walletClient, fetchBalances]);

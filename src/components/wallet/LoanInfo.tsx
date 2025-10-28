@@ -41,6 +41,8 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
 
   const { ltv, borrowApr, borrowableAmount, liquidationPrice, netLoanValue } = useLoanCalculations(supplied, borrowed);
 
+  const hasBorrowed = borrowed.some(b => b.symbol === "USDT" && b.amount > 0);
+
   const handleBorrow = () => {
     if (wbtcBalance > 0 || borrowableAmount > 0) {
       if (onBorrow) {
@@ -166,7 +168,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
           <Button onClick={handleBorrow} className="flex-1" type="button">
             Borrow
           </Button>
-          <Button onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))} className="flex-1" type="button">
+          <Button onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))} className="flex-1" type="button" disabled={!hasBorrowed}>
             Repay
           </Button>
         </div>
