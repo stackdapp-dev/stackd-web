@@ -57,7 +57,7 @@ export function formatCurrency(
   })}`;
 }
 
-export function formatPercent(value: number | null | undefined, decimals: number = 1) {
+export function formatPercent(value: number | null | undefined, decimals: number = 2) {
   if (value === null || value === undefined) return `0%`;
   const num = Number(value);
   if (!Number.isFinite(num)) return `0%`; 

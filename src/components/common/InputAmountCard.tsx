@@ -16,47 +16,49 @@ interface InputAmountCardProps {
   editable?: boolean;
 }
 
-export default function InputAmountCard({
-  label,
-  value,
-  onChangeText,
-  tokenSymbol,
-  usdValue,
-  availableAmount,
-  onMaxPress,
-  editable = true,
-}: InputAmountCardProps) {
+export default function InputAmountCard({ label, value, onChangeText, tokenSymbol, usdValue, availableAmount, onMaxPress, editable = true }: InputAmountCardProps) {
+  const handleChange = (val: string) => {
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      onChangeText(num.toString());
+    } else {
+      onChangeText(val);
+    }
+  };
+
   return (
     <div>
-      <Text size="sm" className="mb-2">{label}</Text>
+      <Text size="sm" className="mb-2">
+        {label}
+      </Text>
       <Card appearance="container">
-        <div className="flex items-start justify-between w-full">
-          <div className="flex-1 min-w-0">
-            <input
-              value={value}
-              type="number"
-              onChange={(e) => onChangeText(e.target.value)}
-              placeholder="0.00"
-              inputMode="decimal"
-              disabled={!editable}
-              className="w-full bg-transparent border-0 text-white text-2xl font-semibold outline-none"
-            />
-            <div className="mt-1 text-sm text-muted">
-              {formatCurrency(Number(usdValue || 0))}
-            </div>
+        <div className="grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-x-4 gap-y-1 w-full">
+          <input
+            value={value}
+            type="number"
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder="0.00"
+            inputMode="decimal"
+            disabled={!editable}
+            min="0"
+            className="w-full bg-transparent border-0 text-white text-2xl font-semibold outline-none appearance-none [-moz-appearance:textfield]"
+          />
+          <div className="flex items-center gap-2 justify-end">
+            <TokenIcon width={24} height={24} symbol={tokenSymbol} />
+            <Text size="sm" weight="semibold">
+              {tokenSymbol}
+            </Text>
           </div>
-
-          <div className="flex flex-col items-end gap-2 ml-4 min-w-[6.5rem]">
-            <div className="flex items-center gap-2">
-              <TokenIcon width={24} height={24} symbol={tokenSymbol} />
-              <div className="font-semibold">{tokenSymbol}</div>
-            </div>
-            <div className="text-sm text-muted flex items-center gap-3">
-              <div>Balance {formatAmount(availableAmount)}</div>
-              <button onClick={onMaxPress} className="text-primary">
-                MAX
-              </button>
-            </div>
+          <Text size="sm" tone="muted">
+            {formatCurrency(Number(usdValue || 0))}
+          </Text>
+          <div className="text-sm text-muted flex items-center gap-3 justify-end">
+            <Text size="sm" tone="muted">
+              Balance {formatAmount(availableAmount)}
+            </Text>
+            <button onClick={onMaxPress} className="text-primary">
+              MAX
+            </button>
           </div>
         </div>
       </Card>
