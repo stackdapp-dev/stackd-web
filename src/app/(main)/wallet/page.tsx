@@ -27,7 +27,7 @@ const Wallet = () => {
       <>
         <Balance amount={walletBalance} />
         <Assets items={assets} />
-        <LoanInfo supplied={suppliedAssets} borrowed={borrowedAssets} />
+        <LoanInfo assets={assets} supplied={suppliedAssets} borrowed={borrowedAssets} />
       </>
     </div>
   );

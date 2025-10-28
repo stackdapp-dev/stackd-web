@@ -1,0 +1,69 @@
+"use client";
+
+import PageHeader from "@/components/common/PageHeader";
+import { Button } from "@/components/ui/button";
+import Text from "@/components/ui/text";
+import { useWeb3 } from "@/providers/Web3Provider";
+import { Copy } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { QRCodeSVG } from 'qrcode.react';
+import { arbitrum } from "viem/chains";
+
+export default function DepositPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { walletClient } = useWeb3();
+
+  // Extract symbol and address from query params, with defaults
+  const symbol = searchParams.get("symbol") || "ETH";
+  const address = walletClient?.account?.address || "-";
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address || "");
+    } catch (e) {
+      console.error("copy failed", e);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+      <PageHeader title={`Deposit ${symbol}`} backHref="/wallet" />
+
+      <div className="flex justify-center">
+        <QRCodeSVG value={address} size={220} fgColor="#000000" bgColor="#ffffff" />
+      </div>
+
+      <div className="text-left">
+        <Text size="sm" tone="white">
+          Network
+        </Text>
+        <Text size="sm" className="mb-3">
+          {arbitrum.name}
+        </Text>
+
+        <div>
+          <Text size="sm" tone="white">
+            Wallet Address
+          </Text>
+          <div className="relative mt-2">
+            <div className="flex items-center mt-2">
+              <Text size="sm" className="flex-1 leading-tight break-all">
+                {address || "-"}
+              </Text>
+              <button onClick={handleCopy} className="ml-2 p-2 rounded bg-white/5 hover:bg-white/10">
+                <Copy size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <Button onClick={() => router.back()} className="w-full">
+          Done
+        </Button>
+      </div>
+    </div>
+  );
+}

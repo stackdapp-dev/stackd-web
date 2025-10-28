@@ -5,6 +5,7 @@ import MaskedValue from "@/components/ui/maskedValue";
 import Text from "@/components/ui/text";
 import { formatAmount, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
+import { useRouter } from "next/navigation";
 import React from "react";
 import TokenIcon from "../common/TokenIcon";
 import { Button } from "../ui/button";
@@ -25,6 +26,7 @@ interface AssetsProps {
 
 export default function Assets({ items }: AssetsProps) {
   const visibility = useVisibility();
+  const router = useRouter();
   return (
     <div className={`w-full`}>
       <div className="grid grid-cols-3 items-center mb-1">
@@ -60,7 +62,14 @@ export default function Assets({ items }: AssetsProps) {
               </div>
 
               <div className="text-right">
-                <Button variant="secondary" onClick={() => it.onAction?.(it.id)} className="ml-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    it.onAction?.(it.id);
+                    router.push(`/wallet/deposit?symbol=${encodeURIComponent(it.symbol)}`);
+                  }}
+                  className="ml-3"
+                >
                   {it.actionLabel ?? "Deposit"}
                 </Button>
               </div>
