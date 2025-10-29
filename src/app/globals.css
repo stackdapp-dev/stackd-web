@@ -89,17 +89,18 @@ body {
   body {
     @apply bg-background text-foreground;
   }
-}
 
-/* For Chrome, Safari, Edge, and Opera */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
+  /* hide number input spinners (Chrome, Edge, Safari) */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 
-/* For Firefox */
-input[type=number] {
-  -moz-appearance: textfield;
-  appearance: textfield;
+  /* ensure no native appearance on the input itself */
+  input[type="number"] {
+    -webkit-appearance: none;
+    appearance: textfield;
+    -moz-appearance: textfield; /* Firefox */
+  }
 }

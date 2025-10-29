@@ -28,7 +28,7 @@ const textVariants = cva("text-xs", {
     },
   },
   defaultVariants: {
-    size: "xs",
+    size: "sm",
     weight: "normal",
     case: "normal",
     tone: "whiteStrong",

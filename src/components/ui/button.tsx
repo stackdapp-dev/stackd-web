@@ -14,10 +14,17 @@ const buttonVariants = cva(
         outline: "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
         ghost: "rounded-full bg-transparent border border-amber-500 text-amber-500 px-4 py-2 text-sm font-medium hover:bg-amber-50/10",
         link: "text-primary underline-offset-4 hover:underline",
+
+        // Pill variants for history page 
+        pill: "rounded-full bg-amber-500 px-2 text-sm text-black hover:bg-amber-600",
+        pill_ghost: "rounded-full bg-transparent border border-amber-500 text-amber-500 px-2 text-sm font-medium hover:bg-amber-50/10",
+        pill_success: "rounded-full bg-emerald-500 px-2 text-sm text-black hover:bg-emerald-600",
+        pill_pending: "rounded-full bg-amber-500 px-2 text-sm text-black hover:bg-amber-600",
+        pill_failed: "rounded-full bg-rose-500 px-2 text-sm text-black hover:bg-rose-600",
       },
       size: {
         default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
+        sm: "h-8 px-3 text-sm",
         lg: "h-10 rounded-md px-8",
         icon: "h-9 w-9",
       },
@@ -35,7 +42,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : "button";
-  return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+  return <Comp className={cn(buttonVariants({ variant, size }), className)} ref={ref} {...props} />;
 });
 Button.displayName = "Button";
 

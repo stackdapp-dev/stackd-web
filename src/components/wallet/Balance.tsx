@@ -13,7 +13,7 @@ export default function Balance({ amount, visible, onToggleVisibility }: Balance
     <div className={`w-full rounded-xl p-3`}>
       <div className="flex items-center justify-center gap-3">
         <MaskedValue
-          value={amount}
+          value={amount || 0}
           mask="long"
           showToggle
           visible={visible}

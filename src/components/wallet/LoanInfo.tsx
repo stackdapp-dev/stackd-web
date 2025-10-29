@@ -60,7 +60,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
     <div className={`w-full`}>
       <div className="grid grid-cols-3 items-center mb-1">
         <div className="text-center">
-          <Text size="sm" weight="semibold" case="upper">
+          <Text weight="semibold" case="upper">
             LOAN INFO
           </Text>
         </div>
@@ -73,7 +73,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
       <Card>
         <div className="grid md:grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Text size="sm" weight="semibold" case="upper">
+            <Text weight="semibold" case="upper">
               SUPPLIED
             </Text>
             <div className="flex flex-col gap-2">
@@ -81,19 +81,19 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
                 <div key={s.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={s.symbol} width={22} height={22} />
-                    <Text size="sm" weight="semibold">
+                    <Text weight="semibold">
                       {s.symbol}
                     </Text>
                   </div>
                   <div className="text-center">
                     <Text>AMOUNT</Text>
-                    <Text size="sm" weight="semibold" className="mt-0">
+                    <Text weight="semibold" className="mt-0">
                       {maskString(formatAmount(s.amount), visibility.visible, MASK_SHORT)}
                     </Text>
                   </div>
                   <div className="text-right">
                     <Text>USD VALUE</Text>
-                    <Text size="sm" weight="semibold" className="mt-0 text-right">
+                    <Text weight="semibold" className="mt-0 text-right">
                       {maskString(formatCurrency(s.usdValue), visibility.visible, MASK_LONG)}
                     </Text>
                   </div>
@@ -101,7 +101,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
               ))}
             </div>
 
-            <Text size="sm" weight="semibold" case="upper" className="mt-2">
+            <Text weight="semibold" case="upper" className="mt-2">
               BORROWED
             </Text>
             <div className="flex flex-col gap-2">
@@ -109,19 +109,19 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
                 <div key={b.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={b.symbol} width={22} height={22} />
-                    <Text size="sm" weight="semibold">
+                    <Text weight="semibold">
                       {b.symbol}
                     </Text>
                   </div>
                   <div className="text-center">
                     <Text>AMOUNT</Text>
-                    <Text size="sm" weight="semibold" className="mt-0">
+                    <Text weight="semibold" className="mt-0">
                       {maskString(formatAmount(b.amount), visibility.visible, MASK_SHORT)}
                     </Text>
                   </div>
                   <div className="text-right">
                     <Text>USD VALUE</Text>
-                    <Text size="sm" weight="semibold" className="mt-0 text-right">
+                    <Text weight="semibold" className="mt-0 text-right">
                       {maskString(formatCurrency(b.usdValue), visibility.visible, MASK_LONG)}
                     </Text>
                   </div>
@@ -135,14 +135,14 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
               <Text className="mb-2" tone="white">
                 LTV
               </Text>
-              <Text size="sm" weight="semibold" className="mb-3">
+              <Text weight="semibold" className="mb-3">
                 {maskString(`${formatPercent(ltv)}`, visibility.visible, MASK_SHORT)}
               </Text>
 
               <Text className="mb-2" tone="white">
                 Borrowable Amount
               </Text>
-              <Text size="sm" weight="semibold">
+              <Text weight="semibold">
                 {maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}
               </Text>
             </div>
@@ -151,14 +151,14 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
               <Text className="mb-2 text-right" tone="white">
                 Borrow APR
               </Text>
-              <Text size="sm" weight="semibold" className="mb-4 text-right">
+              <Text weight="semibold" className="mb-4 text-right">
                 {maskString(`${formatPercent(borrowApr)}`, visibility.visible, MASK_SHORT)}
               </Text>
 
               <Text className="mb-2 text-right" tone="white">
                 Liquidation Price
               </Text>
-              <Text size="sm" weight="semibold" className="text-right">
+              <Text weight="semibold" className="text-right">
                 {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
               </Text>
             </div>

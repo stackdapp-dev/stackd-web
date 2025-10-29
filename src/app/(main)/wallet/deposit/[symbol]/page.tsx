@@ -30,25 +30,25 @@ export default function DepositPage({ params }: { params: Promise<{ symbol?: str
       <PageHeader title={`Deposit ${symbol}`}/>
 
       <div className="flex justify-center">
-        <QRCodeSVG value={address} size={220} fgColor="#000000" bgColor="#ffffff" />
+        <QRCodeSVG value={address} size={220} marginSize={1} fgColor="#000000" bgColor="#ffffff" />
       </div>
 
       <div className="text-left">
-        <Text size="sm" tone="white">
+        <Text tone="white">
           Network
         </Text>
-        <Text size="sm" className="mb-3">
+        <Text className="mb-3">
           {arbitrum.name}
         </Text>
       </div>
 
       <div>
-        <Text size="sm" tone="white">
+        <Text tone="white">
           Wallet Address
         </Text>
-        <div className="relative mt-2">
-          <div className="flex items-center mt-2">
-            <Text size="sm" className="flex-1 leading-tight break-all">
+        <div className="relative">
+          <div className="flex items-center">
+            <Text className="flex-1 leading-tight break-all">
               {address || "-"}
             </Text>
             <button onClick={handleCopy} className="ml-2 p-2 rounded bg-white/5 hover:bg-white/10">
