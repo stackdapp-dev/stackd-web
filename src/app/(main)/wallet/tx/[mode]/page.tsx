@@ -47,7 +47,7 @@ export default function TxModePage() {
   if (lendProcessing) {
     return (
       <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
-        <PageHeader title={title} backHref="/wallet" />
+        <PageHeader title={title} />
         <div className="flex justify-center items-center h-64">
           <Loading size="lg"/>
         </div>

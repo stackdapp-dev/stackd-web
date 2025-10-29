@@ -27,7 +27,7 @@ export default function DepositPage({ params }: { params: Promise<{ symbol?: str
 
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
-      <PageHeader title={`Deposit ${symbol}`} backHref="/wallet" />
+      <PageHeader title={`Deposit ${symbol}`}/>
 
       <div className="flex justify-center">
         <QRCodeSVG value={address} size={220} fgColor="#000000" bgColor="#ffffff" />
