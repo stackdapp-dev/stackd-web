@@ -42,7 +42,7 @@ export default function TxModePage() {
     onError: () => router.push("/wallet"),
   });
 
-  const isDisabled = Number(availableForRepay) <= 0 || Number(amount) <= 0 || isProcessing || lendProcessing || !ackChecked || Number(amount) > available;
+  const isDisabled = Number(availableForRepay) <= 0 || amount <= 0 || isProcessing || lendProcessing || !ackChecked || amount > available;
 
   if (lendProcessing) {
     return (
@@ -59,7 +59,7 @@ export default function TxModePage() {
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
       <PageHeader title={title} />
 
-      <InputAmountCard label="Amount" value={amount} onChangeText={setAmount} tokenSymbol="USDT" usdValue={Number(amount || 0)} availableAmount={availableForRepay} onMaxPress={handleMax} editable={!isProcessing && !lendProcessing} />
+      <InputAmountCard label="Amount" value={String(amount)} onChangeText={(value) => setAmount(Number(value))} tokenSymbol="USDT" usdValue={amount} availableAmount={availableForRepay} onMaxPress={handleMax} editable={!isProcessing && !lendProcessing} />
 
       <TransactionOverview previewAmount={previewAmount} />
 

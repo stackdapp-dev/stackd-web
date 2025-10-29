@@ -12,7 +12,7 @@ import { parseUnits } from "viem";
 export type TxMode = "borrow" | "repay";
 
 export function useTxMode(mode: TxMode = "borrow") {
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewAmount, setPreviewAmount] = useState(0);
 
@@ -24,7 +24,7 @@ export function useTxMode(mode: TxMode = "borrow") {
   const router = useRouter();
 
   const { borrowableAmount } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
-  
+
   // compute available based on mode
   const usdtPrice = getPrice("USDT") || 1;
   const availableForBorrow = borrowableAmount / (usdtPrice || 1);
@@ -37,7 +37,7 @@ export function useTxMode(mode: TxMode = "borrow") {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const parsed = parseFloat(amount) || 0;
+      const parsed = amount || 0;
       if (mode === "repay") {
         const capped = Math.min(parsed, borrowedAmount);
         setPreviewAmount(-capped);
@@ -51,17 +51,17 @@ export function useTxMode(mode: TxMode = "borrow") {
   const handleMax = useCallback(() => {
     if (mode === "repay") {
       const maxRepay = Math.min(availableForRepay, borrowedAmount);
-      setAmount(String(maxRepay));
+      setAmount(maxRepay);
       setPreviewAmount(-maxRepay);
     } else {
-      setAmount(String(available));
+      setAmount(available);
       setPreviewAmount(available);
     }
   }, [available, mode, availableForRepay, borrowedAmount]);
 
   const handleAction = useCallback(async () => {
     if (isProcessing) return;
-    const amt = parseFloat(amount || "0");
+    const amt = amount || 0;
     if (amt <= 0) return;
 
     setIsProcessing(true);
@@ -98,8 +98,10 @@ export function useTxMode(mode: TxMode = "borrow") {
     if (!autoAttempted.current) autoAttempted.current = true;
   }, []);
 
-  const title = mode === "repay" ? `Repay ${getTokenMetadata("USDT")?.symbol }` : `Borrow ${getTokenMetadata("USDT")?.symbol}`;
-  const btnText = mode === "repay" ? `Repay ${getTokenMetadata("USDT")?.symbol}` : `Borrow ${getTokenMetadata("USDT")?.symbol}`;
+  const tokenSymbol = getTokenMetadata("USDT")?.symbol;
+  const action = mode === "repay" ? "Repay" : "Borrow";
+  const title = `${action} ${tokenSymbol}`;
+  const btnText = `${action} ${tokenSymbol}`;
   const warning = mode === "repay" ? "" : "Borrowing this amount will increase your LTV and the risk of liquidation";
 
   return {
@@ -113,7 +115,7 @@ export function useTxMode(mode: TxMode = "borrow") {
     title,
     btnText,
     warning,
-    availableForRepay
+    availableForRepay,
   } as const;
 }
 

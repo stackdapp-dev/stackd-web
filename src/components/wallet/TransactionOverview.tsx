@@ -48,8 +48,8 @@ export default function TransactionOverview({
   // percent
   const pctItems: TxItem[] = [
     { label: "Loan-to-Value ratio", value: [formatPercent(ltvRange[0]), formatPercent(ltvRange[1])] },
-    { label: "Max LTV", value: formatPercent(maxLtv) },
-    { label: "Liquidation ratio", value: formatPercent(liquidationRatio) },
+    { label: "Max LTV", value: formatPercent(maxLtv, 1) },
+    { label: "Liquidation ratio", value: formatPercent(liquidationRatio, 1) },
   ];
 
   // amount
@@ -75,7 +75,7 @@ export default function TransactionOverview({
       </div>
 
       <Card appearance="container">
-        <div className="mt-3 space-y-3 w-full">
+        <div className="space-y-3 w-full">
           {itemsToRender.map((item) => (
             <div key={item.label} className="flex justify-between items-center">
               <div className="flex items-center gap-3 min-w-0">
