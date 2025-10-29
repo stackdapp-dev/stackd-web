@@ -65,7 +65,7 @@ export default function TransactionOverview({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <Text size="sm">Transaction overview</Text>
+        <Text>Transaction overview</Text>
         <button
           onClick={() => setshowAmount((v) => !v)}
           className="mr-4 text-muted"
@@ -86,11 +86,15 @@ export default function TransactionOverview({
               </div>
               <div className="flex-shrink-0 text-sm text-muted whitespace-nowrap text-right">
                 {Array.isArray(item.value) ? (
-                  <div className="flex items-center justify-end gap-1">
-                    <Text tone="white">{item.value[0]}</Text>
-                    <ArrowRight size={10} className="text-muted" />
-                    <Text>{item.value[1]}</Text>
-                  </div>
+                  previewAmount > 0 ? (
+                    <div className="flex items-center justify-end gap-1">
+                      <Text tone="white">{item.value[0]}</Text>
+                      <ArrowRight size={10} className="text-muted" />
+                      <Text>{item.value[1]}</Text>
+                    </div>
+                  ) : (
+                    <Text >{item.value[0]}</Text>
+                  )
                 ) : (
                   <Text>{item.value}</Text>
                 )}

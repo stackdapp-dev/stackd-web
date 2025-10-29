@@ -28,7 +28,7 @@ export default function InputAmountCard({ label, value, onChangeText, tokenSymbo
 
   return (
     <div>
-      <Text size="sm" className="mb-2">
+      <Text className="mb-2">
         {label}
       </Text>
       <Card appearance="container">
@@ -45,15 +45,15 @@ export default function InputAmountCard({ label, value, onChangeText, tokenSymbo
           />
           <div className="flex items-center gap-2 justify-end">
             <TokenIcon width={24} height={24} symbol={tokenSymbol} />
-            <Text size="sm" weight="semibold">
+            <Text weight="semibold">
               {tokenSymbol}
             </Text>
           </div>
-          <Text size="sm" tone="muted">
+          <Text tone="muted">
             {formatCurrency(Number(usdValue || 0))}
           </Text>
           <div className="text-sm text-muted flex items-center gap-3 justify-end">
-            <Text size="sm" tone="muted">
+            <Text tone="muted">
               Balance {formatAmount(availableAmount)}
             </Text>
             <button onClick={onMaxPress} className="text-primary">
