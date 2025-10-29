@@ -18,7 +18,18 @@ export default function TxModePage() {
   const router = useRouter();
 
   const tx = useTxMode(mode === "repay" ? "repay" : "borrow");
-  const { amount, availableForRepay, setAmount, isProcessing, available, handleMax, handleAction, title, btnText, previewAmount } = tx;
+  const {
+    amount,
+    availableForRepay,
+    setAmount,
+    isProcessing,
+    available,
+    handleMax,
+    handleAction,
+    title,
+    btnText,
+    previewAmount,
+  } = tx;
 
   const [ackChecked, setAckChecked] = useState(false);
 
@@ -46,14 +57,20 @@ export default function TxModePage() {
 
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
-      <PageHeader title={title} backHref="/wallet" />
+      <PageHeader title={title} />
 
       <InputAmountCard label="Amount" value={String(amount)} onChangeText={(value) => setAmount(Number(value))} tokenSymbol="USDT" usdValue={amount} availableAmount={availableForRepay} onMaxPress={handleMax} editable={!isProcessing && !lendProcessing} />
 
       <TransactionOverview previewAmount={previewAmount} />
 
       <div className="flex items-center justify-center gap-3">
-        <input type="checkbox" id="ack" checked={ackChecked} onChange={() => setAckChecked((v) => !v)} aria-checked={ackChecked} />
+        <input
+          type="checkbox"
+          id="ack"
+          checked={ackChecked}
+          onChange={() => setAckChecked((v) => !v)}
+          aria-checked={ackChecked}
+        />
         <label htmlFor="ack" className="text-sm text-muted cursor-pointer">
           I acknowledge the risks involved.
         </label>

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  getUserPaymentMethods,
+  getUserProfile,
+  UserPaymentMethod,
+  UserProfile,
+} from "@/lib/api/user";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { createContext, useContext, useEffect, useState } from "react";
 import { zeroAddress } from "viem";
@@ -9,20 +15,8 @@ import { zeroAddress } from "viem";
  */
 type UserContextValue = {
   walletAddress: string;
-  profile: {
-    userId: string;
-    privyId: string;
-    email: string;
-  };
-  paymentMethods: {
-    type: "bank" | "e-wallet";
-    accountName: string;
-    email: string;
-    phoneNumber: string;
-    bankName: string;
-    bankAccountNumber: string;
-    alias: string;
-  }[];
+  profile: UserProfile;
+  paymentMethods: UserPaymentMethod[];
   getAccessToken: () => Promise<string | null>;
 };
 
@@ -46,16 +40,20 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const { wallets } = useWallets();
   const walletAddress = wallets.length > 0 ? wallets[0].address : zeroAddress;
 
-  const [profile, setProfile] = useState({
-    userId: "",
+  const [profile, setProfile] = useState<UserProfile>({
+    id: "",
     privyId: "",
     email: "",
+    walletAddress: "",
+    createdAt: "",
+    updatedAt: "",
   });
+  const [paymentMethods, setPaymentMethods] = useState<UserPaymentMethod[]>([]);
 
   useEffect(() => {
     if (!authenticated) return;
 
-    const fetchProfile = async () => {
+    const getchUserResources = async () => {
       const accessToken = await getAccessToken();
       console.log("Access token:", accessToken);
       if (!accessToken) {
@@ -63,32 +61,27 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         return;
       }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_TOKEN_PRICE_API_BASE_URL}/auth/me`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const data = await Promise.all([
+        getUserProfile(accessToken),
+        getUserPaymentMethods(accessToken),
+      ]);
 
-      if (!response.ok) {
-        console.error("Failed to fetch user profile:", response);
-        return;
+      if (data[0]) {
+        setProfile(data[0]);
       }
 
-      const data = await response.json();
-      setProfile(data);
-      return data;
+      if (data[1]) {
+        setPaymentMethods(data[1]);
+      }
     };
-    fetchProfile();
+    getchUserResources();
   }, [authenticated, getAccessToken]);
 
   // Context value
   const value: UserContextValue = {
     walletAddress,
     profile,
-    paymentMethods: [],
+    paymentMethods,
     getAccessToken,
   };
 
