@@ -16,7 +16,7 @@ export function useTxMode(mode: TxMode = "borrow") {
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewAmount, setPreviewAmount] = useState(0);
 
-  const { suppliedAssets, borrowedAssets, approve, supply, withdraw, refetch } = useCompound();
+  const { suppliedAssets, borrowedAssets, approve, supply, withdraw, refetch, allowance } = useCompound();
   const { tokenBalances, refetchBalances } = useWalletBalance();
   const getPrice = useGetTokenPrice();
   const autoAttempted = useRef(false);
@@ -25,14 +25,10 @@ export function useTxMode(mode: TxMode = "borrow") {
 
   const { borrowableAmount } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
 
-  // compute available based on mode
   const usdtPrice = getPrice("USDT") || 1;
-  const availableForBorrow = borrowableAmount / (usdtPrice || 1);
-
+  const availableForBorrow = borrowableAmount / usdtPrice;
   const availableForRepay = tokenBalances["USDT"]?.balance || 0;
-  const borrowedToken = borrowedAssets.find((a) => a.symbol === "USDT");
-  const borrowedAmount = borrowedToken?.amount || 0;
-
+  const borrowedAmount = borrowedAssets.find((a) => a.symbol === "USDT")?.amount || 0;
   const available = mode === "repay" ? availableForRepay : availableForBorrow;
 
   useEffect(() => {
@@ -72,9 +68,12 @@ export function useTxMode(mode: TxMode = "borrow") {
       const amountBigInt = parseUnits(String(amt), tokenMeta.decimals);
 
       if (mode === "repay") {
-        // approve + supply
-        const approveResult = await approve(tokenMeta.address as `0x${string}`, amountBigInt);
-        if (approveResult.error) throw new Error(approveResult.error);
+        // Check allowance and approve only if needed
+        const currentAllowance = allowance ? await allowance(tokenMeta.address as `0x${string}`) : null;
+        if (currentAllowance === null || currentAllowance < amountBigInt) {
+          const approveResult = await approve(tokenMeta.address as `0x${string}`, amountBigInt);
+          if (approveResult.error) throw new Error(approveResult.error);
+        }
 
         const supplyResult = await supply(tokenMeta.address as `0x${string}`, amountBigInt);
         if (supplyResult.error) throw new Error(supplyResult.error);
@@ -92,7 +91,7 @@ export function useTxMode(mode: TxMode = "borrow") {
     } finally {
       setIsProcessing(false);
     }
-  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetch, router]);
+  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetch, router, allowance]);
 
   useEffect(() => {
     if (!autoAttempted.current) autoAttempted.current = true;

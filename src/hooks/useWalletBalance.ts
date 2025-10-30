@@ -35,6 +35,8 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
   const [error, setError] = useState<string | null>(null);
   const { publicClient, walletClient } = useWeb3();
 
+  const tokenEntries = useMemo(() => Object.entries(TOKEN_ADDRESSES), []);
+
   const assets: Asset[] = useMemo(() => {
     return Object.entries(TOKEN_METADATA).map(([key, meta]) => {
       const amount = key === "ETH" ? ethBalance : tokenBalances[key]?.balance;
@@ -66,7 +68,6 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
       }
 
       const walletAddress = formatAddress(walletClient.account.address);
-      const tokenEntries = Object.entries(TOKEN_ADDRESSES);
 
       const [balanceWei, balanceResults] = await Promise.all([
         publicClient.getBalance({ address: walletAddress }),
@@ -80,7 +81,7 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
         }),
       ]);
 
-      const ethBalanceNumber = parseFloat(formatEther(balanceWei));
+      const ethBalanceNumber = Number(formatEther(balanceWei));
       setEthBalance(ethBalanceNumber);
 
       // Process token balance results
@@ -90,7 +91,7 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
         const metadata = getTokenMetadata(symbol);
         if (balanceResult.status === "success" && metadata) {
           const balance = balanceResult.result as bigint;
-          const formattedBalance = parseFloat(formatUnits(balance, metadata.decimals));
+          const formattedBalance = Number(formatUnits(balance, metadata.decimals));
 
           balances[symbol] = {
             symbol,
@@ -115,7 +116,7 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
       setTokenBalances({});
       setIsLoading(false);
     }
-  }, [walletClient?.account?.address, publicClient]);
+  }, [walletClient?.account?.address, publicClient, tokenEntries]);
 
   useEffect(() => {
     fetchBalances();

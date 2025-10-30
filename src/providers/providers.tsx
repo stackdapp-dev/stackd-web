@@ -4,7 +4,6 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { arbitrum } from "viem/chains";
 import { TokenPriceProvider } from "./TokenPriceProvider";
 import { UserProvider } from "./UserProvider";
-import VisibilityProvider from "./visibility";
 import { Web3Provider } from "./Web3Provider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -22,13 +21,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: { walletChainType: "ethereum-only", theme: "#000000" },
       }}
     >
-      <VisibilityProvider>
-        <TokenPriceProvider>
-          <Web3Provider>
-            <UserProvider>{children}</UserProvider>
-          </Web3Provider>
-        </TokenPriceProvider>
-      </VisibilityProvider>
+      <TokenPriceProvider>
+        <Web3Provider>
+          <UserProvider>{children}</UserProvider>
+        </Web3Provider>
+      </TokenPriceProvider>
     </PrivyProvider>
   );
 }
