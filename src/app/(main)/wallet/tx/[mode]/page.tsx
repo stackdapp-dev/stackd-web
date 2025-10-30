@@ -4,10 +4,8 @@ import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import InputAmountCard from "@/components/common/InputAmountCard";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Loading } from "@/components/ui/loading";
 import Text from "@/components/ui/text";
 import TransactionOverview from "@/components/wallet/TransactionOverview";
-import { useAutoLend } from "@/hooks/useAutoLend";
 import useTxMode from "@/hooks/useTxMode";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useParams, useRouter } from "next/navigation";
@@ -32,24 +30,7 @@ export default function TxModePage() {
 
   const { wbtcBalance } = useWalletBalanceContext();
 
-  const { lendProcessing } = useAutoLend({
-    mode,
-    wbtcBalance,
-    onError: () => router.push("/wallet"),
-  });
-
-  const isDisabled = Number(availableForRepay) <= 0 || amount <= 0 || isProcessing || lendProcessing || !ackChecked || amount > available;
-
-  if (lendProcessing) {
-    return (
-      <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
-        <PageHeader title={title} />
-        <div className="flex justify-center items-center h-64">
-          <Loading size="lg" />
-        </div>
-      </div>
-    );
-  }
+  const isDisabled = Number(availableForRepay) <= 0 || amount <= 0 || isProcessing || !ackChecked || amount > available;
 
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
@@ -64,7 +45,7 @@ export default function TxModePage() {
           usdValue={amount}
           availableAmount={availableForRepay}
           onMaxPress={handleMax}
-          editable={!isProcessing && !lendProcessing}
+          editable={!isProcessing}
         />
         {mode === "borrow" && amount > available && (
           <Text className="text-destructive">Amount exceeds your maximum borrowable amount.</Text>
@@ -82,7 +63,7 @@ export default function TxModePage() {
 
       <div>
         <Button onClick={handleAction} className="w-full" disabled={isDisabled}>
-          {isProcessing || lendProcessing ? "Processing..." : btnText}
+          {isProcessing ? "Processing..." : btnText}
         </Button>
       </div>
     </div>

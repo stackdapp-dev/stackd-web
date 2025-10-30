@@ -24,7 +24,6 @@ export function useTxMode(mode: TxMode = "borrow") {
   const router = useRouter();
 
   const { borrowableAmount } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
-
   const usdtPrice = getPrice("USDT") || 1;
   const availableForBorrow = borrowableAmount / usdtPrice;
   const availableForRepay = tokenBalances["USDT"]?.balance || 0;

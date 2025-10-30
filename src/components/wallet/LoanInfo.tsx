@@ -3,9 +3,11 @@
 import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
 import MaskedValue from "@/components/ui/maskedValue";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
+import { useAutoLend } from "@/hooks/useAutoLend";
 import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
@@ -17,24 +19,65 @@ import { Button } from "../ui/button";
 export default function LoanInfo() {
   const visibility = useVisibility();
   const router = useRouter();
-  const [showModal, setShowModal] = useState(false);
+  const [showCollateralModal, setShowCollateralModal] = useState(false);
 
-  const { wbtcBalance } = useWalletBalanceContext();
+  const { wbtcBalance, refetchBalances } = useWalletBalanceContext();
 
-  const { loanCalcs } = useLoanCalculationsContext();
+  const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
   const { ltv, borrowApr, borrowableAmount, liquidationPrice, netLoanValue, suppliedAssets, borrowedAssets, hasBorrowed } = loanCalcs;
 
-  const handleBorrow = () => {
-    if (wbtcBalance > 0 || borrowableAmount > 0) {
-      router.push("/wallet/tx/borrow");
-    } else {
-      setShowModal(true);
+  const { lendProcessing, startLend } = useAutoLend({
+    wbtcBalance,
+    onError: () => {
+      console.error("Auto lend error");
+    },
+  });
+
+  /* If there is borrowable amount but there's also WBTC to lend, lend first.
+     If no borrowable amount but have WBTC to lend, lend. 
+     If both are zero, show no collateral modal.
+  */
+  const handleBorrow = async () => {
+    try {
+      if (wbtcBalance > 0) {
+        const hasLent = await startLend();
+        if (hasLent) {
+            await Promise.all([refetchBalances(), refetchLoanData()]);
+          if (loanCalcs.borrowableAmount > 0) {
+            router.push("/wallet/tx/borrow");
+          } else {
+            setShowCollateralModal(true);
+          }
+        }
+      } else if (borrowableAmount > 0) {
+        router.push("/wallet/tx/borrow");
+      } else {
+        setShowCollateralModal(true);
+      }
+    } catch (error) {
+      console.error("Error during borrow process:", error);
     }
   };
 
-
   return (
     <div className={`w-full`}>
+      {lendProcessing ? (
+        <Modal
+          isOpen={true}
+          onClose={() => {}}
+          title={"Confirm Transaction"}
+          message={
+            <>
+              <Text tone="muted" className="mb-3">
+                Please confirm the transaction in your wallet.
+              </Text>
+              <Loading />
+            </>
+          }
+          icon={<AlertTriangle className="text-amber-400" size={28} />}
+        />
+      ) : null}
+
       <div className="grid grid-cols-3 items-center mb-1">
         <div className="text-center">
           <Text weight="semibold" case="upper">
@@ -58,9 +101,7 @@ export default function LoanInfo() {
                 <div key={s.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={s.symbol} width={22} height={22} />
-                    <Text weight="semibold">
-                      {s.symbol}
-                    </Text>
+                    <Text weight="semibold">{s.symbol}</Text>
                   </div>
                   <div className="text-center">
                     <Text>AMOUNT</Text>
@@ -86,9 +127,7 @@ export default function LoanInfo() {
                 <div key={b.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={b.symbol} width={22} height={22} />
-                    <Text weight="semibold">
-                      {b.symbol}
-                    </Text>
+                    <Text weight="semibold">{b.symbol}</Text>
                   </div>
                   <div className="text-center">
                     <Text>AMOUNT</Text>
@@ -119,9 +158,7 @@ export default function LoanInfo() {
               <Text className="mb-2" tone="white">
                 Borrowable Amount
               </Text>
-              <Text weight="semibold">
-                {maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}
-              </Text>
+              <Text weight="semibold">{maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}</Text>
             </div>
 
             <div>
@@ -153,8 +190,8 @@ export default function LoanInfo() {
       </Card>
 
       <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        isOpen={showCollateralModal}
+        onClose={() => setShowCollateralModal(false)}
         title="Insufficient Collateral"
         message={
           <>
@@ -169,11 +206,12 @@ export default function LoanInfo() {
         icon={<AlertTriangle className="text-amber-400" size={28} />}
         primaryButtonText="Deposit"
         primaryButtonAction={() => {
+          setShowCollateralModal(false);
           router.push("/wallet/deposit/WBTC");
         }}
         secondaryButtonText="Go back"
         secondaryButtonAction={() => {
-          setShowModal(false);
+          setShowCollateralModal(false);
           router.push("/wallet");
         }}
       />

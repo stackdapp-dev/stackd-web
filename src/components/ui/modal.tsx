@@ -11,10 +11,10 @@ interface ModalProps {
   title: string;
   message: ReactNode;
   icon?: ReactNode;
-  primaryButtonText: string;
-  primaryButtonAction: () => void;
-  secondaryButtonText: string;
-  secondaryButtonAction: () => void;
+  primaryButtonText?: string;
+  primaryButtonAction?: () => void;
+  secondaryButtonText?: string;
+  secondaryButtonAction?: () => void;
 }
 
 export default function Modal({
@@ -53,14 +53,20 @@ export default function Modal({
           </Text>
           {message}
 
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" className="flex-1" onClick={secondaryButtonAction}>
-              {secondaryButtonText}
-            </Button>
-            <Button className="flex-1" onClick={primaryButtonAction}>
-              {primaryButtonText}
-            </Button>
-          </div>
+          {(primaryButtonText || secondaryButtonText) && (
+            <div className="flex w-full gap-3">
+              {secondaryButtonText && (
+                <Button variant="ghost" className="flex-1" onClick={secondaryButtonAction}>
+                  {secondaryButtonText}
+                </Button>
+              )}
+              {primaryButtonText && (
+                <Button className="flex-1" onClick={primaryButtonAction}>
+                  {primaryButtonText}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
