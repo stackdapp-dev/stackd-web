@@ -15,6 +15,8 @@ interface ModalProps {
   primaryButtonAction?: () => void;
   secondaryButtonText?: string;
   secondaryButtonAction?: () => void;
+  showCloseButton?: boolean;
+  showActionButtons?: boolean;
 }
 
 export default function Modal({
@@ -27,36 +29,40 @@ export default function Modal({
   primaryButtonAction,
   secondaryButtonText,
   secondaryButtonAction,
+  showCloseButton = true,
+  showActionButtons = true,
 }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="relative bg-black text-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-        <button
-          aria-label="Close"
-          onClick={onClose}
-          className="absolute top-3 right-3 text-white/60 hover:text-white"
-        >
-          <X size={18} />
-        </button>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+      <div className="relative bg-neutral-900 text-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+        {showCloseButton && (
+          <button
+            aria-label="Close"
+            onClick={onClose}
+            className="absolute top-3 right-3 text-white/60 hover:text-white"
+          >
+            <X size={18} />
+          </button>
+        )}
 
         <div className="flex flex-col items-center text-center">
-          {icon && (
-            <div className="bg-amber-500/10 rounded-full p-3 mb-4">
-              {icon}
-            </div>
-          )}
+          {icon && icon}
 
           <Text size="xl" weight="semibold" className="mb-2">
             {title}
           </Text>
           {message}
 
-          {(primaryButtonText || secondaryButtonText) && (
+          {showActionButtons && (
             <div className="flex w-full gap-3">
               {secondaryButtonText && (
-                <Button variant="ghost" className="flex-1" onClick={secondaryButtonAction}>
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={secondaryButtonAction}
+                >
                   {secondaryButtonText}
                 </Button>
               )}

@@ -27,6 +27,7 @@ const WithdrawViaOTC = () => {
   const router = useRouter();
 
   const choosePayMethod = () => {
+    console.log("paymentMethods", paymentMethods);
     if (paymentMethods.length > 0) {
       router.push("/withdraw/otc/pay-methods");
     } else {

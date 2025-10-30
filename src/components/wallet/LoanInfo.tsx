@@ -86,7 +86,11 @@ export default function LoanInfo() {
         </div>
         <div className="text-left pl-6" />
         <div className="text-center">
-          <MaskedValue value={netLoanValue} mask="long" className="text-sm font-semibold" />
+          <MaskedValue
+            value={netLoanValue}
+            mask="long"
+            className="text-sm font-semibold"
+          />
         </div>
       </div>
 
@@ -203,7 +207,11 @@ export default function LoanInfo() {
             </Text>
           </>
         }
-        icon={<AlertTriangle className="text-amber-400" size={28} />}
+        icon={
+          <div className="bg-amber-500/10 rounded-full p-3 mb-4">
+            <AlertTriangle className="text-amber-400" size={28} />
+          </div>
+        }
         primaryButtonText="Deposit"
         primaryButtonAction={() => {
           setShowCollateralModal(false);
