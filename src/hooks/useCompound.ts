@@ -1,11 +1,12 @@
 import { TOKEN_METADATA, getTokenMetadata } from "@/constants/Tokens";
 import { C_COMPOUND_ADDR } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
-import { borrowBalanceOf, approve as compoundApprove, supply as compoundSupply, withdraw as compoundWithdraw, getAssetInfo, getBorrowRate, getUtilization, userCollateral } from "@/lib/web3/compound";
+import { borrowBalanceOf, allowance as compoundAllowance, approve as compoundApprove, supply as compoundSupply, withdraw as compoundWithdraw, getAssetInfo, getBorrowRate, getUtilization, userCollateral } from "@/lib/web3/compound";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useCallback, useEffect, useState } from "react";
 import type { Address, Hex } from "viem";
+import { formatUnits } from "viem";
 
 // Token symbols used for collateral and borrowing
 const COLLATERAL_TOKEN = "WBTC";
@@ -32,6 +33,7 @@ type UseCompoundResult = {
   approve: (token: Address, amount: bigint, spender?: Address) => Promise<{ txHash: Hex | null; error: string | null }>;
   supply: (token: Address, amount: bigint) => Promise<{ txHash: Hex | null; error: string | null }>;
   withdraw: (token: Address, amount: bigint) => Promise<{ txHash: Hex | null; error: string | null }>;
+  allowance?: (token: Address, spender?: Address) => Promise<bigint | null>;
   maxLtv: number;
   liquidationRatio: number;
   borrowApr: number;
@@ -42,7 +44,7 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   const { publicClient, walletClient } = useWeb3();
   const getTokenPrice = useGetTokenPrice();
   const acct = walletClient?.account?.address || accountAddress;
-  
+
   const [collateralRaw, setCollateralRaw] = useState<bigint>(BigInt(0));
   const [borrowRaw, setBorrowRaw] = useState<bigint>(BigInt(0));
   const [maxLtv, setMaxLtv] = useState<number>(0);
@@ -88,15 +90,31 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
     void fetch();
   }, [fetch]);
 
-  const collateralAmount = Number(collateralRaw) / 10 ** getTokenMetadata(COLLATERAL_TOKEN)?.decimals;
-  const borrowAmount = Number(borrowRaw) / 10 ** getTokenMetadata(BORROW_TOKEN)?.decimals;
+  const collateralAmount = Number(formatUnits(collateralRaw, getTokenMetadata(COLLATERAL_TOKEN).decimals));
+
+  const borrowAmount = Number(formatUnits(borrowRaw, getTokenMetadata(BORROW_TOKEN).decimals));
 
   const collateralUsd = collateralAmount * getTokenPrice(COLLATERAL_TOKEN);
   const borrowUsd = borrowAmount * getTokenPrice(BORROW_TOKEN);
   const netLoanValue = collateralUsd - borrowUsd;
 
-  const suppliedAssets: Asset[] = [{ symbol: COLLATERAL_TOKEN, amount: collateralAmount, usdValue: collateralUsd, decimals: getTokenMetadata(COLLATERAL_TOKEN)?.decimals }];
-  const borrowedAssets: Asset[] = [{ symbol: BORROW_TOKEN, amount: borrowAmount, usdValue: borrowUsd, decimals: getTokenMetadata(BORROW_TOKEN)?.decimals }];
+  const suppliedAssets: Asset[] = [
+    {
+      symbol: COLLATERAL_TOKEN,
+      amount: collateralAmount,
+      usdValue: collateralUsd,
+      decimals: getTokenMetadata(COLLATERAL_TOKEN)?.decimals,
+    },
+  ];
+
+  const borrowedAssets: Asset[] = [
+    {
+      symbol: BORROW_TOKEN,
+      amount: borrowAmount,
+      usdValue: borrowUsd,
+      decimals: getTokenMetadata(BORROW_TOKEN)?.decimals,
+    },
+  ];
 
   const approve = useCallback(
     async (token: Address, amount: bigint, spender: Address = C_COMPOUND_ADDR): Promise<{ txHash: Hex | null; error: string | null }> => {
@@ -114,6 +132,20 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
       }
     },
     [walletClient, acct]
+  );
+
+  const allowance = useCallback(
+    async (token: Address, spender: Address = C_COMPOUND_ADDR): Promise<bigint | null> => {
+      if (!publicClient || !acct) return null;
+      try {
+        const res = await compoundAllowance(publicClient, formatAddress(acct), token, spender);
+        return res ?? null;
+      } catch (err) {
+        console.error("allowance read failed", err);
+        return null;
+      }
+    },
+    [publicClient, acct]
   );
 
   const supply = useCallback(
@@ -163,6 +195,7 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
     approve,
     supply,
     withdraw,
+    allowance,
     maxLtv,
     liquidationRatio,
     borrowApr,

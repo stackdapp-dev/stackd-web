@@ -1,6 +1,6 @@
-import { C_COMPOUND_ABI, C_COMPOUND_ADDR, WBTC_ABI } from "@/lib/config/abis";
+import { C_COMPOUND_ABI, C_COMPOUND_ADDR } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
-import { type Address, type Hex, type PublicClient, type WalletClient } from "viem";
+import { erc20Abi, type Address, type Hex, type PublicClient, type WalletClient } from "viem";
 import { arbitrum } from "viem/chains";
 
 const COMPOUND_ADDRESS = formatAddress(C_COMPOUND_ADDR);
@@ -22,7 +22,7 @@ export async function userCollateral(publicClient: PublicClient, user: Address, 
 export async function approve(walletClient: WalletClient, account: Address, token: Address, spender: Address, amount: bigint): Promise<Hex> {
   return await walletClient.writeContract({
     address: token,
-    abi: WBTC_ABI,
+    abi: erc20Abi,
     functionName: "approve",
     args: [spender, amount],
     account,
@@ -96,4 +96,13 @@ export async function getBorrowRate(publicClient: PublicClient, utilization: big
     functionName: "getBorrowRate",
     args: [utilization],
   });
+}
+
+export async function allowance(publicClient: PublicClient, owner: Address, token: Address, spender: Address): Promise<bigint> {
+  return await publicClient.readContract({
+    address: token,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [owner, spender],
+  }) as bigint;
 }

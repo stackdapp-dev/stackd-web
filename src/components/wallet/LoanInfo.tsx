@@ -1,55 +1,32 @@
 "use client";
 
+import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
 import MaskedValue from "@/components/ui/maskedValue";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
-import { useLoanCalculations } from "@/hooks/useLoanCalculations";
 import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
+import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 
-type Asset = {
-  symbol: string;
-  amount: number;
-  usdValue: number;
-  decimals: number;
-};
-
-interface LoanInfoProps {
-  assets?: any[];
-  supplied?: Asset[];
-  borrowed?: Asset[];
-  ltv?: number;
-  borrowApr?: number;
-  borrowableAmount?: number;
-  liquidationPrice?: number;
-  onBorrow?: () => void;
-  onRepay?: () => void;
-}
-
-export default function LoanInfo({ assets = [], supplied = [], borrowed = [], onBorrow, onRepay }: LoanInfoProps) {
+export default function LoanInfo() {
   const visibility = useVisibility();
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
 
-  const wbtcBalance = useMemo(() => assets.find((a) => a.symbol === "WBTC")?.amount || 0, [assets]);
+  const { wbtcBalance } = useWalletBalanceContext();
 
-  const { ltv, borrowApr, borrowableAmount, liquidationPrice, netLoanValue } = useLoanCalculations(supplied, borrowed);
-
-  const hasBorrowed = borrowed.some(b => b.symbol === "USDT" && b.amount > 0);
+  const { loanCalcs } = useLoanCalculationsContext();
+  const { ltv, borrowApr, borrowableAmount, liquidationPrice, netLoanValue, suppliedAssets, borrowedAssets, hasBorrowed } = loanCalcs;
 
   const handleBorrow = () => {
     if (wbtcBalance > 0 || borrowableAmount > 0) {
-      if (onBorrow) {
-        onBorrow();
-      } else {
-        router.push("/wallet/tx/borrow");
-      }
+      router.push("/wallet/tx/borrow");
     } else {
       setShowModal(true);
     }
@@ -77,7 +54,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
               SUPPLIED
             </Text>
             <div className="flex flex-col gap-2">
-              {supplied.map((s) => (
+              {suppliedAssets.map((s) => (
                 <div key={s.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={s.symbol} width={22} height={22} />
@@ -105,7 +82,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
               BORROWED
             </Text>
             <div className="flex flex-col gap-2">
-              {borrowed.map((b) => (
+              {borrowedAssets.map((b) => (
                 <div key={b.symbol} className="grid grid-cols-3 items-center">
                   <div className="flex items-center gap-2">
                     <TokenIcon symbol={b.symbol} width={22} height={22} />
@@ -169,7 +146,7 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
           <Button onClick={handleBorrow} className="flex-1" type="button">
             Borrow
           </Button>
-          <Button onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))} className="flex-1" type="button" disabled={!hasBorrowed}>
+          <Button onClick={() => router.push("/wallet/tx/repay")} className="flex-1" type="button" disabled={!hasBorrowed}>
             Repay
           </Button>
         </div>

@@ -17,6 +17,11 @@ export default function DepositPage({ params }: { params: Promise<{ symbol?: str
   const symbol = React.use(params).symbol || "ETH";
   const address = walletClient?.account?.address || "-";
 
+  const qrNode = React.useMemo(
+    () => <QRCodeSVG value={address} size={220} marginSize={1} fgColor="#000000" bgColor="#ffffff" />,
+    [address]
+  );
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(address || "");
@@ -30,7 +35,7 @@ export default function DepositPage({ params }: { params: Promise<{ symbol?: str
       <PageHeader title={`Deposit ${symbol}`}/>
 
       <div className="flex justify-center">
-        <QRCodeSVG value={address} size={220} marginSize={1} fgColor="#000000" bgColor="#ffffff" />
+        {qrNode}
       </div>
 
       <div className="text-left">

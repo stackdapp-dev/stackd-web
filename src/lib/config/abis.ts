@@ -1,4 +1,4 @@
-import { erc20Abi } from "viem";
+
 // Contract ABIs and addresses for Compound V3 and tokens
 
 export const C_COMPOUND_ADDR = "0xd98Be00b5D27fc98112BdE293e487f8D4cA57d07" as const;
@@ -73,6 +73,4 @@ export const C_COMPOUND_ABI = [
   },
 ] as const;
 
-export const WBTC_ABI = erc20Abi;
 
-export const USDT_ABI = erc20Abi;

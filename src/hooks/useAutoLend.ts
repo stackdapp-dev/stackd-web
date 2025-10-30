@@ -11,7 +11,7 @@ interface UseAutoLendProps {
 
 export function useAutoLend({ mode, wbtcBalance, onError }: UseAutoLendProps) {
   const [lendProcessing, setLendProcessing] = useState(false);
-  const { approve, supply, refetch } = useCompound();
+  const { approve, supply, refetch, allowance } = useCompound();
 
   const runningRef = useRef(false);
   const lastBalanceRef = useRef<number>(0);
@@ -32,8 +32,12 @@ export function useAutoLend({ mode, wbtcBalance, onError }: UseAutoLendProps) {
 
       const amountBigInt = parseUnits(wbtcBalance.toString(), tokenMeta.decimals);
 
-      const approveResult = await approve(tokenMeta.address as `0x${string}`, amountBigInt);
-      if (approveResult.error) throw new Error(`Approval failed: ${approveResult.error}`);
+      // Check allowance and approve only if needed
+      const currentAllowance = allowance ? await allowance(tokenMeta.address as `0x${string}`) : null;
+      if (currentAllowance === null || currentAllowance < amountBigInt) {
+        const approveResult = await approve(tokenMeta.address as `0x${string}`, amountBigInt);
+        if (approveResult.error) throw new Error(`Approval failed: ${approveResult.error}`);
+      }
 
       const supplyResult = await supply(tokenMeta.address as `0x${string}`, amountBigInt);
       if (supplyResult.error) throw new Error(`Supply failed: ${supplyResult.error}`);
@@ -48,7 +52,7 @@ export function useAutoLend({ mode, wbtcBalance, onError }: UseAutoLendProps) {
       runningRef.current = false;
       setLendProcessing(false);
     }
-  }, [mode, wbtcBalance, approve, supply, refetch, onError]);
+  }, [mode, wbtcBalance, approve, supply, refetch, onError, allowance]);
 
   useEffect(() => {
     lendOnLoad();

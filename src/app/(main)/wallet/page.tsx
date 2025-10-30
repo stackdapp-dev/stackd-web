@@ -1,24 +1,30 @@
 "use client";
 
+import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import { Balance } from "@/components/wallet";
 import Assets from "@/components/wallet/Assets";
 import LoanInfo from "@/components/wallet/LoanInfo";
-import { useCompound } from "@/hooks/useCompound";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
-import { useTokenPrices } from "@/providers/TokenPriceProvider";
+import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
+import { useEffect } from "react";
 
 const Wallet = () => {
-  const { tokenPrices } = useTokenPrices();
-  const { assets, totalBalance } = useWalletBalance(tokenPrices);
-  const { suppliedAssets, borrowedAssets, netLoanValue } = useCompound();
-  const walletBalance = totalBalance + netLoanValue;
+  const { assets, totalBalance, refetchBalances } = useWalletBalanceContext();
+  const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
+  const { netLoanValue } = loanCalcs;
+
+  useEffect(() => {
+    const refreshData = async () => {
+      await Promise.all([refetchBalances(), refetchLoanData()]);
+    };
+    refreshData();
+  }, [refetchBalances, refetchLoanData]);
 
   return (
     <div className="flex flex-col gap-8 items-center p-6 pt-8">
       <>
-        <Balance amount={walletBalance} />
+        <Balance amount={totalBalance + netLoanValue} />
         <Assets items={assets} />
-        <LoanInfo assets={assets} supplied={suppliedAssets} borrowed={borrowedAssets} />
+        <LoanInfo />
       </>
     </div>
   );

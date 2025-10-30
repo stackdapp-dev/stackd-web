@@ -12,10 +12,8 @@ export const useLoanCalculations = (suppliedAssets: Asset[], borrowedAssets: Ass
   const { maxLtv, liquidationRatio, borrowApr } = useCompound();
   const getPrice = useGetTokenPrice();
 
-  const calculateTotalUsd = (assets: Asset[]) => assets.reduce((sum, asset) => sum + asset.amount * getPrice(asset.symbol), 0);
-
-  const totalSuppliedUsd = calculateTotalUsd(suppliedAssets);
-  const totalBorrowedUsd = calculateTotalUsd(borrowedAssets);
+  const totalSuppliedUsd = suppliedAssets.reduce((sum, asset) => sum + asset.amount * getPrice(asset.symbol), 0);
+  const totalBorrowedUsd = borrowedAssets.reduce((sum, asset) => sum + asset.amount * getPrice(asset.symbol), 0);
 
   // Current calculations
   const ltv = totalSuppliedUsd > 0 ? (totalBorrowedUsd / totalSuppliedUsd) * 100 : 0;
@@ -37,21 +35,24 @@ export const useLoanCalculations = (suppliedAssets: Asset[], borrowedAssets: Ass
   const borrowable = [borrowableAmount, borrowableAmountNew];
   const ltvRange = [ltv, effectiveNewLtv];
   const netLoanValue = totalSuppliedUsd - totalBorrowedUsd;
-
+  const hasBorrowed = borrowedAssets.some((b) => b.symbol === "USDT" && b.amount > 0);
 
   return {
     ltv,
     borrowableAmount,
     liquidationPrice,
-    netLoanValue,
+    borrowCapacity,
+    liquidationPoint,
     wbtc,
     usdt,
     borrowable,
     ltvRange,
+    netLoanValue,
+    hasBorrowed,
     maxLtv,
-    borrowCapacity,
     liquidationRatio,
-    liquidationPoint,
     borrowApr,
+    suppliedAssets,
+    borrowedAssets,
   };
 };
