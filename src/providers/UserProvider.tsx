@@ -18,6 +18,7 @@ type UserContextValue = {
   profile: UserProfile;
   paymentMethods: UserPaymentMethod[];
   getAccessToken: () => Promise<string | null>;
+  refetchPaymentMethods: () => Promise<void>;
 };
 
 /**
@@ -77,12 +78,22 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     getchUserResources();
   }, [authenticated, getAccessToken]);
 
+  const refetchPaymentMethods = async () => {
+    const accessToken = await getAccessToken();
+    if (!accessToken) return;
+    const data = await getUserPaymentMethods(accessToken);
+    if (data) {
+      setPaymentMethods(data);
+    }
+  };
+
   // Context value
   const value: UserContextValue = {
     walletAddress,
     profile,
     paymentMethods,
     getAccessToken,
+    refetchPaymentMethods,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

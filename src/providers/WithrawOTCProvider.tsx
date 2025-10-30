@@ -2,6 +2,7 @@
 
 import { getTokenMetadata, TOKEN_ADDRESSES } from "@/constants/Tokens";
 import { getExchangeRate, RateData } from "@/lib/api/rates";
+import { UserPaymentMethodInput } from "@/lib/api/user";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useWallets } from "@privy-io/react-auth";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -13,9 +14,10 @@ type WithdrawOTCValue = {
   setAmount: (amount: string) => void;
   convertedAmount: string;
   isValidAmount: boolean;
-  isProcessing: boolean;
-  available: number;
+  available: number; // available USDT to withdraw
   handleMax: () => void;
+  paymentMethod: UserPaymentMethodInput | string | null;
+  setPaymentMethod: (paymentMethod: UserPaymentMethodInput | string) => void;
 };
 
 const WithdrawOTCContext = createContext<WithdrawOTCValue | undefined>(
@@ -28,12 +30,14 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
   const [amount, setAmount] = useState<string>("");
   const [convertedAmount, setConvertedAmount] = useState<string>("");
   const [isValidAmount, setIsValidAmount] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [available, setAvailable] = useState<number>(0);
   const [handleMax] = useState<() => void>(() => () => {});
   const [exchangeRate, setExchangeRate] = useState<RateData | undefined>(
     undefined
   );
+  const [paymentMethod, setPaymentMethod] = useState<
+    UserPaymentMethodInput | string | null
+  >(null);
 
   const { publicClient } = useWeb3();
   const { wallets } = useWallets();
@@ -90,9 +94,10 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
         setAmount,
         convertedAmount,
         isValidAmount,
-        isProcessing,
         available,
         handleMax,
+        paymentMethod,
+        setPaymentMethod,
       }}
     >
       {children}

@@ -6,7 +6,14 @@ import MaskedValue from "@/components/ui/maskedValue";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
 import { useLoanCalculations } from "@/hooks/useLoanCalculations";
-import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
+import {
+  formatAmount,
+  formatCurrency,
+  formatPercent,
+  MASK_LONG,
+  MASK_SHORT,
+  maskString,
+} from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
 import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -32,16 +39,26 @@ interface LoanInfoProps {
   onRepay?: () => void;
 }
 
-export default function LoanInfo({ assets = [], supplied = [], borrowed = [], onBorrow, onRepay }: LoanInfoProps) {
+export default function LoanInfo({
+  assets = [],
+  supplied = [],
+  borrowed = [],
+  onBorrow,
+  onRepay,
+}: LoanInfoProps) {
   const visibility = useVisibility();
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
 
-  const wbtcBalance = useMemo(() => assets.find((a) => a.symbol === "WBTC")?.amount || 0, [assets]);
+  const wbtcBalance = useMemo(
+    () => assets.find((a) => a.symbol === "WBTC")?.amount || 0,
+    [assets]
+  );
 
-  const { ltv, borrowApr, borrowableAmount, liquidationPrice, netLoanValue } = useLoanCalculations(supplied, borrowed);
+  const { ltv, borrowApr, borrowableAmount, liquidationPrice, netLoanValue } =
+    useLoanCalculations(supplied, borrowed);
 
-  const hasBorrowed = borrowed.some(b => b.symbol === "USDT" && b.amount > 0);
+  const hasBorrowed = borrowed.some((b) => b.symbol === "USDT" && b.amount > 0);
 
   const handleBorrow = () => {
     if (wbtcBalance > 0 || borrowableAmount > 0) {
@@ -55,7 +72,6 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
     }
   };
 
-
   return (
     <div className={`w-full`}>
       <div className="grid grid-cols-3 items-center mb-1">
@@ -66,7 +82,11 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
         </div>
         <div className="text-left pl-6" />
         <div className="text-center">
-          <MaskedValue value={netLoanValue} mask="long" className="text-sm font-semibold" />
+          <MaskedValue
+            value={netLoanValue}
+            mask="long"
+            className="text-sm font-semibold"
+          />
         </div>
       </div>
 
@@ -88,13 +108,25 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
                   <div className="text-center">
                     <Text>AMOUNT</Text>
                     <Text size="sm" weight="semibold" className="mt-0">
-                      {maskString(formatAmount(s.amount), visibility.visible, MASK_SHORT)}
+                      {maskString(
+                        formatAmount(s.amount),
+                        visibility.visible,
+                        MASK_SHORT
+                      )}
                     </Text>
                   </div>
                   <div className="text-right">
                     <Text>USD VALUE</Text>
-                    <Text size="sm" weight="semibold" className="mt-0 text-right">
-                      {maskString(formatCurrency(s.usdValue), visibility.visible, MASK_LONG)}
+                    <Text
+                      size="sm"
+                      weight="semibold"
+                      className="mt-0 text-right"
+                    >
+                      {maskString(
+                        formatCurrency(s.usdValue),
+                        visibility.visible,
+                        MASK_LONG
+                      )}
                     </Text>
                   </div>
                 </div>
@@ -116,13 +148,25 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
                   <div className="text-center">
                     <Text>AMOUNT</Text>
                     <Text size="sm" weight="semibold" className="mt-0">
-                      {maskString(formatAmount(b.amount), visibility.visible, MASK_SHORT)}
+                      {maskString(
+                        formatAmount(b.amount),
+                        visibility.visible,
+                        MASK_SHORT
+                      )}
                     </Text>
                   </div>
                   <div className="text-right">
                     <Text>USD VALUE</Text>
-                    <Text size="sm" weight="semibold" className="mt-0 text-right">
-                      {maskString(formatCurrency(b.usdValue), visibility.visible, MASK_LONG)}
+                    <Text
+                      size="sm"
+                      weight="semibold"
+                      className="mt-0 text-right"
+                    >
+                      {maskString(
+                        formatCurrency(b.usdValue),
+                        visibility.visible,
+                        MASK_LONG
+                      )}
                     </Text>
                   </div>
                 </div>
@@ -136,14 +180,22 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
                 LTV
               </Text>
               <Text size="sm" weight="semibold" className="mb-3">
-                {maskString(`${formatPercent(ltv)}`, visibility.visible, MASK_SHORT)}
+                {maskString(
+                  `${formatPercent(ltv)}`,
+                  visibility.visible,
+                  MASK_SHORT
+                )}
               </Text>
 
               <Text className="mb-2" tone="white">
                 Borrowable Amount
               </Text>
               <Text size="sm" weight="semibold">
-                {maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}
+                {maskString(
+                  formatCurrency(borrowableAmount),
+                  visibility.visible,
+                  MASK_LONG
+                )}
               </Text>
             </div>
 
@@ -152,14 +204,22 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
                 Borrow APR
               </Text>
               <Text size="sm" weight="semibold" className="mb-4 text-right">
-                {maskString(`${formatPercent(borrowApr)}`, visibility.visible, MASK_SHORT)}
+                {maskString(
+                  `${formatPercent(borrowApr)}`,
+                  visibility.visible,
+                  MASK_SHORT
+                )}
               </Text>
 
               <Text className="mb-2 text-right" tone="white">
                 Liquidation Price
               </Text>
               <Text size="sm" weight="semibold" className="text-right">
-                {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
+                {maskString(
+                  formatCurrency(liquidationPrice),
+                  visibility.visible,
+                  MASK_LONG
+                )}
               </Text>
             </div>
           </div>
@@ -169,7 +229,12 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
           <Button onClick={handleBorrow} className="flex-1" type="button">
             Borrow
           </Button>
-          <Button onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))} className="flex-1" type="button" disabled={!hasBorrowed}>
+          <Button
+            onClick={onRepay ?? (() => router.push("/wallet/tx/repay"))}
+            className="flex-1"
+            type="button"
+            disabled={!hasBorrowed}
+          >
             Repay
           </Button>
         </div>
@@ -189,7 +254,11 @@ export default function LoanInfo({ assets = [], supplied = [], borrowed = [], on
             </Text>
           </>
         }
-        icon={<AlertTriangle className="text-amber-400" size={28} />}
+        icon={
+          <div className="bg-amber-500/10 rounded-full p-3 mb-4">
+            <AlertTriangle className="text-amber-400" size={28} />
+          </div>
+        }
         primaryButtonText="Deposit"
         primaryButtonAction={() => {
           router.push("/wallet/deposit/WBTC");
