@@ -40,11 +40,11 @@ const LoanCalculationsContext = createContext<LoanCalculationsContextType | unde
 
 export function LoanCalculationsProvider({ children }: { children: ReactNode }) {
   const [previewAmount, setPreviewAmount] = useState(0);
-  const { suppliedAssets, borrowedAssets, refetch } = useCompound();
+  const { suppliedAssets, borrowedAssets, refetch: refetchLoanData } = useCompound();
   const loanCalcs = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
 
   return (
-    <LoanCalculationsContext.Provider value={{ loanCalcs, setPreviewAmount, refetchLoanData: refetch }}>
+    <LoanCalculationsContext.Provider value={{ loanCalcs, setPreviewAmount, refetchLoanData }}>
       {children}
     </LoanCalculationsContext.Provider>
   );

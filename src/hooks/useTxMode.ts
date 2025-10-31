@@ -1,9 +1,10 @@
 "use client";
 
+import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { useCompound } from "@/hooks/useCompound";
 import { useLoanCalculations } from "@/hooks/useLoanCalculations";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -16,8 +17,9 @@ export function useTxMode(mode: TxMode = "borrow") {
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewAmount, setPreviewAmount] = useState(0);
 
-  const { suppliedAssets, borrowedAssets, approve, supply, withdraw, refetch, allowance } = useCompound();
-  const { tokenBalances, refetchBalances } = useWalletBalance();
+  const { suppliedAssets, borrowedAssets, approve, supply, withdraw, allowance } = useCompound();
+  const { assets, refetchBalances } = useWalletBalanceContext();
+  const { refetchLoanData } = useLoanCalculationsContext();
   const getPrice = useGetTokenPrice();
   const autoAttempted = useRef(false);
 
@@ -26,7 +28,7 @@ export function useTxMode(mode: TxMode = "borrow") {
   const { borrowableAmount } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
   const usdtPrice = getPrice("USDT") || 1;
   const availableForBorrow = borrowableAmount / usdtPrice;
-  const availableForRepay = tokenBalances["USDT"]?.balance || 0;
+  const availableForRepay = assets.find((a) => a.symbol === "USDT")?.amount || 0;
   const borrowedAmount = borrowedAssets.find((a) => a.symbol === "USDT")?.amount || 0;
   const available = mode === "repay" ? availableForRepay : availableForBorrow;
 
@@ -82,7 +84,7 @@ export function useTxMode(mode: TxMode = "borrow") {
         if (result.error) throw new Error(result.error);
       }
 
-      await Promise.all([refetchBalances(), refetch()]);
+      await Promise.all([refetchBalances(), refetchLoanData()]);
       router.push("/wallet");
     } catch (err) {
       console.error(`${mode} failed:`, err);
@@ -90,7 +92,7 @@ export function useTxMode(mode: TxMode = "borrow") {
     } finally {
       setIsProcessing(false);
     }
-  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetch, router, allowance]);
+  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetchLoanData, router, allowance]);
 
   useEffect(() => {
     if (!autoAttempted.current) autoAttempted.current = true;

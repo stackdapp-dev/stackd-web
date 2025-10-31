@@ -28,6 +28,17 @@ interface WalletBalance {
   refetchBalances: () => Promise<void>;
 }
 
+interface WalletBalanceCache {
+  data: {
+    ethBalance: number;
+    tokenBalances: Record<string, TokenBalance>;
+  };
+  timestamp: number;
+}
+
+const walletBalanceCache = new Map<string, WalletBalanceCache>();
+const CACHE_TTL = 30000; // 30 seconds 
+
 export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = {}): WalletBalance {
   const [ethBalance, setEthBalance] = useState<number>(0);
   const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
@@ -55,19 +66,32 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
     return assets.reduce((sum, a) => sum + a.usdValue, 0);
   }, [assets]);
 
-  const fetchBalances = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const fetchBalances = useCallback(async (forceRefresh: boolean = false) => {
+    if (!publicClient || !walletClient?.account?.address) {
+      setIsLoading(false);
+      return;
+    }
 
-      if (!walletClient?.account?.address) {
-        setEthBalance(0);
-        setTokenBalances({});
+    const walletAddress = formatAddress(walletClient.account.address);
+    const cacheKey = `${walletAddress}_balance`;
+    const now = Date.now();
+
+    // Check cache unless forced refresh
+    if (!forceRefresh) {
+      const cached = walletBalanceCache.get(cacheKey);
+
+      if (cached && now - cached.timestamp < CACHE_TTL) {
+        // console.log("Using cached wallet balance data (age:", now - cached.timestamp, "ms)");
+        setEthBalance(cached.data.ethBalance);
+        setTokenBalances(cached.data.tokenBalances);
         setIsLoading(false);
         return;
       }
+    }
 
-      const walletAddress = formatAddress(walletClient.account.address);
+    try {
+      setIsLoading(true);
+      setError(null);
 
       const [balanceWei, balanceResults] = await Promise.all([
         publicClient.getBalance({ address: walletAddress }),
@@ -108,6 +132,16 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
       });
 
       setTokenBalances(balances);
+
+      // Update cache
+      walletBalanceCache.set(cacheKey, {
+        data: {
+          ethBalance: ethBalanceNumber,
+          tokenBalances: balances,
+        },
+        timestamp: now,
+      });
+
       setIsLoading(false);
     } catch (err) {
       console.error("Error fetching balances:", err);
@@ -119,8 +153,10 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
   }, [walletClient?.account?.address, publicClient, tokenEntries]);
 
   useEffect(() => {
-    fetchBalances();
+    void fetchBalances();
   }, [fetchBalances]);
+
+  const refetchBalances = useCallback(() => fetchBalances(true), [fetchBalances]);
 
   return {
     ethBalance,
@@ -129,6 +165,6 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
     totalBalance,
     isLoading,
     error,
-    refetchBalances: fetchBalances,
+    refetchBalances,
   };
 }
