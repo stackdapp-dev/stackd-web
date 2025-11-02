@@ -27,6 +27,20 @@ const BORROW_TOKEN = "USDT";
 // Helper function to convert from wei (10^18) to percentage
 const toPercentage = (value: bigint | number) => (Number(value) / 1e18) * 100;
 
+interface CompoundDataCache {
+  data: {
+    collateralRaw: bigint;
+    borrowRaw: bigint;
+    maxLtv: number;
+    liquidationRatio: number;
+    borrowApr: number;
+  };
+  timestamp: number;
+}
+
+const compoundCache = new Map<string, CompoundDataCache>();
+const CACHE_TTL = 30000; // 30 seconds
+
 type Asset = {
   symbol: string;
   amount: number;
@@ -76,8 +90,31 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   const [error, setError] = useState<string | null>(null);
   const [initialLoad, setInitialLoad] = useState<boolean>(true);
 
-  const fetch = useCallback(async () => {
-    if (!publicClient || !acct) return;
+  const fetch = useCallback(async (forceRefresh: boolean = false) => {
+    if (!publicClient || !acct) {
+      setIsLoading(false);
+      return;
+    }
+
+    const cacheKey = `${acct}_compound`;
+    const now = Date.now();
+
+    // Check cache unless forced refresh
+    if (!forceRefresh) {
+      const cached = compoundCache.get(cacheKey);
+      if (cached && now - cached.timestamp < CACHE_TTL) {
+        // console.log("Using cached Compound data (age:", now - cached.timestamp, "ms)");
+        // Use cached data
+        setCollateralRaw(cached.data.collateralRaw);
+        setBorrowRaw(cached.data.borrowRaw);
+        setMaxLtv(cached.data.maxLtv);
+        setLiquidationRatio(cached.data.liquidationRatio);
+        setBorrowApr(cached.data.borrowApr);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       if (initialLoad) setIsLoading(true);
       const coll = await userCollateral(
@@ -98,13 +135,29 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
       // Calculate APR: (borrowRate / 10^18) * secondsPerYear * 100
       const secondsPerYear = 60 * 60 * 24 * 365; // 31536000
       const apr = (Number(borrowRate) / 10 ** 18) * secondsPerYear * 100;
-      setBorrowApr(apr);
 
-      setCollateralRaw(coll ?? BigInt(0));
-      setBorrowRaw(bor ?? BigInt(0));
-      setMaxLtv(toPercentage(assetInfo.borrowCollateralFactor));
-      setLiquidationRatio(toPercentage(assetInfo.liquidateCollateralFactor));
+      const fetchedData = {
+        collateralRaw: coll ?? BigInt(0),
+        borrowRaw: bor ?? BigInt(0),
+        maxLtv: toPercentage(assetInfo.borrowCollateralFactor),
+        liquidationRatio: toPercentage(assetInfo.liquidateCollateralFactor),
+        borrowApr: apr,
+      };
+
+      // Update state
+      setCollateralRaw(fetchedData.collateralRaw);
+      setBorrowRaw(fetchedData.borrowRaw);
+      setMaxLtv(fetchedData.maxLtv);
+      setLiquidationRatio(fetchedData.liquidationRatio);
+      setBorrowApr(fetchedData.borrowApr);
       setError(null);
+
+      // Update cache
+      compoundCache.set(cacheKey, {
+        data: fetchedData,
+        timestamp: now,
+      });
+
       setIsLoading(false);
       setInitialLoad(false);
     } catch (err) {
@@ -254,6 +307,8 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
     [walletClient, acct]
   );
 
+  const refetch = useCallback(() => fetch(true), [fetch]);
+
   return {
     collateralRaw,
     borrowRaw,
@@ -261,7 +316,7 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
     borrowedAssets,
     isLoading,
     error,
-    refetch: fetch,
+    refetch,
     approve,
     supply,
     withdraw,
