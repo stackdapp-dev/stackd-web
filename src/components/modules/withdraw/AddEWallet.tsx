@@ -25,6 +25,7 @@ import { addUserPaymentMethod, UserPaymentMethodInput } from "@/lib/api/user";
 import { useUser } from "@/providers/UserProvider";
 import { useWithdrawOTC } from "@/providers/WithrawOTCProvider";
 import { useForm } from "@tanstack/react-form";
+import { AlertTriangleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as z from "zod";
 
@@ -63,6 +64,9 @@ const AddEWallet = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(
+    undefined
+  );
 
   const form = useForm({
     defaultValues,
@@ -73,7 +77,7 @@ const AddEWallet = () => {
       const { provider, ...rest } = value;
       const payload: UserPaymentMethodInput = {
         ...rest,
-        bankName: provider,
+        eWalletName: provider,
         type: "e-wallet",
       };
 
@@ -82,25 +86,28 @@ const AddEWallet = () => {
         if (!accessToken) return;
 
         setIsLoading(true);
-        const paymentMethodId = await addUserPaymentMethod(
-          accessToken,
-          payload
-        );
+        try {
+          const paymentMethod = await addUserPaymentMethod(
+            accessToken,
+            payload
+          );
 
-        if (paymentMethodId) {
-          // use payment method id only
-          setPaymentMethod(paymentMethodId);
+          setPaymentMethod(paymentMethod);
           await refetchPaymentMethods();
           setIsLoading(false);
-        } else {
+          router.push("/withdraw/otc/review");
+        } catch (error) {
           setIsLoading(false);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred"
+          );
         }
       } else {
-        // use entire payment method details
         setPaymentMethod(payload);
+        router.push("/withdraw/otc/review");
       }
-
-      router.push("/withdraw/otc/review");
     },
   });
 
@@ -246,6 +253,7 @@ const AddEWallet = () => {
           </Button>
         </Field>
       </form>
+
       <Modal
         isOpen={isLoading}
         onClose={() => {}}
@@ -254,6 +262,18 @@ const AddEWallet = () => {
         icon={<Loading size="lg" />}
         showCloseButton={false}
         showActionButtons={false}
+      />
+
+      <Modal
+        isOpen={errorMessage !== undefined}
+        onClose={() => setErrorMessage(undefined)}
+        title="Failed to create payment method"
+        message={errorMessage}
+        icon={<AlertTriangleIcon size="48" />}
+        showCloseButton={true}
+        showActionButtons={true}
+        secondaryButtonText="Dismiss"
+        secondaryButtonAction={() => setErrorMessage(undefined)}
       />
     </div>
   );

@@ -1,4 +1,5 @@
-import { TOKEN_ADDRESSES, TOKEN_METADATA, getTokenMetadata } from "@/constants/Tokens";
+import { TOKEN_METADATA, getTokenMetadata } from "@/constants/Tokens";
+import { TOKEN_ADDRESSES } from "@/constants/addresses";
 import { formatAddress } from "@/lib/utils";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,9 +29,13 @@ interface WalletBalance {
   refetchBalances: () => Promise<void>;
 }
 
-export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = {}): WalletBalance {
+export function useWalletBalance(
+  tokenPrices: Record<string, { usd: number }> = {}
+): WalletBalance {
   const [ethBalance, setEthBalance] = useState<number>(0);
-  const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
+  const [tokenBalances, setTokenBalances] = useState<
+    Record<string, TokenBalance>
+  >({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { publicClient, walletClient } = useWeb3();
@@ -91,7 +96,9 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
         const metadata = getTokenMetadata(symbol);
         if (balanceResult.status === "success" && metadata) {
           const balance = balanceResult.result as bigint;
-          const formattedBalance = Number(formatUnits(balance, metadata.decimals));
+          const formattedBalance = Number(
+            formatUnits(balance, metadata.decimals)
+          );
 
           balances[symbol] = {
             symbol,

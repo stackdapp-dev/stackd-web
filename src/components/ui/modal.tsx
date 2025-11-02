@@ -47,13 +47,15 @@ export default function Modal({
           </button>
         )}
 
-        <div className="flex flex-col items-center text-center">
+        <div className="flex flex-col gap-6 items-center text-center">
           {icon && icon}
 
-          <Text size="xl" weight="semibold" className="mb-2">
-            {title}
-          </Text>
-          {message}
+          <div className="flex flex-col gap-2">
+            <Text size="xl" weight="semibold">
+              {title}
+            </Text>
+            <p>{message}</p>
+          </div>
 
           {showActionButtons && (
             <div className="flex w-full gap-3">

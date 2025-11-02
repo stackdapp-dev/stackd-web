@@ -15,8 +15,9 @@ export type UserPaymentMethod = {
   accountName: string;
   email: string;
   phoneNumber: string;
-  bankName: string;
+  bankName?: string;
   bankAccountNumber?: string;
+  eWalletName?: string;
   alias?: string;
 };
 
@@ -34,9 +35,9 @@ export const getUserProfile = async (accessToken: string) => {
     return null;
   }
 
-  const data = await response.json();
+  const json = await response.json();
 
-  return data as UserProfile;
+  return json.user as UserProfile;
 };
 
 export const getUserPaymentMethods = async (accessToken: string) => {
@@ -51,9 +52,9 @@ export const getUserPaymentMethods = async (accessToken: string) => {
     return null;
   }
 
-  const data = await response.json();
+  const json = await response.json();
 
-  return data.paymentMethods as UserPaymentMethod[];
+  return json.data as UserPaymentMethod[];
 };
 
 export const addUserPaymentMethod = async (
@@ -72,12 +73,12 @@ export const addUserPaymentMethod = async (
     body,
   });
 
+  const json = await response.json();
+
   if (!response.ok) {
     console.error("Failed to add user payment method:", response);
-    return null;
+    throw new Error(json.message);
   }
 
-  const data = await response.json();
-
-  return data.paymentMethod.id as string;
+  return json.data as UserPaymentMethod;
 };

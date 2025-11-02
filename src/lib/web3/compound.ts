@@ -1,6 +1,11 @@
 import { C_COMPOUND_ABI, C_COMPOUND_ADDR } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
-import { erc20Abi, type Address, type Hex, type PublicClient, type WalletClient } from "viem";
+import {
+  type Address,
+  type Hex,
+  type PublicClient,
+  type WalletClient,
+} from "viem";
 import { arbitrum } from "viem/chains";
 
 const COMPOUND_ADDRESS = formatAddress(C_COMPOUND_ADDR);
@@ -8,7 +13,11 @@ const COMPOUND_ADDRESS = formatAddress(C_COMPOUND_ADDR);
 // Note: These functions assume publicClient and walletClient from Web3Provider,
 // and account from useEmbeddedWallet. Pass them as parameters.
 
-export async function userCollateral(publicClient: PublicClient, user: Address, token: Address): Promise<bigint> {
+export async function userCollateral(
+  publicClient: PublicClient,
+  user: Address,
+  token: Address
+): Promise<bigint> {
   const result = (await publicClient.readContract({
     address: COMPOUND_ADDRESS,
     abi: C_COMPOUND_ABI,
@@ -19,18 +28,12 @@ export async function userCollateral(publicClient: PublicClient, user: Address, 
   return result[0]; // Return the balance
 }
 
-export async function approve(walletClient: WalletClient, account: Address, token: Address, spender: Address, amount: bigint): Promise<Hex> {
-  return await walletClient.writeContract({
-    address: token,
-    abi: erc20Abi,
-    functionName: "approve",
-    args: [spender, amount],
-    account,
-    chain: arbitrum,
-  });
-}
-
-export async function supply(walletClient: WalletClient, account: Address, token: Address, amount: bigint): Promise<Hex> {
+export async function supply(
+  walletClient: WalletClient,
+  account: Address,
+  token: Address,
+  amount: bigint
+): Promise<Hex> {
   return await walletClient.writeContract({
     address: COMPOUND_ADDRESS,
     abi: C_COMPOUND_ABI,
@@ -41,7 +44,12 @@ export async function supply(walletClient: WalletClient, account: Address, token
   });
 }
 
-export async function withdraw(walletClient: WalletClient, account: Address, token: Address, amount: bigint): Promise<Hex> {
+export async function withdraw(
+  walletClient: WalletClient,
+  account: Address,
+  token: Address,
+  amount: bigint
+): Promise<Hex> {
   return await walletClient.writeContract({
     address: COMPOUND_ADDRESS,
     abi: C_COMPOUND_ABI,
@@ -52,7 +60,10 @@ export async function withdraw(walletClient: WalletClient, account: Address, tok
   });
 }
 
-export async function borrowBalanceOf(publicClient: PublicClient, user: Address): Promise<bigint> {
+export async function borrowBalanceOf(
+  publicClient: PublicClient,
+  user: Address
+): Promise<bigint> {
   return await publicClient.readContract({
     address: COMPOUND_ADDRESS,
     abi: C_COMPOUND_ABI,
@@ -73,7 +84,16 @@ export async function getAssetInfo(
     abi: C_COMPOUND_ABI,
     functionName: "getAssetInfoByAddress",
     args: [asset],
-  })) as unknown as readonly [number, Address, Address, bigint, bigint, bigint, bigint, bigint]; // [offset, asset, priceFeed, scale, borrowCollateralFactor, liquidateCollateralFactor, liquidationFactor, supplyCap]
+  })) as unknown as readonly [
+    number,
+    Address,
+    Address,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint
+  ]; // [offset, asset, priceFeed, scale, borrowCollateralFactor, liquidateCollateralFactor, liquidationFactor, supplyCap]
 
   return {
     borrowCollateralFactor: result[4],
@@ -81,7 +101,9 @@ export async function getAssetInfo(
   };
 }
 
-export async function getUtilization(publicClient: PublicClient): Promise<bigint> {
+export async function getUtilization(
+  publicClient: PublicClient
+): Promise<bigint> {
   return await publicClient.readContract({
     address: COMPOUND_ADDRESS,
     abi: C_COMPOUND_ABI,
@@ -89,20 +111,14 @@ export async function getUtilization(publicClient: PublicClient): Promise<bigint
   });
 }
 
-export async function getBorrowRate(publicClient: PublicClient, utilization: bigint): Promise<bigint> {
+export async function getBorrowRate(
+  publicClient: PublicClient,
+  utilization: bigint
+): Promise<bigint> {
   return await publicClient.readContract({
     address: COMPOUND_ADDRESS,
     abi: C_COMPOUND_ABI,
     functionName: "getBorrowRate",
     args: [utilization],
   });
-}
-
-export async function allowance(publicClient: PublicClient, owner: Address, token: Address, spender: Address): Promise<bigint> {
-  return await publicClient.readContract({
-    address: token,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: [owner, spender],
-  }) as bigint;
 }

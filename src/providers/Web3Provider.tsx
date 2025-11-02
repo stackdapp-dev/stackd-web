@@ -1,6 +1,15 @@
 import { useWallets } from "@privy-io/react-auth";
-import React, { createContext, useContext, useState } from "react";
-import { Hex, PublicClient, WalletClient, createPublicClient, createWalletClient, custom, http } from "viem";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  Address,
+  Hex,
+  PublicClient,
+  WalletClient,
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+} from "viem";
 import { arbitrum } from "viem/chains";
 
 declare global {
@@ -12,12 +21,15 @@ declare global {
 type Web3ProviderValue = {
   publicClient: PublicClient;
   walletClient: WalletClient | null;
+  walletAddress: Address;
 };
 
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
 const NETWORK = arbitrum;
 
-export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [publicClient] = useState<PublicClient>(() =>
     createPublicClient({
       chain: NETWORK,
@@ -28,6 +40,10 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
+
+  useEffect(() => {
+    console.log("Privy wallets:", wallets);
+  }, [wallets]);
 
   React.useEffect(() => {
     const initWalletClient = async () => {
@@ -52,7 +68,17 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     initWalletClient();
   }, [wallet]);
 
-  return <Web3Context.Provider value={{ publicClient, walletClient }}>{children}</Web3Context.Provider>;
+  return (
+    <Web3Context.Provider
+      value={{
+        publicClient,
+        walletClient,
+        walletAddress: wallet?.address as `0x${string}`,
+      }}
+    >
+      {children}
+    </Web3Context.Provider>
+  );
 };
 
 export const useWeb3 = (): Web3ProviderValue => {

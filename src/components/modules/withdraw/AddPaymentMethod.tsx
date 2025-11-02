@@ -25,6 +25,7 @@ import { addUserPaymentMethod, UserPaymentMethodInput } from "@/lib/api/user";
 import { useUser } from "@/providers/UserProvider";
 import { useWithdrawOTC } from "@/providers/WithrawOTCProvider";
 import { useForm } from "@tanstack/react-form";
+import { AlertTriangleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as z from "zod";
 
@@ -41,8 +42,8 @@ const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   phoneNumber: z
     .string()
-    .min(11, "Phone number must be at least 11 characters.")
-    .max(13, "Phone number must be at most 13 characters."),
+    .min(11, "Mobile number must be at least 11 characters.")
+    .max(13, "Mobile number must be at most 13 characters."),
   alias: z.string().optional(),
 });
 
@@ -69,6 +70,9 @@ const AddPaymentMethod = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(
+    undefined
+  );
 
   const form = useForm({
     defaultValues,
@@ -86,25 +90,28 @@ const AddPaymentMethod = () => {
         if (!accessToken) return;
 
         setIsLoading(true);
-        const paymentMethodId = await addUserPaymentMethod(
-          accessToken,
-          payload
-        );
+        try {
+          const paymentMethod = await addUserPaymentMethod(
+            accessToken,
+            payload
+          );
 
-        if (paymentMethodId) {
-          // use payment method id only
-          setPaymentMethod(paymentMethodId);
+          setPaymentMethod(paymentMethod);
           await refetchPaymentMethods();
           setIsLoading(false);
-        } else {
+          router.push("/withdraw/otc/review");
+        } catch (error) {
           setIsLoading(false);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred"
+          );
         }
       } else {
-        // use entire payment method details
         setPaymentMethod(payload);
+        router.push("/withdraw/otc/review");
       }
-
-      router.push("/withdraw/otc/review");
     },
   });
 
@@ -220,7 +227,7 @@ const AddPaymentMethod = () => {
                 field.state.meta.isTouched && !field.state.meta.isValid;
               return (
                 <Field className="gap-1" data-invalid={isInvalid}>
-                  <FieldLabel htmlFor={field.name}>Phonenumber</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Mobile Number</FieldLabel>
                   <Input
                     id={field.name}
                     name={field.name}
@@ -275,6 +282,7 @@ const AddPaymentMethod = () => {
           </Button>
         </Field>
       </form>
+
       <Modal
         isOpen={isLoading}
         onClose={() => {}}
@@ -283,6 +291,18 @@ const AddPaymentMethod = () => {
         icon={<Loading size="lg" />}
         showCloseButton={false}
         showActionButtons={false}
+      />
+
+      <Modal
+        isOpen={errorMessage !== undefined}
+        onClose={() => setErrorMessage(undefined)}
+        title="Failed to create payment method"
+        message={errorMessage}
+        icon={<AlertTriangleIcon size="48" />}
+        showCloseButton={true}
+        showActionButtons={true}
+        secondaryButtonText="Dismiss"
+        secondaryButtonAction={() => setErrorMessage(undefined)}
       />
     </div>
   );

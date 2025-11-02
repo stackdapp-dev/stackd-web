@@ -1,7 +1,19 @@
 import { TOKEN_METADATA, getTokenMetadata } from "@/constants/Tokens";
 import { C_COMPOUND_ADDR } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
-import { borrowBalanceOf, allowance as compoundAllowance, approve as compoundApprove, supply as compoundSupply, withdraw as compoundWithdraw, getAssetInfo, getBorrowRate, getUtilization, userCollateral } from "@/lib/web3/compound";
+import {
+  borrowBalanceOf,
+  supply as compoundSupply,
+  withdraw as compoundWithdraw,
+  getAssetInfo,
+  getBorrowRate,
+  getUtilization,
+  userCollateral,
+} from "@/lib/web3/compound";
+import {
+  allowance as compoundAllowance,
+  approve as compoundApprove,
+} from "@/lib/web3/erc20";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useCallback, useEffect, useState } from "react";
@@ -30,9 +42,19 @@ type UseCompoundResult = {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  approve: (token: Address, amount: bigint, spender?: Address) => Promise<{ txHash: Hex | null; error: string | null }>;
-  supply: (token: Address, amount: bigint) => Promise<{ txHash: Hex | null; error: string | null }>;
-  withdraw: (token: Address, amount: bigint) => Promise<{ txHash: Hex | null; error: string | null }>;
+  approve: (
+    token: Address,
+    amount: bigint,
+    spender?: Address
+  ) => Promise<{ txHash: Hex | null; error: string | null }>;
+  supply: (
+    token: Address,
+    amount: bigint
+  ) => Promise<{ txHash: Hex | null; error: string | null }>;
+  withdraw: (
+    token: Address,
+    amount: bigint
+  ) => Promise<{ txHash: Hex | null; error: string | null }>;
   allowance?: (token: Address, spender?: Address) => Promise<bigint | null>;
   maxLtv: number;
   liquidationRatio: number;
@@ -58,9 +80,16 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
     if (!publicClient || !acct) return;
     try {
       if (initialLoad) setIsLoading(true);
-      const coll = await userCollateral(publicClient, formatAddress(acct), formatAddress(TOKEN_METADATA.WBTC.address));
+      const coll = await userCollateral(
+        publicClient,
+        formatAddress(acct),
+        formatAddress(TOKEN_METADATA.WBTC.address)
+      );
       const bor = await borrowBalanceOf(publicClient, formatAddress(acct));
-      const assetInfo = await getAssetInfo(publicClient, formatAddress(TOKEN_METADATA.WBTC.address));
+      const assetInfo = await getAssetInfo(
+        publicClient,
+        formatAddress(TOKEN_METADATA.WBTC.address)
+      );
 
       // Get utilization and borrow rate for APR calculation
       const utilization = await getUtilization(publicClient);
@@ -90,9 +119,13 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
     void fetch();
   }, [fetch]);
 
-  const collateralAmount = Number(formatUnits(collateralRaw, getTokenMetadata(COLLATERAL_TOKEN).decimals));
+  const collateralAmount = Number(
+    formatUnits(collateralRaw, getTokenMetadata(COLLATERAL_TOKEN).decimals)
+  );
 
-  const borrowAmount = Number(formatUnits(borrowRaw, getTokenMetadata(BORROW_TOKEN).decimals));
+  const borrowAmount = Number(
+    formatUnits(borrowRaw, getTokenMetadata(BORROW_TOKEN).decimals)
+  );
 
   const collateralUsd = collateralAmount * getTokenPrice(COLLATERAL_TOKEN);
   const borrowUsd = borrowAmount * getTokenPrice(BORROW_TOKEN);
@@ -117,16 +150,27 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   ];
 
   const approve = useCallback(
-    async (token: Address, amount: bigint, spender: Address = C_COMPOUND_ADDR): Promise<{ txHash: Hex | null; error: string | null }> => {
+    async (
+      token: Address,
+      amount: bigint,
+      spender: Address = C_COMPOUND_ADDR
+    ): Promise<{ txHash: Hex | null; error: string | null }> => {
       if (!walletClient || !acct) {
         return { txHash: null, error: "walletClient or account not available" };
       }
 
       try {
-        const tx = await compoundApprove(walletClient, formatAddress(acct), token, spender, amount);
+        const tx = await compoundApprove(
+          walletClient,
+          formatAddress(acct),
+          token,
+          spender,
+          amount
+        );
         return { txHash: tx, error: null };
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown approval error";
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown approval error";
         console.error("approve failed", err);
         return { txHash: null, error: errorMessage };
       }
@@ -135,10 +179,18 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   );
 
   const allowance = useCallback(
-    async (token: Address, spender: Address = C_COMPOUND_ADDR): Promise<bigint | null> => {
+    async (
+      token: Address,
+      spender: Address = C_COMPOUND_ADDR
+    ): Promise<bigint | null> => {
       if (!publicClient || !acct) return null;
       try {
-        const res = await compoundAllowance(publicClient, formatAddress(acct), token, spender);
+        const res = await compoundAllowance(
+          publicClient,
+          formatAddress(acct),
+          token,
+          spender
+        );
         return res ?? null;
       } catch (err) {
         console.error("allowance read failed", err);
@@ -149,16 +201,25 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   );
 
   const supply = useCallback(
-    async (token: Address, amount: bigint): Promise<{ txHash: Hex | null; error: string | null }> => {
+    async (
+      token: Address,
+      amount: bigint
+    ): Promise<{ txHash: Hex | null; error: string | null }> => {
       if (!walletClient || !acct) {
         return { txHash: null, error: "walletClient or account not available" };
       }
 
       try {
-        const tx = await compoundSupply(walletClient, formatAddress(acct), token, amount);
+        const tx = await compoundSupply(
+          walletClient,
+          formatAddress(acct),
+          token,
+          amount
+        );
         return { txHash: tx, error: null };
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown supply error";
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown supply error";
         console.error("supply failed", err);
         return { txHash: null, error: errorMessage };
       }
@@ -167,16 +228,25 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   );
 
   const withdraw = useCallback(
-    async (token: Address, amount: bigint): Promise<{ txHash: Hex | null; error: string | null }> => {
+    async (
+      token: Address,
+      amount: bigint
+    ): Promise<{ txHash: Hex | null; error: string | null }> => {
       if (!walletClient || !acct) {
         return { txHash: null, error: "walletClient or account not available" };
       }
 
       try {
-        const tx = await compoundWithdraw(walletClient, formatAddress(acct), token, amount);
+        const tx = await compoundWithdraw(
+          walletClient,
+          formatAddress(acct),
+          token,
+          amount
+        );
         return { txHash: tx, error: null };
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown withdraw error";
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown withdraw error";
         console.error("withdraw failed", err);
         return { txHash: null, error: errorMessage };
       }

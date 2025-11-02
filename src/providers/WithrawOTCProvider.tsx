@@ -1,8 +1,9 @@
 "use client";
 
-import { getTokenMetadata, TOKEN_ADDRESSES } from "@/constants/Tokens";
+import { TOKEN_ADDRESSES } from "@/constants/addresses";
+import { getTokenMetadata } from "@/constants/Tokens";
 import { getExchangeRate, RateData } from "@/lib/api/rates";
-import { UserPaymentMethodInput } from "@/lib/api/user";
+import { UserPaymentMethod, UserPaymentMethodInput } from "@/lib/api/user";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useWallets } from "@privy-io/react-auth";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -16,8 +17,10 @@ type WithdrawOTCValue = {
   isValidAmount: boolean;
   available: number; // available USDT to withdraw
   handleMax: () => void;
-  paymentMethod: UserPaymentMethodInput | string | null;
-  setPaymentMethod: (paymentMethod: UserPaymentMethodInput | string) => void;
+  paymentMethod: UserPaymentMethodInput | UserPaymentMethod | null;
+  setPaymentMethod: (
+    paymentMethod: UserPaymentMethodInput | UserPaymentMethod
+  ) => void;
 };
 
 const WithdrawOTCContext = createContext<WithdrawOTCValue | undefined>(
@@ -36,7 +39,7 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
     undefined
   );
   const [paymentMethod, setPaymentMethod] = useState<
-    UserPaymentMethodInput | string | null
+    UserPaymentMethodInput | UserPaymentMethod | null
   >(null);
 
   const { publicClient } = useWeb3();
