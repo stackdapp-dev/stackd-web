@@ -12,8 +12,8 @@ export const useLoanCalculations = (suppliedAssets: Asset[], borrowedAssets: Ass
   const { maxLtv, liquidationRatio, borrowApr } = useCompound();
   const getPrice = useGetTokenPrice();
 
-  const totalSuppliedUsd = suppliedAssets.reduce((sum, asset) => sum + asset.amount * getPrice(asset.symbol), 0);
-  const totalBorrowedUsd = borrowedAssets.reduce((sum, asset) => sum + asset.amount * getPrice(asset.symbol), 0);
+  const totalSuppliedUsd = suppliedAssets.reduce((sum, asset) => sum + asset.usdValue, 0);
+  const totalBorrowedUsd = borrowedAssets.reduce((sum, asset) => sum + asset.usdValue, 0);
 
   // Current calculations
   const ltv = totalSuppliedUsd > 0 ? (totalBorrowedUsd / totalSuppliedUsd) * 100 : 0;

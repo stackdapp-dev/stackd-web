@@ -32,7 +32,8 @@ export default function TxModePage() {
   // - Transaction is processing
   // - User hasn't acknowledged the risks
   // - Amount exceeds available limit
-  const isDisabled = available <= 0 || amount <= 0 || isProcessing || !ackChecked || amount > available;
+  // - For borrow mode: amount is less than 1 USDT but greater than 0
+  const isDisabled = available <= 0 || amount <= 0 || isProcessing || !ackChecked || amount > available || (mode === "borrow" && amount < 1);
 
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
@@ -49,8 +50,12 @@ export default function TxModePage() {
           onMaxPress={handleMax}
           editable={!isProcessing}
         />
-        {mode === "borrow" && amount > available && (
-          <Text className="text-destructive">Amount exceeds your maximum borrowable amount.</Text>
+        {mode === "borrow" && (
+          amount > available ? (
+            <Text className="text-destructive">Amount exceeds your maximum borrowable amount.</Text>
+          ) : amount > 0 && amount < 1 ? (
+            <Text className="text-destructive">Minimum borrow amount is 1 USDT.</Text>
+          ) : null
         )}
       </div>
 
