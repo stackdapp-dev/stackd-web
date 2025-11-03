@@ -43,6 +43,7 @@ const useTokenApproval = () => {
 
     try {
       const tx = await approve(walletClient, address, token, spender, amount);
+      console.log("Approval tx hash:", tx);
       return { txHash: tx, error: null };
     } catch (err) {
       const errorMessage =

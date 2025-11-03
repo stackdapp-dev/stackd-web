@@ -39,11 +39,11 @@ const ReviewOrder = () => {
     setIsLoading(true);
 
     // step 1: transfer crypto to cashout multisig
-    const transferSuccess = await transferCrypto();
+    const transferTxHash = await transferCrypto();
 
-    if (transferSuccess) {
+    if (transferTxHash) {
       // step 2: create order in the backend
-      const createOrderSuccess = await sendOrder();
+      const createOrderSuccess = await sendOrder(transferTxHash);
 
       if (createOrderSuccess) {
         // step 3: redirect to transaction history tab
@@ -74,10 +74,12 @@ const ReviewOrder = () => {
       return false;
     }
 
-    return true;
+    console.log("Transfer tx hash:", transferTxHash);
+
+    return transferTxHash;
   };
 
-  const sendOrder = async () => {
+  const sendOrder = async (transferTxHash: string) => {
     const accessToken = await getAccessToken();
 
     let paymentMethodId: string | undefined = undefined;
@@ -94,7 +96,7 @@ const ReviewOrder = () => {
       await createOrder(accessToken!, {
         cryptoAmount: amount,
         fiatAmount: convertedAmount,
-        transferHash: "",
+        transferHash: transferTxHash,
         paymentMethodId,
         paymentMethodMetadata,
       });
