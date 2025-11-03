@@ -20,6 +20,7 @@ export default function LoanInfo() {
   const visibility = useVisibility();
   const router = useRouter();
   const [showCollateralModal, setShowCollateralModal] = useState(false);
+  const MIN_BORROWABLE_AMOUNT = 1;
 
   const { wbtcBalance, refetchBalances } = useWalletBalanceContext();
 
@@ -42,16 +43,13 @@ export default function LoanInfo() {
       if (wbtcBalance > 0) {
         const hasLent = await startLend();
         if (hasLent) {
-            await Promise.all([refetchBalances(), refetchLoanData()]);
-          if (loanCalcs.borrowableAmount > 0) {
-            router.push("/wallet/tx/borrow");
-          } else {
-            setShowCollateralModal(true);
-          }
+          await Promise.all([refetchBalances(), refetchLoanData()]);
+          router.push("/wallet/tx/borrow");
         }
-      } else if (borrowableAmount > 0) {
+      } else if (borrowableAmount > MIN_BORROWABLE_AMOUNT) {
         router.push("/wallet/tx/borrow");
       } else {
+        console.error(`Minimum Borrowable Amount(USD): ${MIN_BORROWABLE_AMOUNT}.`);
         setShowCollateralModal(true);
       }
     } catch (error) {
