@@ -51,7 +51,9 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
 
   const [savedActiveWallet, setSavedActiveWallet] = useState(
-    localStorage.getItem(ACTIVE_WALLET_KEY)
+    typeof window !== "undefined"
+      ? localStorage.getItem(ACTIVE_WALLET_KEY)
+      : null
   );
 
   const activeWallet = useMemo(() => {
