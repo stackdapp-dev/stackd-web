@@ -43,10 +43,12 @@ const ReviewOrder = () => {
 
     if (transferSuccess) {
       // step 2: create order in the backend
-      await sendOrder();
+      const createOrderSuccess = await sendOrder();
 
-      // step 3: redirect to transaction history tab
-      router.push("/transactions");
+      if (createOrderSuccess) {
+        // step 3: redirect to transaction history tab
+        router.push("/history");
+      }
     }
   };
 
@@ -97,11 +99,13 @@ const ReviewOrder = () => {
         paymentMethodMetadata,
       });
       setIsLoading(false);
+      return true;
     } catch (error) {
       setIsLoading(false);
       setErrorMessage(
         error instanceof Error ? error.message : "An unexpected error occurred"
       );
+      return false;
     }
   };
 

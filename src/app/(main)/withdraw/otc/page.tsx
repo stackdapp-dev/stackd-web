@@ -115,7 +115,7 @@ const WithdrawViaOTC = () => {
         </ul>
       </div>
 
-      <Button disabled={false /*!isValidAmount*/} onClick={choosePayMethod}>
+      <Button disabled={!isValidAmount} onClick={choosePayMethod}>
         Choose Payment Method
       </Button>
     </div>
