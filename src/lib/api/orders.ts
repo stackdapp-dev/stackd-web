@@ -5,7 +5,7 @@ import { baseUrl } from "./config";
 type CreateOrderDetails = {
   cryptoAmount: string;
   fiatAmount: string;
-  transferHash: string;
+  transferTxHash: string;
   paymentMethodId?: string;
   paymentMethodMetadata?: string;
 };
@@ -20,7 +20,7 @@ export const createOrder = async (
     cryptoAmount: number;
     fiat: string;
     fiatAmount: number;
-    transferHash: string;
+    transferTxHash: string;
     paymentMethodId?: string;
     paymentMethodMetadata?: string;
   } = {
@@ -30,7 +30,7 @@ export const createOrder = async (
     ),
     fiat: "PHP",
     fiatAmount: Number(orderDetails.fiatAmount),
-    transferHash: orderDetails.transferHash,
+    transferTxHash: orderDetails.transferTxHash,
   };
 
   if (orderDetails.paymentMethodId) {

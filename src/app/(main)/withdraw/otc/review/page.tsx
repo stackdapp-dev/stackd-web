@@ -93,7 +93,7 @@ const ReviewOrder = () => {
       await createOrder(accessToken!, {
         cryptoAmount: amount,
         fiatAmount: convertedAmount,
-        transferHash: transferTxHash,
+        transferTxHash: transferTxHash,
         paymentMethodId,
         paymentMethodMetadata,
       });
