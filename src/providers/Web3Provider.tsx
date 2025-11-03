@@ -29,65 +29,74 @@ type Web3ProviderValue = {
   walletClient: WalletClient | null;
   wallets: ConnectedWallet[];
   activeWalletAddress: Address;
-  activeWalletIndex: number;
-  setActiveWalletIndex: (index: number) => void;
+  setActiveWalletAddress: (address: Address) => void;
 };
 
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
 const NETWORK = arbitrum;
-const ACTIVE_WALLET_INDEX_KEY = "stackd_active_wallet_index";
+const ACTIVE_WALLET_KEY = "stackd_active_wallet";
 
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { wallets, ready } = useWallets();
+
   const [publicClient] = useState<PublicClient>(() =>
     createPublicClient({
       chain: NETWORK,
       transport: http(),
     })
   );
+
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
-  const [activeWalletIndex, setActiveWalletIndexState] = useState<number>(
-    () => {
-      // Load from localStorage on initialization
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem(ACTIVE_WALLET_INDEX_KEY);
-        return stored ? parseInt(stored, 10) : 0;
+
+  const [savedActiveWallet, setSavedActiveWallet] = useState(
+    localStorage.getItem(ACTIVE_WALLET_KEY)
+  );
+
+  const activeWallet = useMemo(() => {
+    if (!ready || wallets.length === 0) return null;
+
+    // there's an already saved wallet address
+    if (savedActiveWallet) {
+      console.log(
+        "[WALLET] checking for saved active wallet:",
+        savedActiveWallet
+      );
+      console.log("[WALLET] wallets:", wallets);
+      const matchingWallet = wallets.find(
+        (w) => w.address === savedActiveWallet
+      );
+      if (matchingWallet) {
+        console.log("[WALLET] active wallet found:", matchingWallet.address);
+        return matchingWallet;
+      } else {
+        console.log(
+          "[WALLET] active wallet not found, defaulting to first wallet"
+        );
       }
-      return 0;
     }
-  );
 
-  const { wallets } = useWallets();
-
-  const wallet = useMemo(
-    () => wallets?.[activeWalletIndex],
-    [wallets, activeWalletIndex]
-  );
+    // no saved wallet address, or saved wallet address has no match
+    if (wallets.length > 1) {
+      // save persistently if more than 1 wallet
+      localStorage.setItem(ACTIVE_WALLET_KEY, wallets[0].address);
+    }
+    console.log("[WALLET] active wallet is first wallet:", wallets[0].address);
+    return wallets[0];
+  }, [ready, wallets, savedActiveWallet]);
 
   useEffect(() => {
-    console.log("Privy wallets:", wallets);
-  }, [wallets]);
-
-  // Persist activeWalletIndex to localStorage
-  const setActiveWalletIndex = (index: number) => {
-    setActiveWalletIndexState(index);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(ACTIVE_WALLET_INDEX_KEY, index.toString());
-    }
-  };
-
-  React.useEffect(() => {
     const initWalletClient = async () => {
-      if (!wallet) {
+      if (!activeWallet) {
         return;
       }
 
       try {
-        const provider = await wallet.getEthereumProvider();
+        const provider = await activeWallet.getEthereumProvider();
         setWalletClient(
           createWalletClient({
-            account: wallet.address as Hex,
+            account: activeWallet.address as Hex,
             chain: NETWORK,
             transport: custom(provider),
           })
@@ -98,7 +107,16 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     initWalletClient();
-  }, [wallet]);
+  }, [activeWallet]);
+
+  const setActiveWalletAddress = (address: Address) => {
+    const matchingWallet = wallets.find((w) => w.address === address);
+    if (!matchingWallet) return;
+    setSavedActiveWallet(address);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(ACTIVE_WALLET_KEY, address);
+    }
+  };
 
   return (
     <Web3Context.Provider
@@ -106,9 +124,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         publicClient,
         walletClient,
         wallets,
-        activeWalletAddress: wallet?.address as `0x${string}`,
-        activeWalletIndex,
-        setActiveWalletIndex,
+        activeWalletAddress: activeWallet?.address as `0x${string}`,
+        setActiveWalletAddress,
       }}
     >
       {children}

@@ -1,21 +1,13 @@
 "use client";
 
-import {
-  getUserPaymentMethods,
-  getUserProfile,
-  UserPaymentMethod,
-  UserProfile,
-} from "@/lib/api/user";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { getUserPaymentMethods, UserPaymentMethod } from "@/lib/api/user";
+import { usePrivy } from "@privy-io/react-auth";
 import { createContext, useContext, useEffect, useState } from "react";
-import { zeroAddress } from "viem";
 
 /**
  * Define the shape of your context value
  */
 type UserContextValue = {
-  walletAddress: string;
-  profile: UserProfile;
   paymentMethods: UserPaymentMethod[];
   getAccessToken: () => Promise<string | null>;
   refetchPaymentMethods: () => Promise<void>;
@@ -38,17 +30,7 @@ interface UserProviderProps {
  */
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const { getAccessToken, authenticated } = usePrivy();
-  const { wallets } = useWallets();
-  const walletAddress = wallets.length > 0 ? wallets[0].address : zeroAddress;
 
-  const [profile, setProfile] = useState<UserProfile>({
-    id: "",
-    privyId: "",
-    email: "",
-    walletAddress: "",
-    createdAt: "",
-    updatedAt: "",
-  });
   const [paymentMethods, setPaymentMethods] = useState<UserPaymentMethod[]>([]);
 
   useEffect(() => {
@@ -62,17 +44,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         return;
       }
 
-      const data = await Promise.all([
-        getUserProfile(accessToken),
-        getUserPaymentMethods(accessToken),
-      ]);
-
-      if (data[0]) {
-        setProfile(data[0]);
-      }
-
-      if (data[1]) {
-        setPaymentMethods(data[1]);
+      const data = await getUserPaymentMethods(accessToken);
+      if (data) {
+        setPaymentMethods(data);
       }
     };
     getchUserResources();
@@ -89,8 +63,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   // Context value
   const value: UserContextValue = {
-    walletAddress,
-    profile,
     paymentMethods,
     getAccessToken,
     refetchPaymentMethods,

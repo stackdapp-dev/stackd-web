@@ -5,12 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loading } from "@/components/ui/loading";
 import Modal from "@/components/ui/modal";
-import {
-  CASHOUT_MULTISIG_ADDRESS,
-  TOKEN_ADDRESSES,
-} from "@/constants/addresses";
+import { TOKEN_ADDRESSES } from "@/constants/addresses";
 import { TOKEN_METADATA } from "@/constants/Tokens";
-import useTokenApproval from "@/hooks/useTokenApproval";
+// import useTokenApproval from "@/hooks/useTokenApproval";
 import useTokenTransfer from "@/hooks/useTokenTransfer";
 import { createOrder } from "@/lib/api/orders";
 import { useUser } from "@/providers/UserProvider";
@@ -26,7 +23,7 @@ const ReviewOrder = () => {
     useWithdrawOTC();
   const router = useRouter();
   const { getAccessToken } = useUser();
-  const { approveIfNecessary } = useTokenApproval();
+  // const { approveIfNecessary } = useTokenApproval();
   const { transferToCashoutMultisig } = useTokenTransfer();
 
   const [hasAcknowledged, setHasAcknowledged] = useState(false);
@@ -55,16 +52,16 @@ const ReviewOrder = () => {
   const transferCrypto = async () => {
     const cryptoAmount = parseUnits(amount, TOKEN_METADATA["USDT"].decimals);
 
-    const { txHash, error } = await approveIfNecessary(
-      TOKEN_ADDRESSES.USDT,
-      cryptoAmount,
-      CASHOUT_MULTISIG_ADDRESS
-    );
-    if (error) {
-      setIsLoading(false);
-      setErrorMessage(error);
-      return false;
-    }
+    // const { txHash, error } = await approveIfNecessary(
+    //   TOKEN_ADDRESSES.USDT,
+    //   cryptoAmount,
+    //   CASHOUT_MULTISIG_ADDRESS
+    // );
+    // if (error) {
+    //   setIsLoading(false);
+    //   setErrorMessage(error);
+    //   return false;
+    // }
 
     const { txHash: transferTxHash, error: transferError } =
       await transferToCashoutMultisig(TOKEN_ADDRESSES.USDT, cryptoAmount);

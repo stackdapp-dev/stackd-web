@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { useState } from "react";
 
 const Profile = () => {
-  const { wallets, activeWalletIndex, setActiveWalletIndex } = useWeb3();
+  const { wallets, activeWalletAddress, setActiveWalletAddress } = useWeb3();
 
   const { logout } = useLogout({
     onSuccess: () => {
@@ -34,7 +34,7 @@ const Profile = () => {
       <div className="flex flex-col gap-4">
         <h2 className="text-xl text-primary">My Wallets</h2>
         <ul className="flex flex-col gap-4">
-          {wallets.map((wallet, i) => (
+          {wallets.map((wallet) => (
             <li key={wallet.address}>
               <MenuItem
                 href="#"
@@ -48,8 +48,10 @@ const Profile = () => {
                 }
                 trailing={
                   <Switch
-                    checked={i === activeWalletIndex}
-                    onCheckedChange={() => setActiveWalletIndex(i)}
+                    checked={wallet.address === activeWalletAddress}
+                    onCheckedChange={() =>
+                      setActiveWalletAddress(wallet.address as `0x${string}`)
+                    }
                   />
                 }
               />
