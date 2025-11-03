@@ -6,22 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
 import { Switch } from "@/components/ui/switch";
 import { useWeb3 } from "@/providers/Web3Provider";
-import { usePrivy } from "@privy-io/react-auth";
+import { useLogout } from "@privy-io/react-auth";
 import { LogOutIcon } from "lucide-react";
 import { redirect } from "next/navigation";
 import { useState } from "react";
 
 const Profile = () => {
   const { wallets, activeWalletIndex, setActiveWalletIndex } = useWeb3();
-  const { logout } = usePrivy();
+
+  const { logout } = useLogout({
+    onSuccess: () => {
+      redirect("/");
+    },
+  });
 
   const [isLoading, setIsLoading] = useState(false);
 
   const signout = async () => {
     setIsLoading(true);
     logout();
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    redirect("/");
   };
 
   return (
