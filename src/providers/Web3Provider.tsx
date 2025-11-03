@@ -78,7 +78,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     // no saved wallet address, or saved wallet address has no match
-    if (wallets.length > 1) {
+    if (wallets.length > 1 && typeof window !== "undefined") {
       // save persistently if more than 1 wallet
       localStorage.setItem(ACTIVE_WALLET_KEY, wallets[0].address);
     }
