@@ -76,10 +76,10 @@ type UseCompoundResult = {
   netLoanValue: number;
 };
 
-export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
-  const { publicClient, walletClient } = useWeb3();
+export function useCompound(): UseCompoundResult {
+  const { publicClient, walletClient, activeWalletAddress } = useWeb3();
   const getTokenPrice = useGetTokenPrice();
-  const acct = walletClient?.account?.address || accountAddress;
+  const acct = walletClient?.account?.address || activeWalletAddress;
 
   const [collateralRaw, setCollateralRaw] = useState<bigint>(BigInt(0));
   const [borrowRaw, setBorrowRaw] = useState<bigint>(BigInt(0));
@@ -90,82 +90,85 @@ export function useCompound(accountAddress?: `0x${string}`): UseCompoundResult {
   const [error, setError] = useState<string | null>(null);
   const [initialLoad, setInitialLoad] = useState<boolean>(true);
 
-  const fetch = useCallback(async (forceRefresh: boolean = false) => {
-    if (!publicClient || !acct) {
-      setIsLoading(false);
-      return;
-    }
-
-    const cacheKey = `${acct}_compound`;
-    const now = Date.now();
-
-    // Check cache unless forced refresh
-    if (!forceRefresh) {
-      const cached = compoundCache.get(cacheKey);
-      if (cached && now - cached.timestamp < CACHE_TTL) {
-        // console.log("Using cached Compound data (age:", now - cached.timestamp, "ms)");
-        // Use cached data
-        setCollateralRaw(cached.data.collateralRaw);
-        setBorrowRaw(cached.data.borrowRaw);
-        setMaxLtv(cached.data.maxLtv);
-        setLiquidationRatio(cached.data.liquidationRatio);
-        setBorrowApr(cached.data.borrowApr);
+  const fetch = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (!publicClient || !acct) {
         setIsLoading(false);
         return;
       }
-    }
 
-    try {
-      if (initialLoad) setIsLoading(true);
-      const coll = await userCollateral(
-        publicClient,
-        formatAddress(acct),
-        formatAddress(TOKEN_METADATA.WBTC.address)
-      );
-      const bor = await borrowBalanceOf(publicClient, formatAddress(acct));
-      const assetInfo = await getAssetInfo(
-        publicClient,
-        formatAddress(TOKEN_METADATA.WBTC.address)
-      );
+      const cacheKey = `${acct}_compound`;
+      const now = Date.now();
 
-      // Get utilization and borrow rate for APR calculation
-      const utilization = await getUtilization(publicClient);
-      const borrowRate = await getBorrowRate(publicClient, utilization);
+      // Check cache unless forced refresh
+      if (!forceRefresh) {
+        const cached = compoundCache.get(cacheKey);
+        if (cached && now - cached.timestamp < CACHE_TTL) {
+          // console.log("Using cached Compound data (age:", now - cached.timestamp, "ms)");
+          // Use cached data
+          setCollateralRaw(cached.data.collateralRaw);
+          setBorrowRaw(cached.data.borrowRaw);
+          setMaxLtv(cached.data.maxLtv);
+          setLiquidationRatio(cached.data.liquidationRatio);
+          setBorrowApr(cached.data.borrowApr);
+          setIsLoading(false);
+          return;
+        }
+      }
 
-      // Calculate APR: (borrowRate / 10^18) * secondsPerYear * 100
-      const secondsPerYear = 60 * 60 * 24 * 365; // 31536000
-      const apr = (Number(borrowRate) / 10 ** 18) * secondsPerYear * 100;
+      try {
+        if (initialLoad) setIsLoading(true);
+        const coll = await userCollateral(
+          publicClient,
+          formatAddress(acct),
+          formatAddress(TOKEN_METADATA.WBTC.address)
+        );
+        const bor = await borrowBalanceOf(publicClient, formatAddress(acct));
+        const assetInfo = await getAssetInfo(
+          publicClient,
+          formatAddress(TOKEN_METADATA.WBTC.address)
+        );
 
-      const fetchedData = {
-        collateralRaw: coll ?? BigInt(0),
-        borrowRaw: bor ?? BigInt(0),
-        maxLtv: toPercentage(assetInfo.borrowCollateralFactor),
-        liquidationRatio: toPercentage(assetInfo.liquidateCollateralFactor),
-        borrowApr: apr,
-      };
+        // Get utilization and borrow rate for APR calculation
+        const utilization = await getUtilization(publicClient);
+        const borrowRate = await getBorrowRate(publicClient, utilization);
 
-      // Update state
-      setCollateralRaw(fetchedData.collateralRaw);
-      setBorrowRaw(fetchedData.borrowRaw);
-      setMaxLtv(fetchedData.maxLtv);
-      setLiquidationRatio(fetchedData.liquidationRatio);
-      setBorrowApr(fetchedData.borrowApr);
-      setError(null);
+        // Calculate APR: (borrowRate / 10^18) * secondsPerYear * 100
+        const secondsPerYear = 60 * 60 * 24 * 365; // 31536000
+        const apr = (Number(borrowRate) / 10 ** 18) * secondsPerYear * 100;
 
-      // Update cache
-      compoundCache.set(cacheKey, {
-        data: fetchedData,
-        timestamp: now,
-      });
+        const fetchedData = {
+          collateralRaw: coll ?? BigInt(0),
+          borrowRaw: bor ?? BigInt(0),
+          maxLtv: toPercentage(assetInfo.borrowCollateralFactor),
+          liquidationRatio: toPercentage(assetInfo.liquidateCollateralFactor),
+          borrowApr: apr,
+        };
 
-      setIsLoading(false);
-      setInitialLoad(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setIsLoading(false);
-      setInitialLoad(false);
-    }
-  }, [publicClient, acct, initialLoad]);
+        // Update state
+        setCollateralRaw(fetchedData.collateralRaw);
+        setBorrowRaw(fetchedData.borrowRaw);
+        setMaxLtv(fetchedData.maxLtv);
+        setLiquidationRatio(fetchedData.liquidationRatio);
+        setBorrowApr(fetchedData.borrowApr);
+        setError(null);
+
+        // Update cache
+        compoundCache.set(cacheKey, {
+          data: fetchedData,
+          timestamp: now,
+        });
+
+        setIsLoading(false);
+        setInitialLoad(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        setIsLoading(false);
+        setInitialLoad(false);
+      }
+    },
+    [publicClient, acct, initialLoad]
+  );
 
   useEffect(() => {
     setIsLoading(true);

@@ -3,7 +3,7 @@ import { useWeb3 } from "@/providers/Web3Provider";
 import { Address } from "viem";
 
 const useTokenApproval = () => {
-  const { publicClient, walletClient, walletAddress } = useWeb3();
+  const { publicClient, walletClient, activeWalletAddress } = useWeb3();
 
   const approveIfNecessary = async (
     token: Address,
@@ -20,7 +20,7 @@ const useTokenApproval = () => {
 
     const address = walletClient.account
       ? (walletClient.account.address as `0x${string}`)
-      : walletAddress;
+      : activeWalletAddress;
 
     try {
       const currAllowance = await allowance(

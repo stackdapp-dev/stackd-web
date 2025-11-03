@@ -1,5 +1,11 @@
-import { useWallets } from "@privy-io/react-auth";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { ConnectedWallet, useWallets } from "@privy-io/react-auth";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Address,
   Hex,
@@ -21,11 +27,15 @@ declare global {
 type Web3ProviderValue = {
   publicClient: PublicClient;
   walletClient: WalletClient | null;
-  walletAddress: Address;
+  wallets: ConnectedWallet[];
+  activeWalletAddress: Address;
+  activeWalletIndex: number;
+  setActiveWalletIndex: (index: number) => void;
 };
 
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
 const NETWORK = arbitrum;
+const ACTIVE_WALLET_INDEX_KEY = "stackd_active_wallet_index";
 
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -37,13 +47,35 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     })
   );
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
+  const [activeWalletIndex, setActiveWalletIndexState] = useState<number>(
+    () => {
+      // Load from localStorage on initialization
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem(ACTIVE_WALLET_INDEX_KEY);
+        return stored ? parseInt(stored, 10) : 0;
+      }
+      return 0;
+    }
+  );
 
   const { wallets } = useWallets();
-  const wallet = wallets?.[0];
+
+  const wallet = useMemo(
+    () => wallets?.[activeWalletIndex],
+    [wallets, activeWalletIndex]
+  );
 
   useEffect(() => {
     console.log("Privy wallets:", wallets);
   }, [wallets]);
+
+  // Persist activeWalletIndex to localStorage
+  const setActiveWalletIndex = (index: number) => {
+    setActiveWalletIndexState(index);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(ACTIVE_WALLET_INDEX_KEY, index.toString());
+    }
+  };
 
   React.useEffect(() => {
     const initWalletClient = async () => {
@@ -73,7 +105,10 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         publicClient,
         walletClient,
-        walletAddress: wallet?.address as `0x${string}`,
+        wallets,
+        activeWalletAddress: wallet?.address as `0x${string}`,
+        activeWalletIndex,
+        setActiveWalletIndex,
       }}
     >
       {children}

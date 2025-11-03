@@ -1,19 +1,13 @@
 "use client";
 
 import MenuItem from "@/components/common/MenuItem";
-import { Button } from "@/components/ui/button";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
   CircleDollarSignIcon,
   MessageSquareIcon,
   UserIcon,
 } from "lucide-react";
-import { redirect } from "next/navigation";
 
 const Menu = () => {
-  const { logout } = usePrivy();
-  const { wallets } = useWallets();
-
   return (
     <div className="p-6 flex flex-col gap-8">
       <h1 className="text-center text-2xl font-bold">Menu</h1>
@@ -35,27 +29,12 @@ const Menu = () => {
         </li>
         <li>
           <MenuItem
-            href="#"
+            href="/profile"
             leading={<UserIcon className="h-4 w-4 text-primary" />}
             label="Profile"
           />
         </li>
       </ul>
-
-      <div>
-        <div className="wrap-anywhere">
-          Wallet: {wallets.length ? wallets[0].address : "Loading..."}
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            logout();
-            redirect("/");
-          }}
-        >
-          Logout
-        </Button>
-      </div>
     </div>
   );
 };

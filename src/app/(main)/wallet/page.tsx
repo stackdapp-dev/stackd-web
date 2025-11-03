@@ -16,9 +16,8 @@ const Wallet = () => {
     // console.log("Wallet page values:", { totalBalance, netLoanValue, total: totalBalance + netLoanValue });
   }, [totalBalance, netLoanValue]);
 
-
   return (
-    <div className="flex flex-col gap-8 items-center p-6 pt-8">
+    <div className="flex flex-col gap-8 items-center p-3 pt-8">
       <>
         <Balance amount={totalBalance + netLoanValue} />
         <Assets items={assets} />
