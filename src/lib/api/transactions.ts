@@ -1,58 +1,9 @@
+import { Status, Transaction, TransactionType } from "@/types/transaction";
 import { baseUrl } from "./config";
-
-// Types based on your backend schema
-type TransactionType = "otc_withdrawal" | "otc_refund" | "deposit" | "transfer";
-type TransactionStatus = "completed" | "pending" | "failed";
-
-type PaymentMethod = {
-  id: string;
-  type: "bank" | "e-wallet";
-  accountName: string;
-  email: string;
-  phoneNumber: string;
-  bankName?: string;
-  bankAccountNumber?: string;
-  eWalletName?: string;
-  alias?: string;
-};
-
-type Transaction = {
-  id: string;
-  userId: string;
-  type: TransactionType;
-  date: string;
-  otcOrderId: string;
-  txHash: string;
-  amount: string;
-  status: TransactionStatus;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-  order?: Order | null;
-  paymentMethod?: PaymentMethod | null;
-};
-
-type Order = {
-  id: string;
-  userId: string;
-  orderNumber: string;
-  crypto: string;
-  cryptoAmount: string;
-  fiat: string;
-  fiatAmount: string;
-  paymentMethodMetadata: string;
-  transferTxHash: string;
-  quotedRate: string;
-  status: string;
-  hasNotified: boolean;
-  platformFee: string;
-  createdAt: string;
-  updatedAt: string;
-};
 
 type GetTransactionsParams = {
   type?: TransactionType;
-  status?: TransactionStatus;
+  status?: Status;
   otcOrderId?: string;
   excludeDeleted?: string;
   populate?: "order" | "order,payment_method";
