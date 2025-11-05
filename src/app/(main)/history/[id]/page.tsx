@@ -3,35 +3,85 @@
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
+import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
-import { formatAmount } from "@/lib/utils";
-import { ChevronLeft, Copy } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { arbiscanUrl } from "@/lib/api/config";
+import { formatAmount, formatDate } from "@/lib/utils";
+import { useTransactions } from "@/providers/TransactionsProvider";
+import { DisplayStatus, Status, Transaction, TransactionType } from "@/types/transaction";
+import { Copy, ExternalLink } from "lucide-react";
+import { use, useEffect, useState } from "react";
+import { formatUnits } from "viem";
 
-type Status = "Pending" | "Fulfilled";
-
-type Transaction = {
-  id: string;
-  title: string;
-  date: string;
-  status: Status;
-  amount: number;
-  currency?: string;
+const getTransactionTitle = (type: TransactionType): string => {
+  switch (type) {
+    case "otc_withdrawal":
+      return "OTC Withdrawal";
+    case "otc_refund":
+      return "OTC Refund";
+    case "deposit":
+      return "Deposit";
+    case "transfer":
+      return "Transfer";
+    default:
+      return "Transaction";
+  }
 };
 
-const sampleData: Transaction[] = [
-  { id: "1", title: "OTC Withdrawal", date: "2025/10/24 14:14:50", status: "Pending", amount: -100, currency: "USDT" },
-  { id: "2", title: "OTC Withdrawal", date: "2025/10/23 11:11:10", status: "Pending", amount: -200, currency: "USDT" },
-  { id: "3", title: "OTC Withdrawal", date: "2025/10/21 12:24:20", status: "Fulfilled", amount: -100.5, currency: "USDT" },
-  { id: "4", title: "OTC Withdrawal", date: "2025/10/20 14:14:50", status: "Fulfilled", amount: -1100, currency: "USDT" },
-];
+const mapStatus = (status: Status): DisplayStatus => {
+  switch (status) {
+    case "pending":
+      return "Pending";
+    case "completed":
+      return "Fulfilled";
+    case "failed":
+      return "Failed";
+    default:
+      return "Pending";
+  }
+};
 
-const statusBadge = (status: Status) => (status === "Pending" ? "bg-amber-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold" : "bg-emerald-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold");
+const statusBadge = (status: DisplayStatus) => {
+  switch (status) {
+    case "Pending":
+      return "bg-amber-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
+    case "Fulfilled":
+      return "bg-emerald-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
+    case "Failed":
+      return "bg-rose-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
+  }
+};
 
-export default function Page({ params }: { params: { id: string } }) {
-  const tx = sampleData.find((t) => t.id === params.id);
+
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { getTransactionById, fetchTransactionById, loading: transactionsLoading } = useTransactions();
+  const [tx, setTx] = useState<Transaction | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    // From all transactions first
+    const cachedTx = getTransactionById(id);
+    if (cachedTx) {
+      setTx(cachedTx);
+      return;
+    }
+
+    // Wait for all transactions to load first
+    if (transactionsLoading) {
+      return;
+    }
+
+    // If not found in all transactions, fetch by id
+    const fetchTransaction = async () => {
+      const response = await fetchTransactionById(id);
+      if (response) {
+        setTx(response);
+      }
+    };
+
+    fetchTransaction();
+  }, [id, transactionsLoading, getTransactionById, fetchTransactionById]);
 
   const handleCopy = (text: string, key: string) => {
     if (!navigator?.clipboard) return;
@@ -46,19 +96,23 @@ export default function Page({ params }: { params: { id: string } }) {
     );
   };
 
-  if (!tx) {
+  if (transactionsLoading || !tx) {
     return (
-      <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
-        <div className="relative flex items-center h-12">
-          <Link href="/history" className="p-2 rounded-full">
-            <ChevronLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold">Order Details</h1>
-        </div>
-        <div className="p-6 text-sm">Transaction not found.</div>
-      </div>
+      <Modal
+        isOpen={true}
+        onClose={() => {}}
+        title=""
+        message="Loading transaction..."
+        showCloseButton={false}
+        showActionButtons={false}
+      />
     );
   }
+
+  const displayStatus = mapStatus(tx.status);
+  const amount = parseFloat(formatUnits(BigInt(tx.amount), 6));
+  const order = tx.order;
+  const paymentMethod = tx.paymentMethod;
 
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
@@ -67,8 +121,8 @@ export default function Page({ params }: { params: { id: string } }) {
       <Card appearance="container" className="rounded-xl overflow-hidden mb-4">
         <div className="relative">
           <div className="flex items-start justify-between">
-            <Text weight="semibold">{tx.title}</Text>
-            <span className={statusBadge(tx.status)}>{tx.status}</span>
+            <Text weight="semibold">{getTransactionTitle(tx.type)}</Text>
+            <span className={statusBadge(displayStatus)}>{displayStatus}</span>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
@@ -76,95 +130,133 @@ export default function Page({ params }: { params: { id: string } }) {
               Withdraw Amount
             </Text>
             <Text className="text-right">
-              {Math.abs(tx.amount)} {tx.currency}
+              {amount} {order?.crypto || "USDT"}
             </Text>
 
-            <Text tone="muted">
-              Amount to Receive
-            </Text>
-            <Text className="text-right">
-              {formatAmount(tx.amount * -1 * 58.32)} PHP
-            </Text>
+            {order && (
+              <>
+                <Text tone="muted">
+                  Amount to Receive
+                </Text>
+                <Text className="text-right">
+                  {formatAmount(parseFloat(order.fiatAmount))} {order.fiat}
+                </Text>
 
-            <Text tone="muted">
-              Exchange Rate
-            </Text>
-            <Text className="text-right">
-              1 USDT ≈ 58.32 PHP
-            </Text>
+                <Text tone="muted">
+                  Exchange Rate
+                </Text>
+                <Text className="text-right">
+                  1 {order.crypto} ≈ {order.quotedRate} {order.fiat}
+                </Text>
 
-            <Text tone="muted">
-              Order ID
-            </Text>
-            <div className="flex items-center justify-end gap-2">
-              <Text className="text-right">
-                OTC-{tx.id}-4732
-              </Text>
-              <button type="button" aria-label="Copy order id" className="p-1 rounded" onClick={() => handleCopy(`OTC-${tx.id}-4732`, "order")}>
-                <Copy className={`h-4 w-4 ${copied === "order" ? "text-amber-400" : "text-neutral-400"}`} />
-              </button>
-            </div>
+                <Text tone="muted">
+                  Order Number
+                </Text>
+                <div className="flex items-center justify-end gap-2">
+                  <Text className="text-right text-xs">
+                    {order.orderNumber}
+                  </Text>
+                  <button type="button" aria-label="Copy order number" className="p-1 rounded" onClick={() => handleCopy(order.orderNumber, "order")}>
+                    <Copy className={`h-4 w-4 ${copied === "order" ? "text-amber-400" : "text-neutral-400"}`} />
+                  </button>
+                </div>
+
+                <Text tone="muted">
+                  Transaction Hash
+                </Text>
+                <a 
+                  href={`${arbiscanUrl}/tx/${tx.txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-end gap-2 hover:text-amber-400 transition-colors"
+                >
+                  <Text className="text-right text-xs">
+                    {tx.txHash.slice(0, 6)}...{tx.txHash.slice(-4)}
+                  </Text>
+                  <ExternalLink className="h-4 w-4 flex-shrink-0 text-neutral-400" />
+                </a>
+              </>
+            )}
 
             <Text tone="muted">
               Last Updated
             </Text>
             <Text className="text-right">
-              {tx.date}
+              {formatDate(tx.updatedAt)}
             </Text>
           </div>
         </div>
       </Card>
 
-      <div>
-        <Text className="text-amber-400 text-sm">Recipient Details</Text>
-        <Card appearance="container" className="rounded-xl overflow-hidden mt-2">
-          <div className="text-sm space-y-2">
-            <div className="flex justify-between">
-              <Text tone="muted">
-                Reference #
-              </Text>
-              <div className="flex items-center gap-2">
-                <Text>908092309</Text>
-                <button type="button" aria-label="Copy reference" className="p-1 rounded" onClick={() => handleCopy("908092309", "ref")}>
-                  <Copy className={`h-4 w-4 ${copied === "ref" ? "text-amber-400" : "text-neutral-400"}`} />
-                </button>
-              </div>
+      {paymentMethod && (
+        <div>
+          <Text className="text-amber-400 text-sm">Recipient Details</Text>
+          <Card appearance="container" className="rounded-xl overflow-hidden mt-2">
+            <div className="text-sm space-y-2">
+              {paymentMethod.eWalletName && (
+                <div className="flex justify-between">
+                  <Text tone="muted">
+                    E-wallet Name
+                  </Text>
+                  <Text>{paymentMethod.eWalletName}</Text>
+                </div>
+              )}
+              {paymentMethod.bankName && (
+                <div className="flex justify-between">
+                  <Text tone="muted">
+                    Bank Name
+                  </Text>
+                  <Text>{paymentMethod.bankName}</Text>
+                </div>
+              )}
+              {paymentMethod.accountName && (
+                <div className="flex justify-between">
+                  <Text tone="muted">
+                    Account Name
+                  </Text>
+                  <Text>{paymentMethod.accountName}</Text>
+                </div>
+              )}
+              {paymentMethod.phoneNumber && (
+                <div className="flex justify-between">
+                  <Text tone="muted">
+                    Mobile Number
+                  </Text>
+                  <Text>{paymentMethod.phoneNumber}</Text>
+                </div>
+              )}
+              {paymentMethod.email && (
+                <div className="flex justify-between">
+                  <Text tone="muted">
+                    E-mail Address
+                  </Text>
+                  <Text>{paymentMethod.email}</Text>
+                </div>
+              )}
+              {paymentMethod.bankAccountNumber && (
+                <div className="flex justify-between">
+                  <Text tone="muted">
+                    Account Number
+                  </Text>
+                  <Text>{paymentMethod.bankAccountNumber}</Text>
+                </div>
+              )}
+              {paymentMethod.alias && (
+                <div className="flex justify-between">
+                  <Text tone="muted">
+                    Alias
+                  </Text>
+                  <Text>{paymentMethod.alias}</Text>
+                </div>
+              )}
             </div>
-            <div className="flex justify-between">
-              <Text tone="muted">
-                E-wallet Name
-              </Text>
-              <Text>Gcash</Text>
-            </div>
-            <div className="flex justify-between">
-              <Text tone="muted">
-                Account Name
-              </Text>
-              <Text>Juan Dela Cruz</Text>
-            </div>
-            <div className="flex justify-between">
-              <Text tone="muted">
-                Mobile Number
-              </Text>
-              <Text>091712345678</Text>
-            </div>
-            <div className="flex justify-between">
-              <Text tone="muted">
-                E-mail Address
-              </Text>
-              <Text>juan@gmail.com</Text>
-            </div>
-            <div className="flex justify-between">
-              <Text tone="muted">
-                Alias
-              </Text>
-              <Text>Work BPI</Text>
-            </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
-      <Button className="w-full">Order Again</Button>
+      {tx.type === "otc_withdrawal" && displayStatus === "Fulfilled" && (
+        <Button className="w-full">Order Again</Button>
+      )}
     </div>
   );
 }
