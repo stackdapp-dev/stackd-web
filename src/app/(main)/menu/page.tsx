@@ -8,6 +8,10 @@ import {
 } from "lucide-react";
 
 const Menu = () => {
+  const handleContactUs = () => {
+    (window as any).OpenWidget?.call("maximize");
+  };
+
   return (
     <div className="p-6 flex flex-col gap-8">
       <h1 className="text-center text-2xl font-bold">Menu</h1>
@@ -25,6 +29,7 @@ const Menu = () => {
             href="#"
             leading={<MessageSquareIcon className="h-4 w-4 text-primary" />}
             label="Contact Us"
+            onClick={handleContactUs}
           />
         </li>
         <li>
