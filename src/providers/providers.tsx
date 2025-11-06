@@ -19,6 +19,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
         defaultChain: arbitrum,
         appearance: { walletChainType: "ethereum-only", theme: "#171717" },
+        // loginMethods: ["email", "sms", "google", "wallet"],
       }}
     >
       <TokenPriceProvider>
