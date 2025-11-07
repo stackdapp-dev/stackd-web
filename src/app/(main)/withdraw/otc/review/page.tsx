@@ -5,22 +5,38 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loading } from "@/components/ui/loading";
 import Modal from "@/components/ui/modal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { TOKEN_ADDRESSES } from "@/constants/addresses";
 import { TOKEN_METADATA } from "@/constants/Tokens";
 // import useTokenApproval from "@/hooks/useTokenApproval";
 import useTokenTransfer from "@/hooks/useTokenTransfer";
 import { createOrder } from "@/lib/api/orders";
+import { formatAmount } from "@/lib/utils";
 import { useUser } from "@/providers/UserProvider";
-import { useWithdrawOTC } from "@/providers/WithrawOTCProvider";
+import {
+  MIN_PHP_AMOUNT_NO_FEE,
+  PHP_WITHDRAW_FEE,
+  useWithdrawOTC,
+} from "@/providers/WithrawOTCProvider";
 import { Label } from "@radix-ui/react-label";
-import { AlertTriangleIcon, Edit3Icon } from "lucide-react";
+import { AlertTriangleIcon, Edit3Icon, InfoIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { parseUnits } from "viem";
 
 const ReviewOrder = () => {
-  const { amount, convertedAmount, exchangeRate, paymentMethod } =
-    useWithdrawOTC();
+  const {
+    amount,
+    convertedAmount,
+    exchangeRate,
+    paymentMethod,
+    transferTxHash,
+    setTransferTxHash,
+  } = useWithdrawOTC();
   const router = useRouter();
   const { getAccessToken } = useUser();
   // const { approveIfNecessary } = useTokenApproval();
@@ -36,11 +52,11 @@ const ReviewOrder = () => {
     setIsLoading(true);
 
     // step 1: transfer crypto to cashout multisig
-    const transferTxHash = await transferCrypto();
+    const txHash = await transferCrypto();
 
-    if (transferTxHash) {
+    if (txHash) {
       // step 2: create order in the backend
-      const createOrderSuccess = await sendOrder(transferTxHash);
+      const createOrderSuccess = await sendOrder(txHash);
 
       if (createOrderSuccess) {
         // step 3: redirect to transaction history tab
@@ -50,30 +66,31 @@ const ReviewOrder = () => {
   };
 
   const transferCrypto = async () => {
+    if (transferTxHash) {
+      return transferTxHash;
+    }
+
     const cryptoAmount = parseUnits(amount, TOKEN_METADATA["USDT"].decimals);
 
-    // const { txHash, error } = await approveIfNecessary(
-    //   TOKEN_ADDRESSES.USDT,
-    //   cryptoAmount,
-    //   CASHOUT_MULTISIG_ADDRESS
-    // );
-    // if (error) {
-    //   setIsLoading(false);
-    //   setErrorMessage(error);
-    //   return false;
-    // }
+    const { txHash, error: transferError } = await transferToCashoutMultisig(
+      TOKEN_ADDRESSES.USDT,
+      cryptoAmount
+    );
 
-    const { txHash: transferTxHash, error: transferError } =
-      await transferToCashoutMultisig(TOKEN_ADDRESSES.USDT, cryptoAmount);
     if (transferError) {
       setIsLoading(false);
       setErrorMessage(transferError);
       return false;
     }
 
-    console.log("Transfer tx hash:", transferTxHash);
+    console.log("Transfer tx hash:", txHash);
+    if (txHash) {
+      // Save transfer tx hash to context
+      // This is to prevent duplicate transfers in the event that order creation failed
+      setTransferTxHash(txHash);
+    }
 
-    return transferTxHash;
+    return txHash;
   };
 
   const sendOrder = async (transferTxHash: string) => {
@@ -125,14 +142,54 @@ const ReviewOrder = () => {
               <span>{amount} USDT</span>
             </div>
             <div className="flex justify-between items-center">
-              <span>Amount to Receive</span>
-              <span>{convertedAmount} PHP</span>
-            </div>
-            <div className="flex justify-between items-center">
               <span>Exchange Rate</span>
-              <span>1 USDT = ~{exchangeRate?.data} PHP</span>
+              <span>
+                ~{formatAmount(Number(exchangeRate?.data))} PHP / USDT
+              </span>
             </div>
+            {Number(convertedAmount) > MIN_PHP_AMOUNT_NO_FEE ? (
+              <div className="flex justify-between items-center">
+                <span>Amount to Receive</span>
+                <span>{formatAmount(Number(convertedAmount))} PHP</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center">
+                  <span>Subtotal</span>
+                  <span>{formatAmount(Number(convertedAmount))} PHP</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="flex items-center gap-1">
+                        Flat Fee <InfoIcon size={16} />{" "}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        A {formatAmount(PHP_WITHDRAW_FEE)} PHP flat fee applies
+                        to withdrawals below{" "}
+                        {formatAmount(MIN_PHP_AMOUNT_NO_FEE)} PHP
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <span>{formatAmount(PHP_WITHDRAW_FEE)} PHP</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Amount to Receive</span>
+                  <span>
+                    {formatAmount(Number(convertedAmount) - PHP_WITHDRAW_FEE)}{" "}
+                    PHP
+                  </span>
+                </div>
+              </>
+            )}
           </div>
+          <span className="text-xs">
+            <b>Note:</b> Actual settlement rate may vary based on market
+            conditions at the time of disbursement.
+          </span>
         </div>
 
         <div className="flex flex-col gap-2">
