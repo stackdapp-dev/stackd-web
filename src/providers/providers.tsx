@@ -1,5 +1,6 @@
 "use client";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { arbitrum } from "viem/chains";
 import { TokenPriceProvider } from "./TokenPriceProvider";
@@ -22,11 +23,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         // loginMethods: ["email", "sms", "google", "wallet"],
       }}
     >
-      <TokenPriceProvider>
-        <Web3Provider>
-          <UserProvider>{children}</UserProvider>
-        </Web3Provider>
-      </TokenPriceProvider>
+      <TooltipProvider>
+        <TokenPriceProvider>
+          <Web3Provider>
+            <UserProvider>{children}</UserProvider>
+          </Web3Provider>
+        </TokenPriceProvider>
+      </TooltipProvider>
     </PrivyProvider>
   );
 }

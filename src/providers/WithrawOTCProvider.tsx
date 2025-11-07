@@ -8,6 +8,10 @@ import { useWeb3 } from "@/providers/Web3Provider";
 import { createContext, useContext, useEffect, useState } from "react";
 import { erc20Abi, formatUnits } from "viem";
 
+export const MIN_USDT_WITHDRAW_AMOUNT = 1;
+export const MIN_PHP_AMOUNT_NO_FEE = 10000;
+export const PHP_WITHDRAW_FEE = 10;
+
 type WithdrawOTCValue = {
   exchangeRate: RateData | undefined;
   amount: string;
@@ -16,6 +20,8 @@ type WithdrawOTCValue = {
   isValidAmount: boolean;
   available: number; // available USDT to withdraw
   handleMax: () => void;
+  transferTxHash: string | null;
+  setTransferTxHash: (txHash: string) => void;
   paymentMethod: UserPaymentMethodInput | UserPaymentMethod | null;
   setPaymentMethod: (
     paymentMethod: UserPaymentMethodInput | UserPaymentMethod
@@ -39,6 +45,7 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
   const [paymentMethod, setPaymentMethod] = useState<
     UserPaymentMethodInput | UserPaymentMethod | null
   >(null);
+  const [transferTxHash, setTransferTxHash] = useState<string | null>(null);
 
   const { publicClient, activeWalletAddress } = useWeb3();
 
@@ -78,9 +85,13 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (amount === "") {
+      setConvertedAmount("");
       setIsValidAmount(false);
     } else {
-      setIsValidAmount(Number(amount) <= available);
+      setIsValidAmount(
+        Number(amount) <= available &&
+          Number(amount) >= MIN_USDT_WITHDRAW_AMOUNT
+      );
       if (exchangeRate) {
         setConvertedAmount(
           (Number(amount) * Number(exchangeRate.data)).toFixed(2)
@@ -101,6 +112,8 @@ export const WithdrawOTCProvider: React.FC<{ children: React.ReactNode }> = ({
         handleMax,
         paymentMethod,
         setPaymentMethod,
+        transferTxHash,
+        setTransferTxHash,
       }}
     >
       {children}
