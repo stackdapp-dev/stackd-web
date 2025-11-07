@@ -1,5 +1,5 @@
-export type Status = "pending" | "completed" | "failed";
-export type DisplayStatus = "Pending" | "Fulfilled" | "Failed";
+export type Status = "open" | "processing" | "failed" | "fulfilled" | "refunded";
+export type DisplayStatus = "Pending" | "Fulfilled" | "Failed" | "Refunded";
 
 export type TransactionType = "otc_withdrawal" | "otc_refund" | "deposit" | "transfer";
 
