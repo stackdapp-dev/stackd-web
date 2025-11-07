@@ -3,59 +3,21 @@
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
 import { arbiscanUrl } from "@/lib/api/config";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { useTransactions } from "@/providers/TransactionsProvider";
-import { DisplayStatus, Status, Transaction, TransactionType } from "@/types/transaction";
+import { Transaction } from "@/types/transaction";
 import { Copy, ExternalLink } from "lucide-react";
 import { use, useEffect, useState } from "react";
 import { formatUnits } from "viem";
 
-const getTransactionTitle = (type: TransactionType): string => {
-  switch (type) {
-    case "otc_withdrawal":
-      return "OTC Withdrawal";
-    case "otc_refund":
-      return "OTC Refund";
-    case "deposit":
-      return "Deposit";
-    case "transfer":
-      return "Transfer";
-    default:
-      return "Transaction";
-  }
-};
-
-const mapStatus = (status: Status): DisplayStatus => {
-  switch (status) {
-    case "pending":
-      return "Pending";
-    case "completed":
-      return "Fulfilled";
-    case "failed":
-      return "Failed";
-    default:
-      return "Pending";
-  }
-};
-
-const statusBadge = (status: DisplayStatus) => {
-  switch (status) {
-    case "Pending":
-      return "bg-amber-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
-    case "Fulfilled":
-      return "bg-emerald-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
-    case "Failed":
-      return "bg-rose-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
-  }
-};
-
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTransactionById, fetchTransactionById, loading: transactionsLoading } = useTransactions();
+  const { getTransactionById, fetchTransactionById, loading: transactionsLoading, getTransactionTitle, mapStatus, statusBadge } = useTransactions();
   const [tx, setTx] = useState<Transaction | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -103,6 +65,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         onClose={() => {}}
         title=""
         message="Loading transaction..."
+        icon={<Loading size="lg" />}
         showCloseButton={false}
         showActionButtons={false}
       />

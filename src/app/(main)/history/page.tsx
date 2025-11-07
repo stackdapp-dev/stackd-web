@@ -1,66 +1,28 @@
 "use client";
 
 import Card from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { useTransactions } from "@/providers/TransactionsProvider";
-import { DisplayStatus, Status, TransactionType } from "@/types/transaction";
+import { DisplayStatus } from "@/types/transaction";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatUnits } from "viem";
 
-const getTransactionTitle = (type: TransactionType): string => {
-  switch (type) {
-    case "otc_withdrawal":
-      return "OTC Withdrawal";
-    case "otc_refund":
-      return "OTC Refund";
-    case "deposit":
-      return "Deposit";
-    case "transfer":
-      return "Transfer";
-    default:
-      return "Transaction";
-  }
-};
-
-const mapStatus = (status: Status): DisplayStatus => {
-  switch (status) {
-    case "pending":
-      return "Pending";
-    case "completed":
-      return "Fulfilled";
-    case "failed":
-      return "Failed";
-    default:
-      return "Pending";
-  }
-};
-
-const statusBadge = (status: DisplayStatus) => {
-  switch (status) {
-    case "Pending":
-      return "bg-amber-500 text-black px-2 py-0.5 rounded-full text-xs";
-    case "Fulfilled":
-      return "bg-emerald-500 text-black px-2 py-0.5 rounded-full text-xs";
-    case "Failed":
-      return "bg-rose-500 text-black px-2 py-0.5 rounded-full text-xs";
-  }
-};
-
 
 
 const History = () => {
-  const { transactions, loading } = useTransactions();
+  const { transactions, loading, getTransactionTitle, mapStatus, statusBadge } = useTransactions();
   const [filter, setFilter] = useState<"All" | DisplayStatus>("All");
 
   const filtered = useMemo(() => {
     if (filter === "All") return transactions;
 
     return transactions.filter((t) => mapStatus(t.status) === filter);
-  }, [filter, transactions]);
+  }, [filter, transactions, mapStatus]);
 
   if (loading) {
     return (
@@ -69,6 +31,7 @@ const History = () => {
         onClose={() => {}}
         title=""
         message="Loading transactions..."
+        icon={<Loading size="lg" />}
         showCloseButton={false}
         showActionButtons={false}
       />
@@ -92,7 +55,7 @@ const History = () => {
       <h1 className="text-center text-2xl font-bold">History</h1>
 
       <div className="flex gap-2 justify-start items-center">
-        {(["All", "Fulfilled", "Pending"] as const).map((s) => {
+        {(["All", "Fulfilled", "Pending", "Refunded"] as const).map((s) => {
           const active = filter === s;
           return (
             <button
