@@ -13,7 +13,7 @@ export default function BottomSheet({ isOpen, onClose, onDelete }: BottomSheetPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999]">
+    <div className="fixed inset-0 z-[99999] flex items-end justify-center">
       {/* backdrop */}
       <div
         aria-hidden="true"
@@ -21,7 +21,7 @@ export default function BottomSheet({ isOpen, onClose, onDelete }: BottomSheetPr
         className="absolute inset-0 bg-black/50"
       />
 
-      <div className="absolute left-0 right-0 bottom-0 w-full">
+      <div className="relative w-full md:w-sm bottom-0">
         <div className="pb-[env(safe-area-inset-bottom,1rem)]">
           <Card appearance="container" className="rounded-t-2xl overflow-visible w-full relative z-10">
             <div className="py-6">
