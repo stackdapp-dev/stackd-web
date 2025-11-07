@@ -1,7 +1,11 @@
 export type Status = "pending" | "completed" | "failed";
 export type DisplayStatus = "Pending" | "Fulfilled" | "Failed";
 
-export type TransactionType = "otc_withdrawal" | "otc_refund" | "deposit" | "transfer";
+export type TransactionType =
+  | "otc_withdrawal"
+  | "otc_refund"
+  | "deposit"
+  | "transfer";
 
 export type PaymentMethod = {
   id: string;
@@ -29,6 +33,8 @@ export type Order = {
   status: string;
   hasNotified: boolean;
   platformFee: string;
+  flatFee: string;
+  fiatAmountTransferred: string;
   createdAt: string;
   updatedAt: string;
 };
