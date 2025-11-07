@@ -82,3 +82,34 @@ export const addUserPaymentMethod = async (
 
   return json.data as UserPaymentMethod;
 };
+
+export const deleteUserPaymentMethod = async (
+  accessToken: string,
+  id: string
+) => {
+  const body = JSON.stringify({ id });
+
+  const response = await fetch(`${baseUrl}/payment-methods`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+
+  let json: any = {};
+  try {
+    json = await response.json();
+  } catch {
+    // ignore JSON parse errors
+  }
+
+  if (!response.ok) {
+    console.error("Failed to delete user payment method:", response, json);
+    throw new Error(json?.message || "Failed to delete payment method");
+  }
+  console.log("Successfully deleted payment method");
+
+  return json?.data ?? true;
+};

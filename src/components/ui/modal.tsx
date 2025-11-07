@@ -54,7 +54,7 @@ export default function Modal({
             <Text size="xl" weight="semibold">
               {title}
             </Text>
-            <p>{message}</p>
+            <div>{message}</div>
           </div>
 
           {showActionButtons && (
