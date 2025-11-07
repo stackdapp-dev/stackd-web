@@ -78,8 +78,8 @@ const WithdrawViaOTC = () => {
             <ArrowLongDownIcon className="w-6 h-6" />
           </div>
 
-          <div>
-            <div className="text-sm text-muted mb-2">To</div>
+          <div className="flex flex-col gap-2">
+            <div className="text-sm text-muted">To</div>
             <Card
               className="flex flex-row justify-between"
               appearance="container"
@@ -94,11 +94,11 @@ const WithdrawViaOTC = () => {
             </Card>
             {Number(convertedAmount) > 0 &&
               Number(convertedAmount) < MIN_PHP_AMOUNT_NO_FEE && (
-                <span className="text-xs">
+                <p className="text-xs">
                   <b>Note:</b> A {formatAmount(PHP_WITHDRAW_FEE)} PHP flat fee
                   applies to withdrawals below{" "}
                   {formatAmount(MIN_PHP_AMOUNT_NO_FEE)} PHP.
-                </span>
+                </p>
               )}
           </div>
         </div>

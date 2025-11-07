@@ -31,7 +31,7 @@ export function formatAmount(
   // Cap maximum decimals to 4 to avoid very long fractional displays
   const maxDecimals = Math.min(4, Math.max(0, decimals));
   return num.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: maxDecimals,
   });
 }
