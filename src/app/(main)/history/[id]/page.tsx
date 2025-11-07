@@ -3,59 +3,32 @@
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { arbiscanUrl } from "@/lib/api/config";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { useTransactions } from "@/providers/TransactionsProvider";
-import { DisplayStatus, Status, Transaction, TransactionType } from "@/types/transaction";
-import { Copy, ExternalLink } from "lucide-react";
+import { MIN_PHP_AMOUNT_NO_FEE } from "@/providers/WithrawOTCProvider";
+import {
+  DisplayStatus,
+  Status,
+  Transaction,
+  TransactionType,
+} from "@/types/transaction";
+import { Copy, ExternalLink, InfoIcon } from "lucide-react";
 import { use, useEffect, useState } from "react";
 import { formatUnits } from "viem";
-
-const getTransactionTitle = (type: TransactionType): string => {
-  switch (type) {
-    case "otc_withdrawal":
-      return "OTC Withdrawal";
-    case "otc_refund":
-      return "OTC Refund";
-    case "deposit":
-      return "Deposit";
-    case "transfer":
-      return "Transfer";
-    default:
-      return "Transaction";
-  }
-};
-
-const mapStatus = (status: Status): DisplayStatus => {
-  switch (status) {
-    case "pending":
-      return "Pending";
-    case "completed":
-      return "Fulfilled";
-    case "failed":
-      return "Failed";
-    default:
-      return "Pending";
-  }
-};
-
-const statusBadge = (status: DisplayStatus) => {
-  switch (status) {
-    case "Pending":
-      return "bg-amber-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
-    case "Fulfilled":
-      return "bg-emerald-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
-    case "Failed":
-      return "bg-rose-500 text-black px-2 py-0.5 rounded-full text-xs font-semibold";
-  }
-};
 
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTransactionById, fetchTransactionById, loading: transactionsLoading } = useTransactions();
+  const { getTransactionById, fetchTransactionById, loading: transactionsLoading, getTransactionTitle, mapStatus, statusBadge } = useTransactions();
   const [tx, setTx] = useState<Transaction | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -103,6 +76,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         onClose={() => {}}
         title=""
         message="Loading transaction..."
+        icon={<Loading size="lg" />}
         showCloseButton={false}
         showActionButtons={false}
       />
@@ -126,45 +100,101 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-            <Text tone="muted">
-              Withdraw Amount
-            </Text>
+            <Text tone="muted">Withdraw Amount</Text>
             <Text className="text-right">
               {amount} {order?.crypto || "USDT"}
             </Text>
 
             {order && (
               <>
-                <Text tone="muted">
-                  Amount to Receive
-                </Text>
+                <Text tone="muted">Exchange Rate</Text>
                 <Text className="text-right">
-                  {formatAmount(parseFloat(order.fiatAmount))} {order.fiat}
+                  {order.status === "fulfilled"
+                    ? (Number(order.fiatAmountTransferred) / amount).toFixed(2)
+                    : `~ ${order.quotedRate}`}{" "}
+                  {order.fiat}/{order.crypto}
                 </Text>
 
-                <Text tone="muted">
-                  Exchange Rate
-                </Text>
-                <Text className="text-right">
-                  1 {order.crypto} ≈ {order.quotedRate} {order.fiat}
-                </Text>
+                {Number(order.flatFee) === 0 ? (
+                  <>
+                    <Text tone="muted">
+                      {order.status === "fulfilled"
+                        ? "Amount Received"
+                        : "Amount to Receive"}
+                    </Text>
+                    <Text className="text-right">
+                      {formatAmount(
+                        order.status === "fulfilled"
+                          ? parseFloat(order.fiatAmountTransferred)
+                          : parseFloat(order.fiatAmount)
+                      )}{" "}
+                      {order.fiat}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text tone="muted">Subtotal</Text>
+                    <Text className="text-right">
+                      {formatAmount(parseFloat(order.fiatAmount))} {order.fiat}
+                    </Text>
 
-                <Text tone="muted">
-                  Order Number
-                </Text>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Text className="flex items-center gap-1" tone="muted">
+                          Flat Fee <InfoIcon size={16} />{" "}
+                        </Text>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          A {Number(order.flatFee)} PHP flat fee applies to
+                          withdrawals below{" "}
+                          {formatAmount(MIN_PHP_AMOUNT_NO_FEE)} PHP
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Text className="text-right">
+                      {formatAmount(parseFloat(order.flatFee))} {order.fiat}
+                    </Text>
+
+                    <Text tone="muted">
+                      {order.status === "fulfilled"
+                        ? "Amount Received"
+                        : "Amount to Receive"}
+                    </Text>
+                    <Text className="text-right">
+                      {formatAmount(
+                        order.status === "fulfilled"
+                          ? parseFloat(order.fiatAmountTransferred)
+                          : parseFloat(order.fiatAmount) - Number(order.flatFee)
+                      )}{" "}
+                      {order.fiat}
+                    </Text>
+                  </>
+                )}
+
+                <Text tone="muted">Order Number</Text>
                 <div className="flex items-center justify-end gap-2">
                   <Text className="text-right text-xs">
                     {order.orderNumber}
                   </Text>
-                  <button type="button" aria-label="Copy order number" className="p-1 rounded" onClick={() => handleCopy(order.orderNumber, "order")}>
-                    <Copy className={`h-4 w-4 ${copied === "order" ? "text-amber-400" : "text-neutral-400"}`} />
+                  <button
+                    type="button"
+                    aria-label="Copy order number"
+                    className="p-1 rounded"
+                    onClick={() => handleCopy(order.orderNumber, "order")}
+                  >
+                    <Copy
+                      className={`h-4 w-4 ${
+                        copied === "order"
+                          ? "text-amber-400"
+                          : "text-neutral-400"
+                      }`}
+                    />
                   </button>
                 </div>
 
-                <Text tone="muted">
-                  Transaction Hash
-                </Text>
-                <a 
+                <Text tone="muted">Transaction Hash</Text>
+                <a
                   href={`${arbiscanUrl}/tx/${tx.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -178,12 +208,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
               </>
             )}
 
-            <Text tone="muted">
-              Last Updated
-            </Text>
-            <Text className="text-right">
-              {formatDate(tx.updatedAt)}
-            </Text>
+            <Text tone="muted">Last Updated</Text>
+            <Text className="text-right">{formatDate(tx.updatedAt)}</Text>
           </div>
         </div>
       </Card>
@@ -191,61 +217,50 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       {paymentMethod && (
         <div>
           <Text className="text-amber-400 text-sm">Recipient Details</Text>
-          <Card appearance="container" className="rounded-xl overflow-hidden mt-2">
+          <Card
+            appearance="container"
+            className="rounded-xl overflow-hidden mt-2"
+          >
             <div className="text-sm space-y-2">
               {paymentMethod.eWalletName && (
                 <div className="flex justify-between">
-                  <Text tone="muted">
-                    E-wallet Name
-                  </Text>
+                  <Text tone="muted">E-wallet Name</Text>
                   <Text>{paymentMethod.eWalletName}</Text>
                 </div>
               )}
               {paymentMethod.bankName && (
                 <div className="flex justify-between">
-                  <Text tone="muted">
-                    Bank Name
-                  </Text>
+                  <Text tone="muted">Bank Name</Text>
                   <Text>{paymentMethod.bankName}</Text>
                 </div>
               )}
               {paymentMethod.accountName && (
                 <div className="flex justify-between">
-                  <Text tone="muted">
-                    Account Name
-                  </Text>
+                  <Text tone="muted">Account Name</Text>
                   <Text>{paymentMethod.accountName}</Text>
                 </div>
               )}
               {paymentMethod.phoneNumber && (
                 <div className="flex justify-between">
-                  <Text tone="muted">
-                    Mobile Number
-                  </Text>
+                  <Text tone="muted">Mobile Number</Text>
                   <Text>{paymentMethod.phoneNumber}</Text>
                 </div>
               )}
               {paymentMethod.email && (
                 <div className="flex justify-between">
-                  <Text tone="muted">
-                    E-mail Address
-                  </Text>
+                  <Text tone="muted">E-mail Address</Text>
                   <Text>{paymentMethod.email}</Text>
                 </div>
               )}
               {paymentMethod.bankAccountNumber && (
                 <div className="flex justify-between">
-                  <Text tone="muted">
-                    Account Number
-                  </Text>
+                  <Text tone="muted">Account Number</Text>
                   <Text>{paymentMethod.bankAccountNumber}</Text>
                 </div>
               )}
               {paymentMethod.alias && (
                 <div className="flex justify-between">
-                  <Text tone="muted">
-                    Alias
-                  </Text>
+                  <Text tone="muted">Alias</Text>
                   <Text>{paymentMethod.alias}</Text>
                 </div>
               )}

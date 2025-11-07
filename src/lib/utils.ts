@@ -31,7 +31,7 @@ export function formatAmount(
   // Cap maximum decimals to 4 to avoid very long fractional displays
   const maxDecimals = Math.min(4, Math.max(0, decimals));
   return num.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: maxDecimals,
   });
 }
@@ -42,9 +42,9 @@ export function formatCurrency(
   currencySymbol: string = "$",
   abbreviate: boolean = true
 ) {
-  if (value === null || value === undefined) return `${currencySymbol}0`; 
+  if (value === null || value === undefined) return `${currencySymbol}0`;
   const num = Number(value);
-  if (!Number.isFinite(num)) return `${currencySymbol}0`; 
+  if (!Number.isFinite(num)) return `${currencySymbol}0`;
   // For large numbers, abbreviate (e.g., 6.11K, 7.1M). Use 1 decimal place for abbreviated values.
   const abs = Math.abs(num);
   if (abs >= 1000 && abbreviate) {
@@ -57,10 +57,13 @@ export function formatCurrency(
   })}`;
 }
 
-export function formatPercent(value: number | null | undefined, decimals: number = 2) {
+export function formatPercent(
+  value: number | null | undefined,
+  decimals: number = 2
+) {
   if (value === null || value === undefined) return `0%`;
   const num = Number(value);
-  if (!Number.isFinite(num)) return `0%`; 
+  if (!Number.isFinite(num)) return `0%`;
   return `${Number(value).toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -99,4 +102,98 @@ export function formatDate(dateString: string): string {
   })
     .format(date)
     .replace(",", "");
+}
+
+/**
+ * Gets a human-readable identifier from a Privy user object.
+ * Prioritizes identifiers in the following order:
+ * 1. Email address
+ * 2. Phone number
+ * 3. Google account email
+ * 4. Twitter username
+ * 5. Discord username
+ * 6. GitHub username
+ * 7. Farcaster username
+ * 8. Telegram username
+ * 9. Wallet address (shortened)
+ * 10. User ID (as fallback)
+ *
+ * @param user - Privy user object
+ * @returns Human-readable identifier string
+ */
+export function getPrivyUserIdentifier(user: any): string {
+  if (!user) return "--";
+
+  // Email
+  if (user.email?.address) {
+    return user.email.address;
+  }
+
+  // Phone number
+  if (user.phone?.number) {
+    return user.phone.number;
+  }
+
+  // Google
+  if (user.google?.email) {
+    return user.google.email;
+  }
+  if (user.google?.name) {
+    return user.google.name;
+  }
+
+  // Twitter
+  if (user.twitter?.username) {
+    return `@${user.twitter.username}`;
+  }
+  if (user.twitter?.name) {
+    return user.twitter.name;
+  }
+
+  // Discord
+  if (user.discord?.username) {
+    return user.discord.username;
+  }
+
+  // GitHub
+  if (user.github?.username) {
+    return user.github.username;
+  }
+
+  // Farcaster
+  if (user.farcaster?.username) {
+    return user.farcaster.username;
+  }
+
+  // Telegram
+  if (user.telegram?.username) {
+    return `@${user.telegram.username}`;
+  }
+  if (user.telegram?.firstName) {
+    return user.telegram.firstName;
+  }
+
+  // Wallet address (shortened)
+  if (user.wallet?.address) {
+    const addr = user.wallet.address;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }
+
+  // Linked accounts - check for any wallet
+  if (user.linkedAccounts && user.linkedAccounts.length > 0) {
+    const wallet = user.linkedAccounts.find(
+      (account: any) => account.type === "wallet"
+    );
+    if (wallet?.address) {
+      const addr = wallet.address;
+      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    }
+  }
+
+  // Fallback to user ID
+  if (user.id) {
+    return `User ${user.id.slice(0, 8)}`;
+  }
+
+  return "--";
 }

@@ -5,14 +5,16 @@ import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
 import { Switch } from "@/components/ui/switch";
+import { getPrivyUserIdentifier } from "@/lib/utils";
 import { useWeb3 } from "@/providers/Web3Provider";
-import { useLogout } from "@privy-io/react-auth";
+import { useLogout, usePrivy } from "@privy-io/react-auth";
 import { LogOutIcon } from "lucide-react";
 import { redirect } from "next/navigation";
 import { useState } from "react";
 
 const Profile = () => {
   const { wallets, activeWalletAddress, setActiveWalletAddress } = useWeb3();
+  const { user } = usePrivy();
 
   const { logout } = useLogout({
     onSuccess: () => {
@@ -32,7 +34,7 @@ const Profile = () => {
       <PageHeader title="Profile" />
 
       <div className="flex flex-col gap-4">
-        <h2 className="text-xl text-primary">My Wallets</h2>
+        <h2 className="text-xl text-primary">Connected Wallets</h2>
         <ul className="flex flex-col gap-4">
           {wallets.map((wallet) => (
             <li key={wallet.address}>
@@ -60,14 +62,20 @@ const Profile = () => {
         </ul>
       </div>
 
-      <Button
-        variant="link"
-        className="text-destructive mx-auto"
-        onClick={() => signout()}
-        disabled={isLoading}
-      >
-        {isLoading ? <Loading /> : <LogOutIcon />} Sign out
-      </Button>
+      <div className="flex flex-col gap-2">
+        <div className="text-center">
+          Signed in as: {getPrivyUserIdentifier(user)}
+        </div>
+
+        <Button
+          variant="outline"
+          className="text-destructive mx-auto"
+          onClick={() => signout()}
+          disabled={isLoading}
+        >
+          {isLoading ? <Loading /> : <LogOutIcon />} Sign out
+        </Button>
+      </div>
     </div>
   );
 };

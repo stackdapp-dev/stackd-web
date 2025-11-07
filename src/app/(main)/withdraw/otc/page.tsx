@@ -4,9 +4,14 @@ import InputAmountCard from "@/components/common/InputAmountCard";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatAmount, formatDate } from "@/lib/utils";
 import { useUser } from "@/providers/UserProvider";
-import { useWithdrawOTC } from "@/providers/WithrawOTCProvider";
+import {
+  MIN_PHP_AMOUNT_NO_FEE,
+  MIN_USDT_WITHDRAW_AMOUNT,
+  PHP_WITHDRAW_FEE,
+  useWithdrawOTC,
+} from "@/providers/WithrawOTCProvider";
 import { ArrowLongDownIcon } from "@heroicons/react/16/solid";
 import { TriangleAlertIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -42,7 +47,7 @@ const WithdrawViaOTC = () => {
       <div className="flex flex-col gap-4">
         {exchangeRate?.data ? (
           <span className="text-sm text-muted">
-            1 USDT ≈ {exchangeRate.data} PHP as of{" "}
+            1 USDT ≈ {formatAmount(Number(exchangeRate.data))} PHP as of{" "}
             {exchangeRate.updatedAt && formatDate(exchangeRate.updatedAt)}
           </span>
         ) : (
@@ -60,7 +65,11 @@ const WithdrawViaOTC = () => {
           />
           {!isValidAmount && amount !== "" && (
             <span className="text-xs text-destructive">
-              Withdraw amount exceeds your available balance
+              {Number(amount) > available
+                ? "Withdraw amount exceeds your available balance"
+                : "Withdraw amount must be at least " +
+                  MIN_USDT_WITHDRAW_AMOUNT +
+                  " USDT"}
             </span>
           )}
         </div>
@@ -69,8 +78,8 @@ const WithdrawViaOTC = () => {
             <ArrowLongDownIcon className="w-6 h-6" />
           </div>
 
-          <div>
-            <div className="text-sm text-muted mb-2">To</div>
+          <div className="flex flex-col gap-2">
+            <div className="text-sm text-muted">To</div>
             <Card
               className="flex flex-row justify-between"
               appearance="container"
@@ -79,10 +88,18 @@ const WithdrawViaOTC = () => {
                 type="text"
                 disabled
                 placeholder="0.00"
-                value={formatCurrency(Number(convertedAmount), 2, "", false)}
+                value={formatAmount(Number(convertedAmount))}
               />
               <label className="font-semibold">PHP</label>
             </Card>
+            {Number(convertedAmount) > 0 &&
+              Number(convertedAmount) < MIN_PHP_AMOUNT_NO_FEE && (
+                <p className="text-xs">
+                  <b>Note:</b> A {formatAmount(PHP_WITHDRAW_FEE)} PHP flat fee
+                  applies to withdrawals below{" "}
+                  {formatAmount(MIN_PHP_AMOUNT_NO_FEE)} PHP.
+                </p>
+              )}
           </div>
         </div>
       </div>
