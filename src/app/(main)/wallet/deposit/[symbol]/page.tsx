@@ -62,7 +62,7 @@ export default function DepositPage({
             </Text>
             <button
               onClick={handleCopy}
-              className="ml-2 p-2 rounded bg-white/5 hover:bg-white/10"
+              className="ml-2 p-2 rounded bg-white/5 hover:bg-white/10 cursor-pointer"
             >
               <Copy size={18} />
             </button>

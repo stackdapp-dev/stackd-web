@@ -67,7 +67,7 @@ export default function TransactionOverview({
         <Text>Transaction overview</Text>
         <button
           onClick={() => setshowAmount((v) => !v)}
-          className="mr-4 text-muted"
+          className="mr-4 text-muted cursor-pointer"
         >
           <ArrowLeftRight size={12} />
         </button>

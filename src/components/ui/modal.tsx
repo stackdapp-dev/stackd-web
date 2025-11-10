@@ -35,7 +35,7 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6" style={{ overflow: 'auto' }}>
       <div className="relative bg-neutral-900 text-white rounded-lg p-6 max-w-md w-full shadow-xl">
         {showCloseButton && (
           <button

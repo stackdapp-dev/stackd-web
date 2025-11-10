@@ -57,7 +57,7 @@ export default function MaskedValue({
           className={cn("inline-flex items-center justify-center text-xl text-muted/80 hover:text-muted", buttonClassName)}
           type="button"
         >
-          {isVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+          {isVisible ? <Eye className="h-5 w-5 cursor-pointer" /> : <EyeOff className="h-5 w-5 cursor-pointer" />}
         </button>
       ) : null}
     </div>

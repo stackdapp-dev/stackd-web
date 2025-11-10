@@ -54,7 +54,7 @@ const History = () => {
       </div> */}
       <h1 className="text-center text-2xl font-bold">History</h1>
 
-      <div className="flex gap-2 justify-start items-center">
+      <div className="flex justify-between items-center">
         {(["All", "Fulfilled", "Pending", "Refunded"] as const).map((s) => {
           const active = filter === s;
           return (

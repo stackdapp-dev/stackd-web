@@ -56,7 +56,7 @@ export default function InputAmountCard({ label, value, onChangeText, tokenSymbo
             <Text tone="muted">
               Balance {formatAmount(availableAmount)}
             </Text>
-            <button onClick={onMaxPress} className="text-primary">
+            <button onClick={onMaxPress} className="text-primary cursor-pointer">
               MAX
             </button>
           </div>
