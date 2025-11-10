@@ -30,6 +30,7 @@ type Web3ProviderValue = {
   wallets: ConnectedWallet[];
   activeWalletAddress: Address;
   setActiveWalletAddress: (address: Address) => void;
+  ensureCorrectNetwork: () => Promise<void>;
 };
 
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
@@ -120,6 +121,40 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const ensureCorrectNetwork = async () => {
+    if (!activeWallet) {
+      throw new Error("No active wallet connected");
+    }
+
+    try {
+      // Get current chain ID from wallet client
+      const provider = await activeWallet.getEthereumProvider();
+      const walletChainId = await provider.request({
+        method: "eth_chainId",
+      });
+      
+      const currentChainId = parseInt(walletChainId as string, 16);
+
+      if (currentChainId === NETWORK.id) {
+        console.log(`[NETWORK] Already on ${NETWORK.name} network`);
+        return;
+      }
+
+      console.log(
+        `[NETWORK] Switching from chain ${currentChainId} to ${NETWORK.id} (${NETWORK.name})`
+      );
+
+      await activeWallet.switchChain(NETWORK.id);
+
+      console.log(`[NETWORK] Successfully switched to ${NETWORK.name}`);
+    } catch (error) {
+      console.error("[NETWORK] Failed to switch network:", error);
+      throw new Error(
+        `Please switch your wallet to the ${NETWORK.name} network to continue`
+      );
+    }
+  };
+
   return (
     <Web3Context.Provider
       value={{
@@ -128,6 +163,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         wallets,
         activeWalletAddress: activeWallet?.address as `0x${string}`,
         setActiveWalletAddress,
+        ensureCorrectNetwork,
       }}
     >
       {children}

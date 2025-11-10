@@ -77,7 +77,7 @@ type UseCompoundResult = {
 };
 
 export function useCompound(): UseCompoundResult {
-  const { publicClient, walletClient, activeWalletAddress } = useWeb3();
+  const { publicClient, walletClient, activeWalletAddress, ensureCorrectNetwork } = useWeb3();
   const getTokenPrice = useGetTokenPrice();
   const acct = walletClient?.account?.address || activeWalletAddress;
 
@@ -216,6 +216,8 @@ export function useCompound(): UseCompoundResult {
       }
 
       try {
+        await ensureCorrectNetwork();
+
         const tx = await compoundApprove(
           walletClient,
           formatAddress(acct),
@@ -231,7 +233,7 @@ export function useCompound(): UseCompoundResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [walletClient, acct]
+    [walletClient, acct, ensureCorrectNetwork]
   );
 
   const allowance = useCallback(
@@ -266,6 +268,8 @@ export function useCompound(): UseCompoundResult {
       }
 
       try {
+        await ensureCorrectNetwork();
+
         const tx = await compoundSupply(
           walletClient,
           formatAddress(acct),
@@ -280,7 +284,7 @@ export function useCompound(): UseCompoundResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [walletClient, acct]
+    [walletClient, acct, ensureCorrectNetwork]
   );
 
   const withdraw = useCallback(
@@ -293,6 +297,8 @@ export function useCompound(): UseCompoundResult {
       }
 
       try {
+        await ensureCorrectNetwork();
+
         const tx = await compoundWithdraw(
           walletClient,
           formatAddress(acct),
@@ -307,7 +313,7 @@ export function useCompound(): UseCompoundResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [walletClient, acct]
+    [walletClient, acct, ensureCorrectNetwork]
   );
 
   const refetch = useCallback(() => fetch(true), [fetch]);
