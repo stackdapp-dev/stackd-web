@@ -4,7 +4,7 @@ import { useWeb3 } from "@/providers/Web3Provider";
 import { Address } from "viem";
 
 const useTokenTransfer = () => {
-  const { walletClient, activeWalletAddress } = useWeb3();
+  const { walletClient, activeWalletAddress, ensureCorrectNetwork } = useWeb3();
 
   const transferTo = async (
     recipient: Address,
@@ -20,6 +20,8 @@ const useTokenTransfer = () => {
       : activeWalletAddress;
 
     try {
+      await ensureCorrectNetwork();
+
       const tx = await transfer(
         walletClient,
         address,
