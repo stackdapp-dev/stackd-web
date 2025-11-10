@@ -37,7 +37,7 @@ const PageHeader = ({ title }: { title: string }) => {
         isScrolled ? "border-b" : ""
       }`}
     >
-      <button className="absolute left-4" onClick={() => history.back()}>
+      <button className="absolute left-4 cursor-pointer" onClick={() => history.back()}>
         <ArrowLeftIcon className="h-7 w-7" />
       </button>
       <h1 className="text-center text-2xl font-bold">{title}</h1>

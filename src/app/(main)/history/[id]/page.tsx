@@ -16,10 +16,7 @@ import { formatAmount, formatDate } from "@/lib/utils";
 import { useTransactions } from "@/providers/TransactionsProvider";
 import { MIN_PHP_AMOUNT_NO_FEE } from "@/providers/WithrawOTCProvider";
 import {
-  DisplayStatus,
-  Status,
-  Transaction,
-  TransactionType,
+  Transaction
 } from "@/types/transaction";
 import { Copy, ExternalLink, InfoIcon } from "lucide-react";
 import { use, useEffect, useState } from "react";
@@ -184,7 +181,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                     onClick={() => handleCopy(order.orderNumber, "order")}
                   >
                     <Copy
-                      className={`h-4 w-4 ${
+                      className={`h-4 w-4 cursor-pointer ${
                         copied === "order"
                           ? "text-amber-400"
                           : "text-neutral-400"
