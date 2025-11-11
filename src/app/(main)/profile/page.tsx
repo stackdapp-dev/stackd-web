@@ -5,30 +5,18 @@ import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
 import { Switch } from "@/components/ui/switch";
+import { useFullLogout } from "@/hooks/useFullLogout";
 import { getPrivyUserIdentifier, shortenAddress } from "@/lib/utils";
 import { useWeb3 } from "@/providers/Web3Provider";
-import { useLogout, usePrivy } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 import { KeyIcon, LogOutIcon } from "lucide-react";
-import { redirect, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const Profile = () => {
   const { wallets, activeWalletAddress, setActiveWalletAddress } = useWeb3();
   const { user } = usePrivy();
   const router = useRouter();
-
-  const { logout } = useLogout({
-    onSuccess: () => {
-      redirect("/");
-    },
-  });
-
-  const [isLoading, setIsLoading] = useState(false);
-
-  const signout = async () => {
-    setIsLoading(true);
-    logout();
-  };
+  const { fullLogout, isLoading } = useFullLogout();
 
   return (
     <div className="p-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
@@ -67,6 +55,7 @@ const Profile = () => {
                       {wallet.meta.name}
                     </div>
                     <Switch
+                      disabled={wallets.length === 1}
                       checked={wallet.address === activeWalletAddress}
                       onCheckedChange={() =>
                         setActiveWalletAddress(wallet.address as `0x${string}`)
@@ -88,7 +77,7 @@ const Profile = () => {
         <Button
           variant="outline"
           className="text-destructive mx-auto"
-          onClick={() => signout()}
+          onClick={() => fullLogout()}
           disabled={isLoading}
         >
           {isLoading ? <Loading /> : <LogOutIcon />} Sign out

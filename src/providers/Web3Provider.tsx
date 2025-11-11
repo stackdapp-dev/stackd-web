@@ -1,4 +1,4 @@
-import { ConnectedWallet, useWallets } from "@privy-io/react-auth";
+import { ConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import React, {
   createContext,
   useContext,
@@ -31,6 +31,7 @@ type Web3ProviderValue = {
   activeWalletAddress: Address;
   setActiveWalletAddress: (address: Address) => void;
   ensureCorrectNetwork: () => Promise<void>;
+  clearWalletState: () => void;
 };
 
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
@@ -41,6 +42,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { wallets, ready } = useWallets();
+  const { authenticated } = usePrivy();
 
   const [publicClient] = useState<PublicClient>(() =>
     createPublicClient({
@@ -58,7 +60,13 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const activeWallet = useMemo(() => {
-    if (!ready || wallets.length === 0) return null;
+    // Only set active wallet if user is authenticated
+    if (!ready || wallets.length === 0 || !authenticated) {
+      if (!authenticated) {
+        console.log("[WALLET] User not authenticated, no active wallet");
+      }
+      return null;
+    }
 
     // there's an already saved wallet address
     if (savedActiveWallet) {
@@ -87,7 +95,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     }
     console.log("[WALLET] active wallet is first wallet:", wallets[0].address);
     return wallets[0];
-  }, [ready, wallets, savedActiveWallet]);
+  }, [ready, wallets, savedActiveWallet, authenticated]);
 
   useEffect(() => {
     const initWalletClient = async () => {
@@ -132,7 +140,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       const walletChainId = await provider.request({
         method: "eth_chainId",
       });
-      
+
       const currentChainId = parseInt(walletChainId as string, 16);
 
       if (currentChainId === NETWORK.id) {
@@ -155,6 +163,23 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const clearWalletState = () => {
+    console.log("[WALLET] Clearing wallet state...");
+
+    // Clear wallet client
+    setWalletClient(null);
+
+    // Clear saved active wallet
+    setSavedActiveWallet(null);
+
+    // Clear localStorage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(ACTIVE_WALLET_KEY);
+    }
+
+    console.log("[WALLET] Wallet state cleared");
+  };
+
   return (
     <Web3Context.Provider
       value={{
@@ -164,6 +189,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         activeWalletAddress: activeWallet?.address as `0x${string}`,
         setActiveWalletAddress,
         ensureCorrectNetwork,
+        clearWalletState,
       }}
     >
       {children}
