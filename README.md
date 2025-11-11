@@ -1,4 +1,4 @@
-# Privy + Next.js Starter 
+# Privy + Next.js Starter
 
 This example showcases how to get started using Privy's React SDK inside a Next.js application.
 
