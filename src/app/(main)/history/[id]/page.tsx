@@ -15,19 +15,23 @@ import { arbiscanUrl } from "@/lib/api/config";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { useTransactions } from "@/providers/TransactionsProvider";
 import { MIN_PHP_AMOUNT_NO_FEE } from "@/providers/WithrawOTCProvider";
-import {
-  Transaction
-} from "@/types/transaction";
+import { Transaction } from "@/types/transaction";
 import { Copy, ExternalLink, InfoIcon } from "lucide-react";
 import { use, useEffect, useState } from "react";
 import { formatUnits } from "viem";
 
-
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { getTransactionById, fetchTransactionById, loading: transactionsLoading, getTransactionTitle, mapStatus, statusBadge } = useTransactions();
+  const {
+    getTransactionById,
+    fetchTransactionById,
+    loading: transactionsLoading,
+    getTransactionTitle,
+    mapStatus,
+    statusBadge,
+  } = useTransactions();
   const [tx, setTx] = useState<Transaction | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [showCopied, setShowCopied] = useState(false);
 
   useEffect(() => {
     // From all transactions first
@@ -53,17 +57,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     fetchTransaction();
   }, [id, transactionsLoading, getTransactionById, fetchTransactionById]);
 
-  const handleCopy = (text: string, key: string) => {
-    if (!navigator?.clipboard) return;
-    navigator.clipboard.writeText(text).then(
-      () => {
-        setCopied(key);
-        window.setTimeout(() => setCopied(null), 1800);
-      },
-      () => {
-        /* ignore */
-      }
-    );
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
   };
 
   if (transactionsLoading || !tx) {
@@ -174,20 +175,21 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                   <Text className="text-right text-xs">
                     {order.orderNumber}
                   </Text>
-                  <button
-                    type="button"
-                    aria-label="Copy order number"
-                    className="p-1 rounded"
-                    onClick={() => handleCopy(order.orderNumber, "order")}
-                  >
-                    <Copy
-                      className={`h-4 w-4 cursor-pointer ${
-                        copied === "order"
-                          ? "text-amber-400"
-                          : "text-neutral-400"
-                      }`}
-                    />
-                  </button>
+                  <Tooltip open={showCopied}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Copy order number"
+                        className="p-1 text-neutral-400 hover:text-primary transition-colors"
+                        onClick={() => handleCopy(order.orderNumber)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Copied!</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
 
                 <Text tone="muted">Transaction Hash</Text>

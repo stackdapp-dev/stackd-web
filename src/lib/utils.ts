@@ -105,6 +105,19 @@ export function formatDate(dateString: string): string {
 }
 
 /**
+ * Shortens a wallet address for display purposes
+ * @param address - The full wallet address (0x...)
+ * @param chars - Number of characters to show at the start and end (default: 4)
+ * @returns Shortened address (e.g., "0x1234...5678")
+ */
+export function shortenAddress(address: string, chars = 4): string {
+  if (!address || address.length < chars * 2 + 2) return address;
+  return `${address.substring(0, chars + 2)}...${address.substring(
+    address.length - chars
+  )}`;
+}
+
+/**
  * Gets a human-readable identifier from a Privy user object.
  * Prioritizes identifiers in the following order:
  * 1. Email address
