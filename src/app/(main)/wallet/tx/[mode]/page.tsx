@@ -64,7 +64,7 @@ export default function TxModePage() {
       <div className="flex items-center justify-center gap-3">
         <input type="checkbox" id="ack" checked={ackChecked} onChange={() => setAckChecked((v) => !v)} aria-checked={ackChecked} />
         <label htmlFor="ack" className="text-sm text-muted cursor-pointer">
-          I acknowledge the risks involved.
+          {mode === "repay" ? "I confirm that I've reviewed the repayment details above." : "I acknowledge the risks involved."}
         </label>
       </div>
 
