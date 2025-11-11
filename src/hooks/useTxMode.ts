@@ -8,7 +8,7 @@ import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseUnits } from "viem";
+import { maxUint256, parseUnits } from "viem";
 
 export type TxMode = "borrow" | "repay";
 
@@ -28,59 +28,56 @@ export function useTxMode(mode: TxMode = "borrow") {
   const { borrowableAmount } = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
   const usdtPrice = getPrice("USDT") || 1;
   const availableForBorrow = borrowableAmount / usdtPrice;
-  const availableForRepay = assets.find((a) => a.symbol === "USDT")?.amount || 0;
+  const availableForRepay = assets.find((a) => a.symbol === "USDT")?.amount || 0; // USDT balance in wallet
   const borrowedAmount = borrowedAssets.find((a) => a.symbol === "USDT")?.amount || 0;
-  const available = mode === "repay" ? availableForRepay : availableForBorrow;
+  const maxRepay = Math.min(availableForRepay, borrowedAmount); // Max repayable amount
+  const available = mode === "repay" ? maxRepay : availableForBorrow; // Max amount user can transact
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const parsed = amount || 0;
       if (mode === "repay") {
-        const capped = Math.min(parsed, borrowedAmount);
+        const capped = Math.min(amount, borrowedAmount);
         setPreviewAmount(-capped);
       } else {
-        setPreviewAmount(parsed);
+        setPreviewAmount(amount);
       }
     }, 300);
     return () => clearTimeout(t);
   }, [amount, mode, borrowedAmount]);
 
   const handleMax = useCallback(() => {
-    if (mode === "repay") {
-      const maxRepay = Math.min(availableForRepay, borrowedAmount);
-      setAmount(maxRepay);
-      setPreviewAmount(-maxRepay);
-    } else {
-      setAmount(available);
-      setPreviewAmount(available);
-    }
-  }, [available, mode, availableForRepay, borrowedAmount]);
+    setAmount(available);
+    setPreviewAmount(mode === "repay" ? -available : available);
+  }, [available, mode]);
 
   const handleAction = useCallback(async () => {
-    if (isProcessing) return;
-    const amt = amount || 0;
-    if (amt <= 0) return;
+    if (isProcessing || amount <= 0) return;
 
     setIsProcessing(true);
     try {
       const tokenMeta = getTokenMetadata("USDT");
       if (!tokenMeta) throw new Error("USDT metadata not found");
 
-      const amountBigInt = parseUnits(String(amt), tokenMeta.decimals);
+      const tokenAddress = tokenMeta.address as `0x${string}`;
+      const amountBigInt = parseUnits(String(amount), tokenMeta.decimals);
 
       if (mode === "repay") {
+        const bufferAmount = parseUnits("1", tokenMeta.decimals); // 1 USDT buffer
+        const approvalAmount = amountBigInt + bufferAmount;
+
         // Check allowance and approve only if needed
-        const currentAllowance = allowance ? await allowance(tokenMeta.address as `0x${string}`) : null;
-        if (currentAllowance === null || currentAllowance < amountBigInt) {
-          const approveResult = await approve(tokenMeta.address as `0x${string}`, amountBigInt);
+        const currentAllowance = allowance ? await allowance(tokenAddress) : null;
+        if (currentAllowance === null || currentAllowance < approvalAmount) {
+          const approveResult = await approve(tokenAddress, approvalAmount);
           if (approveResult.error) throw new Error(approveResult.error);
         }
 
-        const supplyResult = await supply(tokenMeta.address as `0x${string}`, amountBigInt);
+        // Use maxUint256 when repaying max available amount
+        const repayAmount = amount >= available ? maxUint256 : amountBigInt;
+        const supplyResult = await supply(tokenAddress, repayAmount);
         if (supplyResult.error) throw new Error(supplyResult.error);
       } else {
-        // borrow -> represented by withdraw in this protocol
-        const result = await withdraw(tokenMeta.address as `0x${string}`, amountBigInt);
+        const result = await withdraw(tokenAddress, amountBigInt);
         if (result.error) throw new Error(result.error);
       }
 
@@ -92,7 +89,7 @@ export function useTxMode(mode: TxMode = "borrow") {
     } finally {
       setIsProcessing(false);
     }
-  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetchLoanData, router, allowance]);
+  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetchLoanData, router, allowance, available]);
 
   useEffect(() => {
     if (!autoAttempted.current) autoAttempted.current = true;
