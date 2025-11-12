@@ -172,7 +172,7 @@ export default function LoanInfo() {
               </Text>
 
               <Text className="mb-2 text-right" tone="white">
-                Liquidation Price
+                Liquidation Point
               </Text>
               <Text weight="semibold" className="text-right">
                 {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
