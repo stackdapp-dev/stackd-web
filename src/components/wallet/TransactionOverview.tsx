@@ -34,7 +34,7 @@ export default function TransactionOverview({
     maxLtv,
     borrowCapacity,
     liquidationRatio,
-    liquidationPoint,
+    liquidationRange,
     borrowApr,
   } = loanCalcs;
 
@@ -56,7 +56,7 @@ export default function TransactionOverview({
   const amtItems: TxItem[] = [
     { label: "Borrowable Amount", value: [formatCurrency(borrowable[0]), formatCurrency(borrowable[1])] },
     { label: "Borrow Capacity", value: formatCurrency(borrowCapacity) },
-    { label: "Liquidation Point", value: formatCurrency(liquidationPoint) },
+    { label: "Liquidation Point", value: [formatCurrency(liquidationRange[0]), formatCurrency(liquidationRange[1])] },
   ];
 
   const itemsToRender = showAmount ? [...commonItems, ...amtItems] : [...commonItems, ...pctItems];

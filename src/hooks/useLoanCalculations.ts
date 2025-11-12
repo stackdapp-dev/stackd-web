@@ -20,20 +20,22 @@ export const useLoanCalculations = (suppliedAssets: Asset[], borrowedAssets: Ass
   const borrowableAmount = Math.max(0, totalSuppliedUsd * (maxLtv / 100) - totalBorrowedUsd);
   const liquidationPrice = totalBorrowedUsd > 0 ? totalBorrowedUsd * (100 / liquidationRatio) : 0;
   const borrowCapacity = totalSuppliedUsd * (maxLtv / 100);
-  const liquidationPoint = totalSuppliedUsd * (liquidationRatio / 100);
+  const liquidationPoint = totalBorrowedUsd > 0 ? totalBorrowedUsd / (liquidationRatio / 100) : 0;
 
   // Preview calculations
   const newBorrowValue = previewBorrowAmount * getPrice("USDT");
-  const newTotalBorrow = totalBorrowedUsd + newBorrowValue;
+  const newTotalBorrow = Math.max(0, totalBorrowedUsd + newBorrowValue);
   const newLtv = totalSuppliedUsd > 0 ? (newTotalBorrow / totalSuppliedUsd) * 100 : 0;
-  const effectiveNewLtv = Math.min(newLtv, maxLtv);
-  const borrowableAmountNew = Math.max(0, totalSuppliedUsd * (maxLtv / 100) - newTotalBorrow);
+  const newEffectiveLTV = Math.min(newLtv, maxLtv);
+  const newBorrowableAmount = Math.max(0, totalSuppliedUsd * (maxLtv / 100) - newTotalBorrow);
+  const newLiquidationPoint = newTotalBorrow > 0 ? newTotalBorrow / (liquidationRatio / 100) : 0;
 
   // Formatted values for display
   const wbtc = totalSuppliedUsd;
   const usdt = [totalBorrowedUsd, newTotalBorrow];
-  const borrowable = [borrowableAmount, borrowableAmountNew];
-  const ltvRange = [ltv, effectiveNewLtv];
+  const borrowable = [borrowableAmount, newBorrowableAmount];
+  const ltvRange = [ltv, newEffectiveLTV];
+  const liquidationRange = [liquidationPoint, newLiquidationPoint];
   const netLoanValue = totalSuppliedUsd - totalBorrowedUsd;
   const hasBorrowed = borrowedAssets.some((b) => b.symbol === "USDT" && b.amount > 0);
 
@@ -42,7 +44,7 @@ export const useLoanCalculations = (suppliedAssets: Asset[], borrowedAssets: Ass
     borrowableAmount,
     liquidationPrice,
     borrowCapacity,
-    liquidationPoint,
+    liquidationRange,
     wbtc,
     usdt,
     borrowable,

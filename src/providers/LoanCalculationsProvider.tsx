@@ -19,7 +19,7 @@ interface LoanCalculations {
   maxLtv: number;
   borrowCapacity: number;
   liquidationRatio: number;
-  liquidationPoint: number;
+  liquidationRange: number[];
   borrowApr: number;
   ltv: number;
   borrowableAmount: number;
