@@ -67,7 +67,7 @@ export default function TransactionOverview({
         <Text>Transaction overview</Text>
         <button
           onClick={() => setshowAmount((v) => !v)}
-          className="mr-4 text-muted cursor-pointer"
+          className="mr-4 text-white/60 hover:text-white cursor-pointer"
         >
           <ArrowLeftRight size={12} />
         </button>
@@ -83,12 +83,12 @@ export default function TransactionOverview({
                 ) : null}
                 <div className="text-sm truncate">{item.label}</div>
               </div>
-              <div className="flex-shrink-0 text-sm text-muted whitespace-nowrap text-right">
+              <div className="flex-shrink-0 text-sm text-white/60 whitespace-nowrap text-right">
                 {Array.isArray(item.value) ? (
                   previewAmount !== 0 ? (
                     <div className="flex items-center justify-end gap-1">
                       <Text tone="white">{item.value[0]}</Text>
-                      <ArrowRight size={10} className="text-muted" />
+                      <ArrowRight size={10} className="text-white/40" />
                       <Text>{item.value[1]}</Text>
                     </div>
                   ) : (

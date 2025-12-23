@@ -46,7 +46,7 @@ export default function TxModePage() {
           onChangeText={(value) => setAmount(Number(value))}
           tokenSymbol="USDT"
           usdValue={amount}
-          availableAmount={availableForRepay}
+          availableAmount={available}
           onMaxPress={handleMax}
           editable={!isProcessing}
         />
@@ -61,9 +61,9 @@ export default function TxModePage() {
 
       <TransactionOverview previewAmount={previewAmount} warning={warning} />
 
-      <div className="flex items-center justify-center gap-3">
-        <input type="checkbox" id="ack" checked={ackChecked} onChange={() => setAckChecked((v) => !v)} aria-checked={ackChecked} />
-        <label htmlFor="ack" className="text-sm text-muted cursor-pointer">
+      <div className="flex items-start justify-center gap-3">
+        <input type="checkbox" id="ack" checked={ackChecked} onChange={() => setAckChecked((v) => !v)} aria-checked={ackChecked} className="mt-1" />
+        <label htmlFor="ack" className="text-sm text-white/70 cursor-pointer">
           {mode === "repay" ? "I confirm that I've reviewed the repayment details above." : "I acknowledge the risks involved."}
         </label>
       </div>

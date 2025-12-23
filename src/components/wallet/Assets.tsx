@@ -1,7 +1,6 @@
 "use client";
 
 import Card from "@/components/ui/card";
-import MaskedValue from "@/components/ui/maskedValue";
 import { formatAmount, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
 import { useRouter } from "next/navigation";
@@ -46,16 +45,19 @@ export default function Assets({ items }: AssetsProps) {
   const visibility = useVisibility();
   const router = useRouter();
 
+  // Filter out ETH from the assets list
+  const filteredItems = items.filter((it) => it.symbol !== "ETH");
+
   return (
     <div className="w-full px-4">
       {/* Section Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-white text-sm font-medium uppercase tracking-wider">Assets</h2>
-        <span className="text-white/40 text-xs uppercase tracking-wider">USD Value</span>
+        <span className="text-white/40 text-xs uppercase tracking-wider">Amount</span>
       </div>
 
       <div className="flex flex-col gap-3">
-        {items.map((it) => (
+        {filteredItems.map((it) => (
           <Card
             key={it.id ?? it.symbol}
             appearance="glassDark"
@@ -73,13 +75,11 @@ export default function Assets({ items }: AssetsProps) {
                 </div>
               </div>
 
-              {/* Right: Value + Deposit Button */}
+              {/* Right: Crypto Amount + Deposit Button */}
               <div className="flex items-center gap-3">
-                <MaskedValue
-                  value={it.usdValue || 0}
-                  mask="long"
-                  className="text-white/60 text-sm"
-                />
+                <span className="text-white/60 text-sm">
+                  {maskString(formatAmount(it.amount || 0), visibility.visible, MASK_SHORT)} {it.symbol}
+                </span>
                 <Button
                   variant="ghost"
                   size="sm"

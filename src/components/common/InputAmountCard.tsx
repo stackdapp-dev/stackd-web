@@ -32,36 +32,46 @@ export default function InputAmountCard({ label, value, onChangeText, tokenSymbo
         {label}
       </Text>
       <Card appearance="container">
-        <div className="grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-x-4 gap-y-1 w-full">
-          <input
-            value={value}
-            type="number"
-            onChange={(e) => handleChange(e.target.value)}
-            placeholder="0.00"
-            inputMode="decimal"
-            disabled={!editable}
-            min="0"
-            className="w-full bg-transparent border-0 text-white text-2xl font-semibold outline-none appearance-none [-moz-appearance:textfield]"
-          />
-          <div className="flex items-center gap-2 justify-end">
-            <TokenIcon width={24} height={24} symbol={tokenSymbol} />
-            <Text weight="semibold">
-              {tokenSymbol}
-            </Text>
+        <div className="flex flex-col gap-2 w-full">
+          {/* Row 1: Input + Token */}
+          <div className="flex items-center justify-between gap-4">
+            <input
+              value={value}
+              type="number"
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder="0.00"
+              inputMode="decimal"
+              disabled={!editable}
+              min="0"
+              className="flex-1 min-w-0 bg-transparent border-0 text-white text-2xl font-semibold outline-none appearance-none [-moz-appearance:textfield]"
+            />
+            <div className="flex items-center gap-2 shrink-0">
+              <TokenIcon width={24} height={24} symbol={tokenSymbol} />
+              <Text weight="semibold">
+                {tokenSymbol}
+              </Text>
+            </div>
           </div>
-          <Text tone="muted">
-            {formatCurrency(Number(usdValue || 0))}
-          </Text>
-          <div className="text-sm text-muted flex items-center gap-3 justify-end">
-            <Text tone="muted">
-              Balance {formatAmount(availableAmount)}
+          {/* Row 2: USD Value + Balance/Max */}
+          <div className="flex items-center justify-between gap-4">
+            <Text className="text-white/50 text-sm">
+              {formatCurrency(Number(usdValue || 0))}
             </Text>
-            <button onClick={onMaxPress} className="text-primary cursor-pointer">
-              MAX
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Text className="text-white/50 text-sm">
+                Balance {formatAmount(availableAmount)}
+              </Text>
+              <button
+                onClick={onMaxPress}
+                className="text-amber-500 font-medium cursor-pointer hover:text-amber-400 transition-colors"
+              >
+                MAX
+              </button>
+            </div>
           </div>
         </div>
       </Card>
     </div>
   );
 }
+

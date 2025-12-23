@@ -10,6 +10,7 @@ const LoginScreen = () => {
       <Image src="/login-logo.png" alt="Stack'd Logo" width={164} height={26} />
       <Image src="/login-art.png" alt="Stack BTC" width={194} height={254} />
       <Button
+        variant="ghost"
         className="w-full text-lg font-semibold"
         size="lg"
         onClick={() => login()}
