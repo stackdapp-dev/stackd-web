@@ -2,6 +2,8 @@
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PrivyProvider } from "@privy-io/react-auth";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { arbitrum } from "viem/chains";
 import { TokenPriceProvider } from "./TokenPriceProvider";
 import { UserProvider } from "./UserProvider";
@@ -26,7 +28,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <TooltipProvider>
         <TokenPriceProvider>
           <Web3Provider>
-            <UserProvider>{children}</UserProvider>
+            <UserProvider>
+              {children}
+              <ToastContainer
+                position="top-center"
+                autoClose={3000}
+                hideProgressBar
+                newestOnTop
+                closeOnClick={false}
+                rtl={false}
+                pauseOnFocusLoss
+                draggable={false}
+                pauseOnHover
+              />
+            </UserProvider>
           </Web3Provider>
         </TokenPriceProvider>
       </TooltipProvider>

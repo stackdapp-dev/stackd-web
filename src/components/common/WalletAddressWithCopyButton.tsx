@@ -1,51 +1,32 @@
 import { Copy } from "lucide-react";
-import { useState } from "react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
+import { showSuccessToast, showErrorToast } from "../ui/custom-toast";
 
 const WalletAddressWithCopyButton = ({
   walletAddress,
 }: {
   walletAddress: string;
 }) => {
-  const [showCopied, setShowCopied] = useState(false);
-
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(walletAddress);
-      setShowCopied(true);
-      setTimeout(() => setShowCopied(false), 2000);
+      showSuccessToast("Copied");
     } catch (err) {
       console.error("Failed to copy text: ", err);
+      showErrorToast("Clipboard Copy Didn't Work");
     }
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="text-neutral-400 text-sm">Wallet Address</div>
-      <div className="flex items-center gap-4">
-        <div className="break-all text-white">{walletAddress}</div>
-        <TooltipProvider>
-          <Tooltip open={showCopied}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="hover:text-primary"
-              >
-                <Copy className="h-5 w-5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">Copied!</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+    <div className="flex flex-col gap-2">
+      <div className="text-white/40 text-sm">Wallet Address</div>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="flex items-center gap-2 text-left group cursor-pointer hover:opacity-80 transition-opacity"
+      >
+        <Copy className="h-4 w-4 text-white/60 shrink-0" />
+        <span className="break-all text-white text-sm">{walletAddress}</span>
+      </button>
     </div>
   );
 };
