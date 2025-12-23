@@ -62,7 +62,7 @@ export default function LoanInfo() {
       {lendProcessing ? (
         <Modal
           isOpen={true}
-          onClose={() => {}}
+          onClose={() => { }}
           title={"Confirm Transaction"}
           message={
             <>
@@ -76,20 +76,14 @@ export default function LoanInfo() {
         />
       ) : null}
 
-      <div className="grid grid-cols-3 items-center mb-1">
-        <div className="text-center">
-          <Text weight="semibold" case="upper">
-            LOAN INFO
-          </Text>
-        </div>
-        <div className="text-left pl-6" />
-        <div className="text-center">
-          <MaskedValue
-            value={netLoanValue}
-            mask="long"
-            className="text-sm font-semibold"
-          />
-        </div>
+      {/* Section Header */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-white text-sm font-medium uppercase tracking-wider">Loan Info</h2>
+        <MaskedValue
+          value={netLoanValue}
+          mask="long"
+          className="text-white/60 text-sm"
+        />
       </div>
 
       <Card>
@@ -148,33 +142,29 @@ export default function LoanInfo() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Text className="mb-2" tone="white">
-                LTV
-              </Text>
-              <Text weight="semibold" className="mb-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <Text tone="white">LTV</Text>
+              <Text weight="semibold">
                 {maskString(`${formatPercent(ltv)}`, visibility.visible, MASK_SHORT)}
               </Text>
+            </div>
 
-              <Text className="mb-2" tone="white">
-                Borrowable Amount
+            <div className="flex items-center justify-between">
+              <Text tone="white">Borrow APR</Text>
+              <Text weight="semibold">
+                {maskString(`${formatPercent(borrowApr)}`, visibility.visible, MASK_SHORT)}
               </Text>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Text tone="white">Borrowable Amount</Text>
               <Text weight="semibold">{maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}</Text>
             </div>
 
-            <div>
-              <Text className="mb-2 text-right" tone="white">
-                Borrow APR
-              </Text>
-              <Text weight="semibold" className="mb-4 text-right">
-                {maskString(`${formatPercent(borrowApr)}`, visibility.visible, MASK_SHORT)}
-              </Text>
-
-              <Text className="mb-2 text-right" tone="white">
-                Liquidation Point
-              </Text>
-              <Text weight="semibold" className="text-right">
+            <div className="flex items-center justify-between">
+              <Text tone="white">Liquidation Point</Text>
+              <Text weight="semibold">
                 {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
               </Text>
             </div>
@@ -182,10 +172,10 @@ export default function LoanInfo() {
         </div>
 
         <div className="mt-4 flex gap-3 w-full">
-          <Button onClick={handleBorrow} className="flex-1" type="button">
+          <Button onClick={handleBorrow} variant="ghost" className="flex-1" type="button">
             Borrow
           </Button>
-          <Button onClick={() => router.push("/wallet/tx/repay")} className="flex-1" type="button" disabled={!hasBorrowed}>
+          <Button onClick={() => router.push("/wallet/tx/repay")} variant="ghost" className="flex-1" type="button" disabled={!hasBorrowed}>
             Repay
           </Button>
         </div>
@@ -197,10 +187,10 @@ export default function LoanInfo() {
         title="Insufficient Collateral"
         message={
           <>
-            <Text tone="muted" className="mb-3">
+            <Text className="text-white/70 mb-3">
               Your WBTC collateral is below the required amount for this action.
             </Text>
-            <Text tone="muted" className="mb-6">
+            <Text className="text-white/70 mb-6">
               Please deposit more WBTC to borrow USDT.
             </Text>
           </>

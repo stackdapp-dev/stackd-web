@@ -1,13 +1,6 @@
 import Providers from "@/providers/providers";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Stack'd",
@@ -29,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/sf-pro-display" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"
@@ -47,12 +41,9 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={
-          `${inter.variable} antialiased ` +
-          `w-full h-[100dvh] bg-black md:max-w-sm md:mx-auto overflow-hidden`
-        }
+        className="antialiased w-full min-h-[100dvh] md:max-w-sm md:mx-auto"
       >
-        <div className="bg-[url('/bg.jpg')] bg-cover bg-bottom bg-no-repeat w-full h-full overflow-y-auto pb-[calc(56px+env(safe-area-inset-bottom))]">
+        <div className="w-full min-h-full overflow-y-auto pb-[calc(56px+env(safe-area-inset-bottom))]">
           <Providers>{children}</Providers>
         </div>
         <noscript>

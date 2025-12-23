@@ -5,24 +5,24 @@ import { Balance } from "@/components/wallet";
 import Assets from "@/components/wallet/Assets";
 import LoanInfo from "@/components/wallet/LoanInfo";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
-import { useEffect } from "react";
 
 const Wallet = () => {
   const { assets, totalBalance } = useWalletBalanceContext();
   const { loanCalcs } = useLoanCalculationsContext();
   const { netLoanValue } = loanCalcs;
 
-  useEffect(() => {
-    // console.log("Wallet page values:", { totalBalance, netLoanValue, total: totalBalance + netLoanValue });
-  }, [totalBalance, netLoanValue]);
-
   return (
-    <div className="flex flex-col gap-8 items-center p-3 pt-8">
-      <>
-        <Balance amount={totalBalance + netLoanValue} />
-        <Assets items={assets} />
+    <div className="flex flex-col gap-6 pb-8">
+      {/* Hero Balance */}
+      <Balance amount={totalBalance + netLoanValue} />
+
+      {/* Assets List */}
+      <Assets items={assets} />
+
+      {/* Loan Info */}
+      <div className="px-4">
         <LoanInfo />
-      </>
+      </div>
     </div>
   );
 };

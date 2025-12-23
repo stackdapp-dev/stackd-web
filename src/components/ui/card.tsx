@@ -6,10 +6,10 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const cardVariants = cva("w-full rounded-xl bg-card/30", {
+const cardVariants = cva("w-full rounded-2xl transition-all", {
   variants: {
     padding: {
-      default: "p-6",
+      default: "p-4",
       compact: "p-3",
       none: "p-0",
     },
@@ -18,8 +18,11 @@ const cardVariants = cva("w-full rounded-xl bg-card/30", {
       sm: "shadow-sm",
     },
     appearance: {
-      default: "",
-      container: "border-1 rounded border-neutral-500 flex flex-col gap-2 py-2 px-4 bg-black",
+      default: "glass",
+      glass: "backdrop-blur-xl bg-white/5 border border-white/10",
+      glassDark: "backdrop-blur-xl bg-black/20 border border-white/5",
+      glassAccent: "backdrop-blur-xl bg-[#ffa02d]/10 border border-[#ffa02d]/20",
+      container: "border border-white/10 bg-white/5",
     },
   },
   defaultVariants: {
@@ -31,7 +34,7 @@ const cardVariants = cva("w-full rounded-xl bg-card/30", {
 
 export interface CardProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof cardVariants> {
+  VariantProps<typeof cardVariants> {
   asChild?: boolean;
   children: React.ReactNode;
 }
@@ -43,7 +46,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ) => {
     const Comp: any = asChild ? Slot : "div";
 
-  const effectivePadding = appearance === "container" && padding === undefined ? "none" : padding;
+    const effectivePadding = appearance === "container" && padding === undefined ? "none" : padding;
 
     return (
       <Comp

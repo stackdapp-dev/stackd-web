@@ -28,7 +28,7 @@ const WalletAddressWithCopyButton = ({
     <div className="flex flex-col gap-1">
       <div className="text-neutral-400 text-sm">Wallet Address</div>
       <div className="flex items-center gap-4">
-        <div className="break-all">{walletAddress}</div>
+        <div className="break-all text-white">{walletAddress}</div>
         <TooltipProvider>
           <Tooltip open={showCopied}>
             <TooltipTrigger asChild>

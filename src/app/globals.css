@@ -3,7 +3,10 @@
 @plugin "tailwindcss-animate";
 
 @theme {
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-sf-pro);
+  --font-sf-pro: 'SF Pro Display', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -43,51 +46,43 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-body {
-  background-color: black;
-}
-
 :root {
   --radius: 0.625rem;
-  --background: black;
+  --background: #020617;
+  /* slate-950 */
   --foreground: white;
-  --card: #333333;
+  --card: rgba(255, 255, 255, 0.05);
   --card-foreground: white;
-  --popover: black;
+  --popover: #0f172a;
   --popover-foreground: white;
   --primary: #ffa02d;
   --primary-foreground: black;
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --secondary: rgba(255, 255, 255, 0.1);
+  --secondary-foreground: white;
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+  --accent: rgba(255, 255, 255, 0.1);
+  --accent-foreground: white;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.05);
+  --ring: #ffa02d;
+  --chart-1: #ffa02d;
+  --chart-2: #10b981;
+  --chart-3: #3b82f6;
+  --chart-4: #a855f7;
+  --chart-5: #ec4899;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    background: linear-gradient(to bottom, #020617, #0f172a, #000000);
+    min-height: 100vh;
   }
 
   /* hide number input spinners (Chrome, Edge, Safari) */
@@ -101,6 +96,29 @@ body {
   input[type="number"] {
     -webkit-appearance: none;
     appearance: textfield;
-    -moz-appearance: textfield; /* Firefox */
+    -moz-appearance: textfield;
+  }
+}
+
+/* Liquid Glass Utilities */
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl;
+  }
+
+  .glass-dark {
+    @apply backdrop-blur-xl bg-black/20 border border-white/5 rounded-2xl;
+  }
+
+  .glass-accent {
+    @apply backdrop-blur-xl bg-[#ffa02d]/10 border border-[#ffa02d]/20 rounded-2xl;
+  }
+
+  .glass-success {
+    @apply backdrop-blur-xl bg-emerald-900/20 border border-emerald-500/20 rounded-2xl;
+  }
+
+  .glass-nav {
+    @apply backdrop-blur-2xl bg-black/40 border-t border-white/10;
   }
 }

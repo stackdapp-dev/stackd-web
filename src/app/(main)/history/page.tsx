@@ -28,7 +28,7 @@ const History = () => {
     return (
       <Modal
         isOpen={true}
-        onClose={() => {}}
+        onClose={() => { }}
         title=""
         message="Loading transactions..."
         icon={<Loading size="lg" />}
@@ -62,7 +62,10 @@ const History = () => {
               key={s}
               onClick={() => setFilter(s as any)}
               aria-pressed={active}
-              className={`cursor-pointer select-none transition-all text-sm ${active ? "bg-amber-500 text-black px-4 py-0.5 rounded-full font-semibold" : "bg-transparent border border-amber-500 text-amber-500 px-4 py-0.5 rounded-full font-medium"}`}
+              className={`cursor-pointer select-none transition-all duration-300 text-sm px-4 py-1.5 rounded-full font-medium ${active
+                  ? "bg-gradient-to-br from-[#ffa02d] to-[#ff8c00] text-black shadow-lg hover:shadow-[0_0_20px_rgba(255,160,45,0.5)]"
+                  : "backdrop-blur-xl bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                }`}
             >
               {s}
             </button>
@@ -73,7 +76,7 @@ const History = () => {
       <div className="flex flex-col gap-4">
         {filtered.length === 0 ? (
           <div className="flex justify-center items-center py-12">
-            <Text tone="muted">No transactions found</Text>
+            <Text className="text-white/60">No transactions found</Text>
           </div>
         ) : (
           filtered.map((tx) => {
