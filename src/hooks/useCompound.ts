@@ -145,6 +145,14 @@ export function useCompound(): UseCompoundResult {
           borrowApr: apr,
         };
 
+        // Debug logging
+        console.log("[COMPOUND] Account:", acct);
+        console.log("[COMPOUND] WBTC Address:", TOKEN_METADATA.WBTC.address);
+        console.log("[COMPOUND] Collateral Raw:", coll?.toString());
+        console.log("[COMPOUND] Borrow Raw:", bor?.toString());
+        console.log("[COMPOUND] Max LTV:", fetchedData.maxLtv, "%");
+        console.log("[COMPOUND] Liquidation Ratio:", fetchedData.liquidationRatio, "%");
+
         // Update state
         setCollateralRaw(fetchedData.collateralRaw);
         setBorrowRaw(fetchedData.borrowRaw);
@@ -162,6 +170,7 @@ export function useCompound(): UseCompoundResult {
         setIsLoading(false);
         setInitialLoad(false);
       } catch (err) {
+        console.error("[COMPOUND] Error fetching data:", err);
         setError(err instanceof Error ? err.message : String(err));
         setIsLoading(false);
         setInitialLoad(false);
@@ -183,9 +192,19 @@ export function useCompound(): UseCompoundResult {
     formatUnits(borrowRaw, getTokenMetadata(BORROW_TOKEN).decimals)
   );
 
-  const collateralUsd = collateralAmount * getTokenPrice(COLLATERAL_TOKEN);
-  const borrowUsd = borrowAmount * getTokenPrice(BORROW_TOKEN);
+  const wbtcPrice = getTokenPrice(COLLATERAL_TOKEN);
+  const usdtPrice = getTokenPrice(BORROW_TOKEN);
+  const collateralUsd = collateralAmount * wbtcPrice;
+  const borrowUsd = borrowAmount * usdtPrice;
   const netLoanValue = collateralUsd - borrowUsd;
+
+  // Debug logging for USD calculations
+  console.log("[COMPOUND] WBTC Price:", wbtcPrice);
+  console.log("[COMPOUND] USDT Price:", usdtPrice);
+  console.log("[COMPOUND] Collateral Amount:", collateralAmount, "WBTC");
+  console.log("[COMPOUND] Collateral USD:", collateralUsd);
+  console.log("[COMPOUND] Max LTV:", maxLtv, "%");
+  console.log("[COMPOUND] Borrowable:", collateralUsd * (maxLtv / 100) - borrowUsd);
 
   const suppliedAssets: Asset[] = [
     {

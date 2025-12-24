@@ -46,7 +46,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ) => {
     const Comp: any = asChild ? Slot : "div";
 
-    const effectivePadding = appearance === "container" && padding === undefined ? "none" : padding;
+    const effectivePadding = padding ?? "default";
 
     return (
       <Comp
