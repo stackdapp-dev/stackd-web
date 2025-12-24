@@ -43,7 +43,7 @@ export default function RootLayout({
       <body
         className="antialiased w-full min-h-[100dvh] md:max-w-sm md:mx-auto"
       >
-        <div className="w-full min-h-full overflow-y-auto pb-[calc(56px+env(safe-area-inset-bottom))]">
+        <div className="w-full pb-[calc(56px+env(safe-area-inset-bottom))]">
           <Providers>{children}</Providers>
         </div>
         <noscript>

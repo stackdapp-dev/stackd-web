@@ -79,6 +79,10 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    background-color: #020617;
+  }
+
   body {
     @apply bg-background text-foreground;
     background: linear-gradient(to bottom, #020617, #0f172a, #000000);
