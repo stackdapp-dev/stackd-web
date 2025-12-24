@@ -1,10 +1,11 @@
-import { C_COMPOUND_ABI, C_COMPOUND_ADDR } from "@/lib/config/abis";
+import { C_COMPOUND_ABI, C_COMPOUND_ADDR, ERC20_ABI } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
 import {
   type Address,
   type Hex,
   type PublicClient,
   type WalletClient,
+  encodeFunctionData,
 } from "viem";
 import { arbitrum } from "viem/chains";
 
@@ -122,3 +123,32 @@ export async function getBorrowRate(
     args: [utilization],
   });
 }
+
+// ============ Encode functions for sponsored transactions ============
+
+export function encodeSupplyData(token: Address, amount: bigint): Hex {
+  return encodeFunctionData({
+    abi: C_COMPOUND_ABI,
+    functionName: "supply",
+    args: [token, amount],
+  });
+}
+
+export function encodeWithdrawData(token: Address, amount: bigint): Hex {
+  return encodeFunctionData({
+    abi: C_COMPOUND_ABI,
+    functionName: "withdraw",
+    args: [token, amount],
+  });
+}
+
+export function encodeApproveData(spender: Address, amount: bigint): Hex {
+  return encodeFunctionData({
+    abi: ERC20_ABI,
+    functionName: "approve",
+    args: [spender, amount],
+  });
+}
+
+export { COMPOUND_ADDRESS };
+

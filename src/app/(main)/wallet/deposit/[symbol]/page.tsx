@@ -3,6 +3,7 @@
 import PageHeader from "@/components/common/PageHeader";
 import WalletAddressWithCopyButton from "@/components/common/WalletAddressWithCopyButton";
 import { Button } from "@/components/ui/button";
+import Card from "@/components/ui/card";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
@@ -39,9 +40,11 @@ export default function DepositPage({
 
       <div className="flex justify-center">{qrNode}</div>
 
-      <div className="flex flex-col gap-1">
-        <div className="text-neutral-400 text-sm">Network</div>
-        <div>{arbitrum.name}</div>
+      <div className="flex flex-col gap-2">
+        <div className="text-white/40 text-sm">Network</div>
+        <Card appearance="glassDark" padding="default">
+          <span className="text-white">{arbitrum.name}</span>
+        </Card>
       </div>
 
       <WalletAddressWithCopyButton walletAddress={address || ""} />

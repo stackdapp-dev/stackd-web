@@ -1,4 +1,4 @@
-import { ConnectedWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import { ConnectedWallet, usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import React, {
   createContext,
   useContext,
@@ -24,6 +24,12 @@ declare global {
   }
 }
 
+type SendTransactionParams = {
+  to: Address;
+  data?: Hex;
+  value?: bigint;
+};
+
 type Web3ProviderValue = {
   publicClient: PublicClient;
   walletClient: WalletClient | null;
@@ -32,6 +38,8 @@ type Web3ProviderValue = {
   setActiveWalletAddress: (address: Address) => void;
   ensureCorrectNetwork: () => Promise<void>;
   clearWalletState: () => void;
+  sendSponsoredTransaction: (params: SendTransactionParams) => Promise<{ hash: string | null; error: string | null }>;
+  isSendingTransaction: boolean;
 };
 
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
@@ -43,6 +51,9 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { wallets, ready } = useWallets();
   const { authenticated } = usePrivy();
+
+  // Privy's sponsored transaction hook
+  const { sendTransaction: privySendTransaction, state: sendTxState } = useSendTransaction();
 
   const [publicClient] = useState<PublicClient>(() =>
     createPublicClient({
@@ -180,6 +191,43 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     console.log("[WALLET] Wallet state cleared");
   };
 
+  // Send transaction with Privy gas sponsorship
+  const sendSponsoredTransaction = async (
+    params: SendTransactionParams
+  ): Promise<{ hash: string | null; error: string | null }> => {
+    if (!activeWallet) {
+      return { hash: null, error: "No active wallet connected" };
+    }
+
+    try {
+      await ensureCorrectNetwork();
+
+      console.log("[TX] Sending sponsored transaction:", params);
+
+      // Use Privy's sendTransaction with gas sponsorship
+      const txReceipt = await privySendTransaction(
+        {
+          to: params.to,
+          data: params.data,
+          value: params.value ? BigInt(params.value) : undefined,
+          chainId: NETWORK.id,
+        },
+        {
+          // Enable gas sponsorship - Privy will use configured paymaster
+          // This requires gas sponsorship to be enabled in Privy dashboard
+        }
+      );
+
+      console.log("[TX] Sponsored transaction hash:", txReceipt.transactionHash);
+      return { hash: txReceipt.transactionHash, error: null };
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown transaction error";
+      console.error("[TX] Sponsored transaction failed:", err);
+      return { hash: null, error: errorMessage };
+    }
+  };
+
   return (
     <Web3Context.Provider
       value={{
@@ -190,6 +238,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         setActiveWalletAddress,
         ensureCorrectNetwork,
         clearWalletState,
+        sendSponsoredTransaction,
+        isSendingTransaction: sendTxState.status === "pending-signature" || sendTxState.status === "pending-transaction",
       }}
     >
       {children}

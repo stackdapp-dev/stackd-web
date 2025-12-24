@@ -21,8 +21,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           },
         },
         defaultChain: arbitrum,
+        supportedChains: [arbitrum],
         appearance: { walletChainType: "ethereum-only", theme: "#171717" },
-        // loginMethods: ["email", "sms", "google", "wallet"],
+        // Enable gas sponsorship - requires dashboard.privy.io configuration
+        fundingMethodConfig: {
+          moonpay: {
+            useSandbox: true,
+          },
+        },
       }}
     >
       <TooltipProvider>
