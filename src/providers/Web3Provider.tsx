@@ -213,8 +213,10 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
           chainId: NETWORK.id,
         },
         {
-          // Enable gas sponsorship - Privy will use configured paymaster
-          // This requires gas sponsorship to be enabled in Privy dashboard
+          uiOptions: {
+            description: "Approve this sponsored transaction",
+            buttonText: "Sign",
+          },
         }
       );
 
@@ -239,7 +241,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         ensureCorrectNetwork,
         clearWalletState,
         sendSponsoredTransaction,
-        isSendingTransaction: sendTxState.status === "pending-signature" || sendTxState.status === "pending-transaction",
+        isSendingTransaction: sendTxState?.status === "pending-signature" || sendTxState?.status === "pending-transaction",
       }}
     >
       {children}

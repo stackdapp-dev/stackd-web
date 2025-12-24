@@ -23,6 +23,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         defaultChain: arbitrum,
         supportedChains: [arbitrum],
         appearance: { walletChainType: "ethereum-only", theme: "#171717" },
+        walletConnectCloudProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,
+        loginMethods: ["email", "wallet", "passkey"],
         // Enable gas sponsorship - requires dashboard.privy.io configuration
         fundingMethodConfig: {
           moonpay: {
