@@ -1,6 +1,7 @@
 "use client";
 
 import PageHeader from "@/components/common/PageHeader";
+import TokenIcon from "@/components/common/TokenIcon";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
@@ -158,9 +159,7 @@ export default function LoanDetailsPage() {
                 <Card appearance="glassDark" padding="default">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-amber-600/30 flex items-center justify-center">
-                                <span className="text-amber-400 font-bold text-lg">W</span>
-                            </div>
+                            <TokenIcon symbol="WBTC" width={48} height={48} />
                             <div>
                                 <p className="text-white font-semibold">Wrapped Bitcoin</p>
                                 <p className="text-white/50 text-sm">WBTC</p>
@@ -196,7 +195,7 @@ export default function LoanDetailsPage() {
                     <Card appearance="glassDark" padding="default">
                         <div className="flex items-center gap-2 mb-2">
                             <AlertTriangle className="w-4 h-4 text-amber-500" />
-                            <p className="text-white/50 text-sm">Liquidation Point</p>
+                            <p className="text-white/50 text-sm">Collateral Liquidation Price</p>
                         </div>
                         <p className="text-white font-bold text-xl">
                             {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
