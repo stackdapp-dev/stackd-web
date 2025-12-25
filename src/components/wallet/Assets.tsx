@@ -73,18 +73,7 @@ export default function Assets({ items }: AssetsProps) {
               <div className="flex items-center justify-between">
                 {/* Left: Icon + Name + Amount */}
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`w-12 h-12 rounded-full ${tokenColors[it.symbol] || "bg-white/10"
-                      } flex items-center justify-center`}
-                  >
-                    {tokenLetters[it.symbol] ? (
-                      <span className="text-amber-400 font-bold text-lg">
-                        {tokenLetters[it.symbol]}
-                      </span>
-                    ) : (
-                      <TokenIcon symbol={it.symbol} width={28} height={28} />
-                    )}
-                  </div>
+                  <TokenIcon symbol={it.symbol} width={48} height={48} />
                   <div>
                     <span className="text-white font-semibold">
                       {tokenNames[it.symbol] || it.name || it.symbol}

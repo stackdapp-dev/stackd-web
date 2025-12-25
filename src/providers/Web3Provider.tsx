@@ -205,6 +205,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       await ensureCorrectNetwork();
 
       console.log("[TX] Sending sponsored transaction:", params);
+      console.log("[TX] Using wallet address:", activeWallet.address);
 
       // Use Privy's sendTransaction with gas sponsorship
       const txReceipt = await privySendTransaction(
@@ -215,6 +216,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
           chainId: NETWORK.id,
         },
         {
+          // Specify the wallet to use for the transaction
+          address: activeWallet.address as `0x${string}`,
           uiOptions: {
             description: "Approve this sponsored transaction",
             buttonText: "Sign",
