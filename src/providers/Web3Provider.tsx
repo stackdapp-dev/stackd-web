@@ -192,7 +192,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     console.log("[WALLET] Wallet state cleared");
   };
 
-  // Send transaction with Privy gas sponsorship
+  // Send transaction - sponsored for embedded wallets, regular for external wallets
   const sendSponsoredTransaction = async (
     params: SendTransactionParams
   ): Promise<{ hash: string | null; error: string | null }> => {
