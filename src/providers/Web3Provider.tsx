@@ -53,7 +53,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   const { authenticated } = usePrivy();
 
   // Privy's sponsored transaction hook
-  const { sendTransaction: privySendTransaction, state: sendTxState } = useSendTransaction();
+  const { sendTransaction: privySendTransaction } = useSendTransaction();
+  const [isSending, setIsSending] = useState(false);
 
   const [publicClient] = useState<PublicClient>(() =>
     createPublicClient({
@@ -200,6 +201,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
+      setIsSending(true);
       await ensureCorrectNetwork();
 
       console.log("[TX] Sending sponsored transaction:", params);
@@ -220,12 +222,14 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
-      console.log("[TX] Sponsored transaction hash:", txReceipt.transactionHash);
-      return { hash: txReceipt.transactionHash, error: null };
+      console.log("[TX] Sponsored transaction hash:", txReceipt.hash);
+      setIsSending(false);
+      return { hash: txReceipt.hash, error: null };
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown transaction error";
       console.error("[TX] Sponsored transaction failed:", err);
+      setIsSending(false);
       return { hash: null, error: errorMessage };
     }
   };
@@ -241,7 +245,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         ensureCorrectNetwork,
         clearWalletState,
         sendSponsoredTransaction,
-        isSendingTransaction: sendTxState?.status === "pending-signature" || sendTxState?.status === "pending-transaction",
+        isSendingTransaction: isSending,
       }}
     >
       {children}
