@@ -50,8 +50,7 @@ export default function ActionButtons() {
                 <ActionButton
                     icon={<ArrowRightLeft className="w-6 h-6 text-blue-400" />}
                     label="Convert"
-                    onClick={() => { }}
-                    disabled
+                    onClick={() => router.push("/wallet/convert")}
                 />
             </div>
         </div>
