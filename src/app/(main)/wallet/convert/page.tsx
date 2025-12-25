@@ -6,8 +6,7 @@ import Card from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import { formatAmount } from "@/lib/utils";
-import { TOKEN_METADATA } from "@/constants/Tokens";
-import { useVeloraSwap } from "@/hooks/useVeloraSwap";
+import { useGaslessSwap } from "@/hooks/useGaslessSwap";
 import { ArrowDownUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -40,7 +39,7 @@ export default function ConvertPage() {
         getQuote,
         executeSwap,
         getDestAmount,
-    } = useVeloraSwap();
+    } = useGaslessSwap();
 
     const [fromToken, setFromToken] = useState<SwapToken>("WBTC");
     const [toToken, setToToken] = useState<SwapToken>("USDT");
@@ -68,11 +67,9 @@ export default function ConvertPage() {
     // Calculate exchange rate
     const exchangeRate = useMemo(() => {
         if (!quote) return null;
-        const priceData = quote.delta || quote.market;
-        if (!priceData) return null;
 
-        const srcAmount = parseFloat(priceData.srcAmount) / Math.pow(10, TOKEN_DECIMALS[fromToken]);
-        const destAmount = parseFloat(priceData.destAmount) / Math.pow(10, TOKEN_DECIMALS[toToken]);
+        const srcAmount = parseFloat(quote.sellAmount) / Math.pow(10, TOKEN_DECIMALS[fromToken]);
+        const destAmount = parseFloat(quote.buyAmount) / Math.pow(10, TOKEN_DECIMALS[toToken]);
 
         if (srcAmount === 0) return null;
 
@@ -84,9 +81,6 @@ export default function ConvertPage() {
     useEffect(() => {
         const fetchQuote = async () => {
             if (!amount || parseFloat(amount) === 0) return;
-
-            const tokenMeta = TOKEN_METADATA[fromToken];
-            if (!tokenMeta) return;
 
             const amountInWei = parseUnits(amount, TOKEN_DECIMALS[fromToken]).toString();
             await getQuote(fromToken, toToken, amountInWei);
@@ -110,11 +104,20 @@ export default function ConvertPage() {
 
     // Handle convert
     const handleConvert = async () => {
-        if (!quote || isSwapping) return;
+        console.log("[Convert] Button clicked, canConvert:", canConvert, "quote:", quote, "isSwapping:", isSwapping);
+
+        if (!quote || isSwapping) {
+            console.log("[Convert] Early return - no quote or already swapping");
+            return;
+        }
 
         setIsSwapping(true);
+        toast.info("Starting conversion...");
+
         try {
+            console.log("[Convert] Executing swap...");
             const result = await executeSwap();
+            console.log("[Convert] Swap result:", result);
 
             if (result.success) {
                 toast.success(`Successfully converted ${amount} ${fromToken} to ${toToken}!`);
@@ -124,7 +127,7 @@ export default function ConvertPage() {
                 toast.error(result.error || "Conversion failed");
             }
         } catch (err) {
-            console.error("Convert failed:", err);
+            console.error("[Convert] Convert failed:", err);
             toast.error("Conversion failed. Please try again.");
         } finally {
             setIsSwapping(false);

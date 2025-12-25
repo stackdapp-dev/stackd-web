@@ -89,7 +89,10 @@ export function useVeloraSwap() {
 
     // Execute the swap
     const executeSwap = useCallback(async (): Promise<SwapResult> => {
+        console.log("[Velora] executeSwap called, quote:", quote);
+
         if (!quote || !walletClient || !activeWalletAddress) {
+            console.log("[Velora] Missing requirements:", { quote: !!quote, walletClient: !!walletClient, activeWalletAddress });
             return { success: false, error: "Missing requirements for swap" };
         }
 
@@ -98,73 +101,89 @@ export function useVeloraSwap() {
 
         try {
             // Check if delta pricing is available
-            const price = quote.delta;
-            if (!price) {
+            if (quote.delta) {
+                console.log("[Velora] Using Delta pricing (gasless)...");
+                const price = quote.delta;
+
+                // Step 1: Build the order
+                console.log("[Velora] Building order...");
+                const buildResponse = await fetch("/api/velora", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: "build",
+                        price,
+                        chainId: ARBITRUM_CHAIN_ID,
+                        owner: activeWalletAddress,
+                    }),
+                });
+
+                if (!buildResponse.ok) {
+                    const errorText = await buildResponse.text();
+                    console.error("[Velora] Build failed:", errorText);
+                    throw new Error("Failed to build order");
+                }
+
+                const builtOrder = await buildResponse.json();
+                console.log("[Velora] Order built:", builtOrder);
+
+                // Step 2: Sign the order using EIP-712
+                console.log("[Velora] Signing order...");
+                const signature = await walletClient.signTypedData({
+                    account: activeWalletAddress as `0x${string}`,
+                    domain: builtOrder.domain,
+                    types: builtOrder.types,
+                    primaryType: "Order",
+                    message: builtOrder.value,
+                });
+
+                // Compact the signature using viem
+                const parsedSig = parseSignature(signature);
+                const compactSig = signatureToCompactSignature(parsedSig);
+                const compactSignature = compactSignatureToHex(compactSig);
+                console.log("[Velora] Signature compact:", compactSignature);
+
+                // Step 3: Submit the order
+                console.log("[Velora] Submitting order...");
+                const submitResponse = await fetch("/api/velora", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        action: "submit",
+                        order: builtOrder.value,
+                        signature: compactSignature,
+                    }),
+                });
+
+                if (!submitResponse.ok) {
+                    const errorText = await submitResponse.text();
+                    console.error("[Velora] Submit failed:", errorText);
+                    throw new Error("Failed to submit order");
+                }
+
+                const submitResult = await submitResponse.json();
+                console.log("[Velora] Order submitted:", submitResult);
+
+                return {
+                    success: true,
+                    orderId: submitResult.id,
+                };
+            } else if (quote.market) {
+                // Market fallback - Delta not available on this chain
+                console.log("[Velora] Delta not available, using market swap...");
+                console.log("[Velora] Fallback reason:", quote.fallbackReason);
+
+                // For now, show a message that gasless swaps aren't available on Arbitrum
                 return {
                     success: false,
-                    error: quote.fallbackReason?.details || "Delta pricing unavailable",
+                    error: "Gasless swaps not yet available on Arbitrum. Coming soon!",
+                };
+            } else {
+                return {
+                    success: false,
+                    error: "No pricing available",
                 };
             }
-
-            // Step 1: Build the order
-            console.log("[Velora] Building order...");
-            const buildResponse = await fetch("/api/velora", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action: "build",
-                    price,
-                    chainId: ARBITRUM_CHAIN_ID,
-                    owner: activeWalletAddress,
-                }),
-            });
-
-            if (!buildResponse.ok) {
-                throw new Error("Failed to build order");
-            }
-
-            const builtOrder = await buildResponse.json();
-            console.log("[Velora] Order built:", builtOrder);
-
-            // Step 2: Sign the order using EIP-712
-            console.log("[Velora] Signing order...");
-            const signature = await walletClient.signTypedData({
-                account: activeWalletAddress as `0x${string}`,
-                domain: builtOrder.domain,
-                types: builtOrder.types,
-                primaryType: "Order",
-                message: builtOrder.value,
-            });
-
-            // Compact the signature using viem
-            const parsedSig = parseSignature(signature);
-            const compactSig = signatureToCompactSignature(parsedSig);
-            const compactSignature = compactSignatureToHex(compactSig);
-            console.log("[Velora] Signature compact:", compactSignature);
-
-            // Step 3: Submit the order
-            console.log("[Velora] Submitting order...");
-            const submitResponse = await fetch("/api/velora", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action: "submit",
-                    order: builtOrder.value,
-                    signature: compactSignature,
-                }),
-            });
-
-            if (!submitResponse.ok) {
-                throw new Error("Failed to submit order");
-            }
-
-            const submitResult = await submitResponse.json();
-            console.log("[Velora] Order submitted:", submitResult);
-
-            return {
-                success: true,
-                orderId: submitResult.id,
-            };
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Swap failed";
             console.error("[Velora] Swap error:", err);
