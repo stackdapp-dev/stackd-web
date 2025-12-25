@@ -1,12 +1,10 @@
 "use client";
 
 import Card from "@/components/ui/card";
-import { formatAmount, MASK_SHORT, maskString } from "@/lib/utils";
+import { formatAmount, formatCurrency, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
-import { useRouter } from "next/navigation";
 import React from "react";
 import TokenIcon from "../common/TokenIcon";
-import { Button } from "../ui/button";
 
 interface AssetItem {
   id?: string;
@@ -15,35 +13,39 @@ interface AssetItem {
   amount?: number;
   icon?: React.ReactNode;
   usdValue: number;
-  actionLabel?: string;
-  onAction?: (id?: string) => void;
+  change24h?: number; // percentage change
 }
 
 interface AssetsProps {
   items: AssetItem[];
 }
 
-// Token names mapping
+// Token display names - WBTC shows as "Bitcoin (Wrapped)"
 const tokenNames: Record<string, string> = {
-  WBTC: "Wrapped Bitcoin",
+  WBTC: "Bitcoin (Wrapped)",
   BTC: "Bitcoin",
-  USDT: "Tether USD",
+  USDT: "USD Tether",
   USDC: "USD Coin",
   ETH: "Ethereum",
 };
 
-// Token background colors
+// Token icon background colors
 const tokenColors: Record<string, string> = {
-  WBTC: "bg-orange-500/20",
+  WBTC: "bg-amber-600/30",
   BTC: "bg-orange-500/20",
   USDT: "bg-teal-500/20",
   USDC: "bg-blue-500/20",
   ETH: "bg-purple-500/20",
 };
 
+// Token icon letter for fallback
+const tokenLetters: Record<string, string> = {
+  WBTC: "W",
+  USDT: "U",
+};
+
 export default function Assets({ items }: AssetsProps) {
   const visibility = useVisibility();
-  const router = useRouter();
 
   // Filter out ETH from the assets list
   const filteredItems = items.filter((it) => it.symbol !== "ETH");
@@ -51,50 +53,64 @@ export default function Assets({ items }: AssetsProps) {
   return (
     <div className="w-full px-4">
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-white text-sm font-medium uppercase tracking-wider">Assets</h2>
-        <span className="text-white/40 text-xs uppercase tracking-wider">Amount</span>
-      </div>
+      <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
+        Assets
+      </h2>
 
       <div className="flex flex-col gap-3">
-        {filteredItems.map((it) => (
-          <Card
-            key={it.id ?? it.symbol}
-            appearance="glassDark"
-            padding="compact"
-          >
-            <div className="flex items-center justify-between">
-              {/* Left: Icon + Info */}
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full ${tokenColors[it.symbol] || "bg-white/10"} flex items-center justify-center`}>
-                  <TokenIcon symbol={it.symbol} width={24} height={24} />
-                </div>
-                <div>
-                  <span className="text-white font-medium">{it.symbol}</span>
-                  <p className="text-white/40 text-xs">{tokenNames[it.symbol] || it.name || it.symbol}</p>
-                </div>
-              </div>
+        {filteredItems.map((it) => {
+          const change = it.change24h ?? 0;
+          const isPositive = change >= 0;
+          const changeColor = isPositive ? "text-green-400" : "text-red-400";
+          const sign = isPositive ? "+" : "";
 
-              {/* Right: Crypto Amount + Deposit Button */}
-              <div className="flex items-center gap-3">
-                <span className="text-white/60 text-sm">
-                  {maskString(formatAmount(it.amount || 0), visibility.visible, MASK_SHORT)} {it.symbol}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push(`/wallet/deposit/${encodeURIComponent(it.symbol)}`)}
-                  className="rounded-full px-4"
-                >
-                  Deposit
-                </Button>
+          return (
+            <Card
+              key={it.id ?? it.symbol}
+              appearance="glassDark"
+              padding="default"
+            >
+              <div className="flex items-center justify-between">
+                {/* Left: Icon + Name + Amount */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-full ${tokenColors[it.symbol] || "bg-white/10"
+                      } flex items-center justify-center`}
+                  >
+                    {tokenLetters[it.symbol] ? (
+                      <span className="text-amber-400 font-bold text-lg">
+                        {tokenLetters[it.symbol]}
+                      </span>
+                    ) : (
+                      <TokenIcon symbol={it.symbol} width={28} height={28} />
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-white font-semibold">
+                      {tokenNames[it.symbol] || it.name || it.symbol}
+                    </span>
+                    <p className="text-white/50 text-sm">
+                      {maskString(formatAmount(it.amount || 0), visibility.visible, MASK_SHORT)} {it.symbol}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: USD Value + Change */}
+                <div className="text-right">
+                  <span className="text-white font-semibold">
+                    {maskString(formatCurrency(it.usdValue), visibility.visible, MASK_SHORT)}
+                  </span>
+                  {change !== 0 && (
+                    <p className={`text-sm ${changeColor}`}>
+                      {sign}{change.toFixed(1)}%
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
 }
-
-

@@ -2,8 +2,9 @@
 
 import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import { Balance } from "@/components/wallet";
+import ActionButtons from "@/components/wallet/ActionButtons";
+import ActiveLoans from "@/components/wallet/ActiveLoans";
 import Assets from "@/components/wallet/Assets";
-import LoanInfo from "@/components/wallet/LoanInfo";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 
 const Wallet = () => {
@@ -16,13 +17,14 @@ const Wallet = () => {
       {/* Hero Balance */}
       <Balance amount={totalBalance + netLoanValue} />
 
+      {/* Action Buttons */}
+      <ActionButtons />
+
       {/* Assets List */}
       <Assets items={assets} />
 
-      {/* Loan Info */}
-      <div className="px-4">
-        <LoanInfo />
-      </div>
+      {/* Active Loans */}
+      <ActiveLoans />
     </div>
   );
 };
