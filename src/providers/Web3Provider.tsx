@@ -216,6 +216,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
           chainId: NETWORK.id,
         },
         {
+          // Enable gas sponsorship (requires dashboard configuration)
+          sponsor: true,
           // Specify the wallet to use for the transaction
           address: activeWallet.address as `0x${string}`,
           uiOptions: {
