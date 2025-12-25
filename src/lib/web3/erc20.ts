@@ -4,6 +4,7 @@ import {
   type Hex,
   type PublicClient,
   type WalletClient,
+  encodeFunctionData,
 } from "viem";
 import { arbitrum } from "viem/chains";
 
@@ -54,3 +55,21 @@ export async function transfer(
     chain: arbitrum,
   });
 }
+
+// Encode functions for sponsored transactions
+export function encodeTransferData(recipient: Address, amount: bigint): Hex {
+  return encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [recipient, amount],
+  });
+}
+
+export function encodeApproveData(spender: Address, amount: bigint): Hex {
+  return encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [spender, amount],
+  });
+}
+
