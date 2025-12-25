@@ -31,14 +31,14 @@ const MenuItem = ({
         }
       }}
       className={cn(
-        "border-1 rounded border-neutral-500 flex gap-2 items-center py-3 px-4 hover:bg-foreground/10",
+        "rounded-2xl border border-white/10 flex gap-3 items-center py-4 px-4 hover:bg-white/5 transition-colors",
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >
       {leading && leading}
       {customContent && !label && customContent}
-      {!customContent && label && <span className="flex flex-1">{label}</span>}
-      {trailing ? trailing : <ArrowRightIcon className="h-4 w-4" />}
+      {!customContent && label && <span className="flex flex-1 text-white font-medium">{label}</span>}
+      {trailing ? trailing : <ArrowRightIcon className="h-5 w-5 text-white/40" />}
     </Link>
   );
 };

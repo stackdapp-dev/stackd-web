@@ -39,14 +39,21 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               {children}
               <ToastContainer
                 position="top-center"
-                autoClose={3000}
-                hideProgressBar
+                autoClose={4000}
+                hideProgressBar={false}
                 newestOnTop
-                closeOnClick={false}
+                closeOnClick
                 rtl={false}
                 pauseOnFocusLoss
                 draggable={false}
                 pauseOnHover
+                theme="dark"
+                toastStyle={{
+                  background: "rgba(15, 23, 42, 0.95)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "12px",
+                  backdropFilter: "blur(10px)",
+                }}
               />
             </UserProvider>
           </Web3Provider>

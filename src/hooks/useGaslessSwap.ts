@@ -38,6 +38,42 @@ interface SwapResult {
     error?: string;
 }
 
+// Parse 0x API errors into user-friendly messages
+function parseApiError(errorString: string): string {
+    // Try to parse the error message
+    if (errorString.includes("SELL_AMOUNT_TOO_SMALL")) {
+        // Extract min amount if available
+        const minMatch = errorString.match(/minSellAmount["\s:]+(\d+)/);
+        if (minMatch) {
+            return `Amount too small. Please enter a larger amount to swap.`;
+        }
+        return "Amount too small. Please enter a larger amount.";
+    }
+
+    if (errorString.includes("INSUFFICIENT_ASSET_LIQUIDITY")) {
+        return "Not enough liquidity available for this swap. Try a smaller amount.";
+    }
+
+    if (errorString.includes("INPUT_INVALID")) {
+        return "Invalid swap parameters. Please try again.";
+    }
+
+    if (errorString.includes("TAKER_ADDRESS_INVALID")) {
+        return "Wallet address issue. Please reconnect your wallet.";
+    }
+
+    if (errorString.includes("No liquidity")) {
+        return "No liquidity available for this token pair.";
+    }
+
+    // Default: return a cleaned up version
+    if (errorString.includes("0x API error:")) {
+        return "Swap service temporarily unavailable. Please try again.";
+    }
+
+    return errorString;
+}
+
 export function useGaslessSwap() {
     const { walletClient, activeWalletAddress } = useWeb3();
     const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +121,8 @@ export function useGaslessSwap() {
                 setQuote(data);
                 return data;
             } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "Quote failed";
+                const rawError = err instanceof Error ? err.message : "Quote failed";
+                const errorMessage = parseApiError(rawError);
                 console.error("[0x] Quote error:", err);
                 setError(errorMessage);
                 setQuote(null);
@@ -146,7 +183,7 @@ export function useGaslessSwap() {
                 const { r: approvalR, s: approvalS, v: approvalV } = splitSignature(approvalSignature);
                 submitPayload.approval = {
                     type: quote.approval.type,
-                    hash: quote.approval.hash,
+                    eip712: quote.approval.eip712,
                     signature: {
                         r: approvalR,
                         s: approvalS,
@@ -170,7 +207,7 @@ export function useGaslessSwap() {
             const { r: tradeR, s: tradeS, v: tradeV } = splitSignature(tradeSignature);
             submitPayload.trade = {
                 type: quote.trade.type,
-                hash: quote.trade.hash,
+                eip712: quote.trade.eip712,
                 signature: {
                     r: tradeR,
                     s: tradeS,
@@ -201,7 +238,8 @@ export function useGaslessSwap() {
                 tradeHash: submitResult.tradeHash,
             };
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Swap failed";
+            const rawError = err instanceof Error ? err.message : "Swap failed";
+            const errorMessage = parseApiError(rawError);
             console.error("[0x] Swap error:", err);
             setError(errorMessage);
             return { success: false, error: errorMessage };
