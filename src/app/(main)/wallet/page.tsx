@@ -9,7 +9,7 @@ import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider
 import { useVisibility } from "@/providers/visibility";
 
 const Wallet = () => {
-  const { assets, totalBalance } = useWalletBalanceContext();
+  const { assets, totalBalance, isLoading } = useWalletBalanceContext();
   const { loanCalcs } = useLoanCalculationsContext();
   const { netLoanValue } = loanCalcs;
   const visibility = useVisibility();
@@ -27,7 +27,7 @@ const Wallet = () => {
       <ActionButtons />
 
       {/* Assets List */}
-      <Assets items={assets} />
+      <Assets items={assets} isLoading={isLoading} />
 
       {/* Active Loans */}
       <ActiveLoans />

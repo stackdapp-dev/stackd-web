@@ -1,6 +1,7 @@
 "use client";
 
 import Card from "@/components/ui/card";
+import { SkeletonRow } from "@/components/ui/skeleton";
 import Text from "@/components/ui/text";
 import { formatAmount } from "@/lib/utils";
 import { useTransactionHistory } from "@/hooks/useTransactionHistory";
@@ -10,21 +11,6 @@ import { formatUnits } from "viem";
 
 // Arbiscan base URL for Arbitrum One
 const ARBISCAN_TX_URL = "https://arbiscan.io/tx/";
-
-// Skeleton loading component with shimmer animation
-const SkeletonRow = () => (
-  <div className="rounded-2xl border border-white/10 p-4 flex items-center gap-4 animate-pulse">
-    <div className="w-10 h-10 rounded-full bg-white/10 skeleton-shimmer" />
-    <div className="flex-1 space-y-2">
-      <div className="h-4 w-32 rounded bg-white/10 skeleton-shimmer" />
-      <div className="h-3 w-48 rounded bg-white/10 skeleton-shimmer" />
-    </div>
-    <div className="text-right space-y-2">
-      <div className="h-4 w-20 rounded bg-white/10 skeleton-shimmer ml-auto" />
-      <div className="h-3 w-16 rounded bg-white/10 skeleton-shimmer ml-auto" />
-    </div>
-  </div>
-);
 
 // Format timestamp to relative time
 const formatRelativeTime = (timestamp: number): string => {

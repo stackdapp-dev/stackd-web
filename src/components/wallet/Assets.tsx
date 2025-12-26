@@ -1,6 +1,7 @@
 "use client";
 
 import Card from "@/components/ui/card";
+import { SkeletonRow } from "@/components/ui/skeleton";
 import { formatAmount, formatCurrency, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
 import React from "react";
@@ -18,6 +19,7 @@ interface AssetItem {
 
 interface AssetsProps {
   items: AssetItem[];
+  isLoading?: boolean;
 }
 
 // Token display names - WBTC shows as "Bitcoin (Wrapped)"
@@ -44,11 +46,8 @@ const tokenLetters: Record<string, string> = {
   USDT: "U",
 };
 
-export default function Assets({ items }: AssetsProps) {
+export default function Assets({ items, isLoading = false }: AssetsProps) {
   const visibility = useVisibility();
-
-  // Filter out ETH from the assets list
-  const filteredItems = items.filter((it) => it.symbol !== "ETH");
 
   return (
     <div className="w-full px-4">
@@ -58,47 +57,56 @@ export default function Assets({ items }: AssetsProps) {
       </h2>
 
       <div className="flex flex-col gap-3">
-        {filteredItems.map((it) => {
-          const change = it.change24h ?? 0;
-          const isPositive = change >= 0;
-          const changeColor = isPositive ? "text-green-400" : "text-red-400";
-          const sign = isPositive ? "+" : "";
+        {/* Show skeleton loading rows */}
+        {isLoading ? (
+          <>
+            {[...Array(3)].map((_, i) => (
+              <SkeletonRow key={i} />
+            ))}
+          </>
+        ) : (
+          items.map((it) => {
+            const change = it.change24h ?? 0;
+            const isPositive = change >= 0;
+            const changeColor = isPositive ? "text-green-400" : "text-red-400";
+            const sign = isPositive ? "+" : "";
 
-          return (
-            <Card
-              key={it.id ?? it.symbol}
-              appearance="glassDark"
-              padding="default"
-            >
-              <div className="flex items-center justify-between">
-                {/* Left: Icon + Name + Amount */}
-                <div className="flex items-center gap-3">
-                  <TokenIcon symbol={it.symbol} width={48} height={48} />
-                  <div>
+            return (
+              <Card
+                key={it.id ?? it.symbol}
+                appearance="glassDark"
+                padding="default"
+              >
+                <div className="flex items-center justify-between">
+                  {/* Left: Icon + Name + Amount */}
+                  <div className="flex items-center gap-3">
+                    <TokenIcon symbol={it.symbol} width={48} height={48} />
+                    <div>
+                      <span className="text-white font-semibold">
+                        {tokenNames[it.symbol] || it.name || it.symbol}
+                      </span>
+                      <p className="text-white/50 text-sm">
+                        {maskString(formatAmount(it.amount || 0), visibility.visible, MASK_SHORT)} {it.symbol}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: USD Value + Change */}
+                  <div className="text-right">
                     <span className="text-white font-semibold">
-                      {tokenNames[it.symbol] || it.name || it.symbol}
+                      {maskString(formatCurrency(it.usdValue), visibility.visible, MASK_SHORT)}
                     </span>
-                    <p className="text-white/50 text-sm">
-                      {maskString(formatAmount(it.amount || 0), visibility.visible, MASK_SHORT)} {it.symbol}
-                    </p>
+                    {change !== 0 && (
+                      <p className={`text-sm ${changeColor}`}>
+                        {sign}{change.toFixed(1)}%
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                {/* Right: USD Value + Change */}
-                <div className="text-right">
-                  <span className="text-white font-semibold">
-                    {maskString(formatCurrency(it.usdValue), visibility.visible, MASK_SHORT)}
-                  </span>
-                  {change !== 0 && (
-                    <p className={`text-sm ${changeColor}`}>
-                      {sign}{change.toFixed(1)}%
-                    </p>
-                  )}
-                </div>
-              </div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })
+        )}
       </div>
     </div>
   );
