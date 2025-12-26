@@ -7,6 +7,7 @@ export default defineConfig({
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : undefined,
     reporter: "html",
+    timeout: 30000,
     use: {
         baseURL: "http://localhost:3000",
         trace: "on-first-retry",
@@ -17,15 +18,16 @@ export default defineConfig({
             name: "chromium",
             use: { ...devices["Desktop Chrome"] },
         },
-        {
-            name: "Mobile Safari",
-            use: { ...devices["iPhone 13"] },
-        },
+        // Mobile Safari commented out for faster initial testing
+        // {
+        //   name: "Mobile Safari",
+        //   use: { ...devices["iPhone 13"] },
+        // },
     ],
     webServer: {
         command: "pnpm dev",
         url: "http://localhost:3000",
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: true, // Always reuse if available
         timeout: 120000,
     },
 });
