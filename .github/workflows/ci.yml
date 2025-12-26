@@ -35,12 +35,18 @@ jobs:
         run: pnpm run test:e2e
         env:
           CI: true
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          NEXT_PUBLIC_PRIVY_SIGNER_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_SIGNER_ID }}
+          NEXT_PUBLIC_TOKEN_PRICE_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_TOKEN_PRICE_API_BASE_URL }}
+          NEXT_PUBLIC_ARBISCAN_URL: https://arbiscan.io
       
       - name: Build
-        run: pnpm run build:only
+        run: pnpm run build
         env:
           NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
           NEXT_PUBLIC_PRIVY_SIGNER_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_SIGNER_ID }}
+          NEXT_PUBLIC_TOKEN_PRICE_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_TOKEN_PRICE_API_BASE_URL }}
+          NEXT_PUBLIC_ARBISCAN_URL: https://arbiscan.io
       
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
