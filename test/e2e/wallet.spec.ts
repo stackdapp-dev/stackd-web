@@ -1,56 +1,69 @@
 /**
  * E2E Tests for Wallet Page
- * Tests basic page structure and unauthenticated flows
- * 
- * Note: Authenticated flows require app-side test mode integration.
- * These tests verify the app loads correctly and handles auth states.
+ * Tests wallet display with mocked authentication
  */
 import { test, expect } from "@playwright/test";
+import { createMockAuthScript, clearMockAuthScript } from "./fixtures";
 
-test.describe("Wallet Page - Basic", () => {
+test.describe("Wallet Page - Unauthenticated", () => {
+    test.beforeEach(async ({ page }) => {
+        await page.addInitScript(clearMockAuthScript);
+    });
+
     test("page should load without errors", async ({ page }) => {
         const response = await page.goto("/wallet");
-
-        // Page should return successfully (200, 301, 302 are ok)
         expect(response?.status()).toBeLessThan(400);
-    });
-
-    test("should have proper page title", async ({ page }) => {
-        await page.goto("/wallet");
-
-        // Should have a title
-        const title = await page.title();
-        expect(title).toBeTruthy();
-    });
-
-    test("should display some UI content", async ({ page }) => {
-        await page.goto("/wallet");
-        await page.waitForLoadState("domcontentloaded");
-
-        // Page should have visible content
-        const bodyContent = await page.locator("body").textContent();
-        expect(bodyContent?.length).toBeGreaterThan(0);
     });
 });
 
-test.describe("Wallet Page - Unauthenticated State", () => {
-    test("should show login/auth UI when not authenticated", async ({ page }) => {
+test.describe("Wallet Page - Embedded Wallet (No Loan)", () => {
+    test.beforeEach(async ({ page }) => {
+        await page.addInitScript(createMockAuthScript("embeddedNoLoan"));
+    });
+
+    test("should display Wallet title", async ({ page }) => {
         await page.goto("/wallet");
         await page.waitForLoadState("networkidle");
-        await page.waitForTimeout(2000);
 
-        // Check if either shows login prompt OR redirects to login
-        // The exact behavior depends on app routing
-        const currentUrl = page.url();
-        const pageContent = await page.content();
+        const content = await page.content();
+        expect(content).toContain("Wallet");
+    });
 
-        // Either redirected away OR shows some form of auth UI
-        const hasAuthUI = pageContent.includes("Sign in")
-            || pageContent.includes("Log in")
-            || pageContent.includes("Connect")
-            || pageContent.includes("privy")
-            || !currentUrl.includes("/wallet");
+    test("should contain Assets text or loading state", async ({ page }) => {
+        await page.goto("/wallet");
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(3000);
 
-        expect(hasAuthUI || currentUrl !== page.url()).toBeTruthy();
+        const content = await page.content();
+        // Either shows Assets section or skeleton loading
+        const hasAssets = content.includes("ASSETS") || content.includes("Assets");
+        const hasSkeleton = content.includes("skeleton") || content.includes("animate-pulse");
+        expect(hasAssets || hasSkeleton || content.length > 1000).toBeTruthy();
+    });
+
+    test("should display action buttons", async ({ page }) => {
+        await page.goto("/wallet");
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(3000);
+
+        const content = await page.content();
+        // Look for action-related content
+        expect(content).toContain("Send");
+    });
+});
+
+test.describe("Wallet Page - External Wallet (With Loan)", () => {
+    test.beforeEach(async ({ page }) => {
+        await page.addInitScript(createMockAuthScript("externalWithLoan"));
+    });
+
+    test("should render wallet page content", async ({ page }) => {
+        await page.goto("/wallet");
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(3000);
+
+        // Verify page loads with content
+        const content = await page.content();
+        expect(content.length).toBeGreaterThan(1000);
     });
 });

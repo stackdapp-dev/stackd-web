@@ -1,32 +1,35 @@
 /**
  * E2E Tests for Navigation
- * Tests bottom nav and basic routing
  */
 import { test, expect } from "@playwright/test";
+import { createMockAuthScript } from "./fixtures";
 
-test.describe("Navigation - Basic", () => {
-    test("should navigate to different main routes", async ({ page }) => {
-        // Test that main routes load
-
-        const walletResponse = await page.goto("/wallet");
-        expect(walletResponse?.status()).toBeLessThan(400);
-
-        const historyResponse = await page.goto("/history");
-        expect(historyResponse?.status()).toBeLessThan(400);
-
-        const menuResponse = await page.goto("/menu");
-        expect(menuResponse?.status()).toBeLessThan(400);
+test.describe("Navigation", () => {
+    test.beforeEach(async ({ page }) => {
+        await page.addInitScript(createMockAuthScript("embeddedNoLoan"));
     });
 
-    test("bottom nav should be visible on main pages", async ({ page }) => {
+    test("should navigate between main pages", async ({ page }) => {
+        // Navigate to wallet
+        await page.goto("/wallet");
+        expect(page.url()).toContain("/wallet");
+
+        // Navigate to history
+        await page.goto("/history");
+        expect(page.url()).toContain("/history");
+
+        // Navigate to menu
+        await page.goto("/menu");
+        expect(page.url()).toContain("/menu");
+    });
+
+    test("bottom nav should have navigation items", async ({ page }) => {
         await page.goto("/wallet");
         await page.waitForLoadState("networkidle");
 
-        // Look for nav element
-        const nav = page.locator("nav").first();
-        const isVisible = await nav.isVisible().catch(() => false);
-
-        // Either has nav or shows auth (which may hide nav)
-        expect(true).toBeTruthy(); // Basic connectivity test
+        const content = await page.content();
+        expect(content).toContain("Wallet");
+        expect(content).toContain("History");
+        expect(content).toContain("Menu");
     });
 });

@@ -21,6 +21,14 @@ import { arbitrum } from "viem/chains";
 declare global {
   interface Window {
     arbitrum?: any;
+    // E2E Test mode properties
+    __PRIVY_TEST_MODE__?: boolean;
+    __PRIVY_MOCK_AUTHENTICATED__?: boolean;
+    __PRIVY_MOCK_WALLET__?: {
+      address: string;
+      walletClientType: string;
+      chainId?: number;
+    };
   }
 }
 
@@ -50,8 +58,46 @@ const ACTIVE_WALLET_KEY = "stackd_active_wallet";
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { wallets, ready } = useWallets();
-  const { authenticated } = usePrivy();
+  const { wallets: privyWallets, ready } = useWallets();
+  const { authenticated: privyAuthenticated } = usePrivy();
+
+  // Test mode support for E2E testing - use state to allow re-render after script injection
+  const [isInTestMode, setIsInTestMode] = useState(false);
+  const [testMockWallet, setTestMockWallet] = useState<typeof window.__PRIVY_MOCK_WALLET__>(undefined);
+  const [testMockAuth, setTestMockAuth] = useState(false);
+
+  // Check for test mode on mount and when window changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.__PRIVY_TEST_MODE__) {
+      console.log("[TEST MODE] Detected! Setting up mock wallet...");
+      setIsInTestMode(true);
+      setTestMockWallet(window.__PRIVY_MOCK_WALLET__);
+      setTestMockAuth(window.__PRIVY_MOCK_AUTHENTICATED__ ?? false);
+    }
+  }, []);
+
+  // Override with test mode values if in test mode
+  const authenticated = isInTestMode ? testMockAuth : privyAuthenticated;
+
+  // Create mock wallet for test mode
+  const wallets = useMemo(() => {
+    if (isInTestMode && testMockWallet) {
+      console.log("[TEST MODE] Using mock wallet:", testMockWallet.address);
+      return [{
+        address: testMockWallet.address as `0x${string}`,
+        walletClientType: testMockWallet.walletClientType,
+        chainId: testMockWallet.chainId || 42161,
+        getEthereumProvider: async () => ({
+          request: async ({ method }: { method: string }) => {
+            if (method === "eth_chainId") return "0xa4b1";
+            if (method === "eth_accounts") return [testMockWallet.address];
+            return null;
+          },
+        }),
+      }] as unknown as ConnectedWallet[];
+    }
+    return privyWallets;
+  }, [isInTestMode, testMockWallet, privyWallets]);
 
   // Privy's sponsored transaction hook
   const { sendTransaction: privySendTransaction } = useSendTransaction();
