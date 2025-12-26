@@ -1,120 +1,118 @@
-# Privy + Next.js Starter
+# Stack'd Web
 
-This example showcases how to get started using Privy's React SDK inside a Next.js application.
+A DeFi wallet application built with Next.js, Privy authentication, and Compound Finance integration on Arbitrum.
 
-## Live Demo
-
-[View Demo]({{DEPLOY_URL}})
-
-## Getting Started
-
-### 1. Clone the Project
+## Quick Start
 
 ```bash
-mkdir -p privy-next-starter && curl -L https://github.com/privy-io/privy-examples/archive/main.tar.gz | tar -xz --strip=2 -C privy-next-starter examples-main/privy-next-starter && cd privy-next-starter
-```
-
-### 2. Install Dependencies
-
-```bash
+# Install dependencies
 pnpm install
-```
 
-### 3. Configure Environment
-
-Copy the example environment file and configure your Privy app credentials:
-
-```bash
+# Set up environment variables
 cp .env.example .env.local
-```
+# Edit .env.local with your credentials
 
-Update `.env.local` with your Privy app credentials:
-
-```env
-# Public - Safe to expose in the browser
-NEXT_PUBLIC_PRIVY_APP_ID=your_app_id_here
-NEXT_PUBLIC_PRIVY_SIGNER_ID=your_signer_id_here
-```
-
-**Important:** Variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Get your credentials from the [Privy Dashboard](https://dashboard.privy.io).
-
-### 4. Start Development Server
-
-```bash
+# Start development server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+Open [http://localhost:3000](http://localhost:3000)
 
-## Core Functionality
+## Commands
 
-### 1. Login with Privy
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start development server |
+| `pnpm build` | Production build |
+| `pnpm test` | Unit tests (watch mode) |
+| `pnpm test:coverage` | Unit tests with coverage |
+| `pnpm test:e2e` | E2E tests with Playwright |
+| `pnpm test:all` | Run all tests (CI-ready) |
 
-Login or sign up using Privy's pre-built modals.
+## Project Structure
 
-[`src/app/page.tsx`](./src/app/page.tsx)
-
-```tsx
-import { usePrivy } from "@privy-io/react-auth";
-const { login } = usePrivy();
-login();
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── (main)/            # Authenticated routes
+│   │   ├── wallet/        # Wallet dashboard
+│   │   ├── history/       # Transaction history
+│   │   ├── send/          # Send tokens
+│   │   ├── convert/       # Token swaps
+│   │   ├── deposit/       # Deposit funds
+│   │   └── menu/          # Settings menu
+│   └── api/               # API routes
+│       ├── token-prices/  # CoinGecko price feed
+│       └── transactions/  # Transaction history
+├── components/            # Reusable UI components
+│   ├── ui/               # Base components (Button, Skeleton, etc.)
+│   └── wallet/           # Wallet-specific components
+├── hooks/                # Custom React hooks
+│   ├── useWalletBalance.ts
+│   ├── useCompound.ts    # Compound Finance integration
+│   └── useTokenTransfer.ts
+├── lib/                  # Core library code (100% tested)
+│   ├── utils.ts          # Formatting utilities
+│   ├── web3/             # Blockchain interactions
+│   │   ├── compound.ts   # Compound protocol
+│   │   └── erc20.ts      # ERC20 token ops
+│   └── config/           # Contract ABIs
+└── providers/            # React context providers
+    ├── Web3Provider.tsx  # Wallet + test mode
+    ├── UserProvider.tsx  # User auth state
+    └── TokenPriceProvider.tsx
 ```
 
-### 2. Create Multi-Chain Wallets
+## Testing
 
-Programmatically create embedded wallets for multiple blockchains. Supports Ethereum, Solana, Bitcoin, and more.
+### Test Coverage
+- **Unit Tests**: 70 tests, 100% coverage on `/src/lib`
+- **E2E Tests**: 9 tests covering wallet, history, navigation
 
-[`src/components/sections/create-a-wallet.tsx`](./src/components/sections/create-a-wallet.tsx)
+### Running Tests
 
-```tsx
-import { useCreateWallet, useSolanaWallets } from "@privy-io/react-auth";
-import { useCreateWallet as useCreateWalletExtendedChains } from "@privy-io/react-auth/extended-chains";
+```bash
+# Unit tests (watch mode for development)
+pnpm test
 
-const { createWallet: createWalletEvm } = useCreateWallet();
-const { createWallet: createWalletSolana } = useSolanaWallets();
-const { createWallet: createWalletExtendedChains } =
-  useCreateWalletExtendedChains();
+# Unit tests with coverage report
+pnpm test:coverage
 
-// Create Ethereum wallet
-createWalletEvm({ createAdditional: true });
+# E2E tests (requires pnpm dev running)
+pnpm test:e2e
 
-// Create Solana wallet
-createWalletSolana({ createAdditional: true });
-
-// Create Bitcoin/other chain wallets
-createWalletExtendedChains({ chainType: "bitcoin-segwit" });
+# All tests (CI-ready, no manual input)
+pnpm test:all
 ```
 
-### 3. Send Transactions
+### Test Mode for E2E
 
-Send transactions on both Ethereum and Solana with comprehensive wallet action support.
+E2E tests use mock wallet authentication. The app checks for `window.__PRIVY_TEST_MODE__` and uses injected mock data for wallet addresses:
 
-[`src/components/sections/wallet-actions.tsx`](./src/components/sections/wallet-actions.tsx)
+| Fixture | Address | Type |
+|---------|---------|------|
+| `externalWithLoan` | `0xfCDd6Dcc...` | External (MetaMask) |
+| `embeddedNoLoan` | `0x45acE1fF...` | Embedded (Privy) |
+| `embeddedWithLoan` | `0x5388B884...` | Embedded (Privy) |
 
-```tsx
-import { useSendTransaction } from "@privy-io/react-auth";
-import { useSendTransaction as useSendTransactionSolana } from "@privy-io/react-auth/solana";
+## Key Technologies
 
-const { sendTransaction: sendTransactionEvm } = useSendTransaction();
-const { sendTransaction: sendTransactionSolana } = useSendTransactionSolana();
+- **Framework**: Next.js 15 with App Router
+- **Authentication**: Privy (embedded + external wallets)
+- **Blockchain**: Arbitrum One, viem
+- **DeFi**: Compound Finance (lending/borrowing)
+- **Testing**: Vitest + Playwright
+- **Styling**: Tailwind CSS
 
-// Send Ethereum transaction
-const txHash = await sendTransactionEvm(
-  { to: "0xE3070d3e4309afA3bC9a6b057685743CF42da77C", value: 10000 },
-  { address: selectedWallet.address }
-);
+## Environment Variables
 
-// Send Solana transaction
-const receipt = await sendTransactionSolana({
-  transaction: transaction,
-  connection: connection,
-  address: selectedWallet.address,
-});
+```env
+NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
+NEXT_PUBLIC_PRIVY_SIGNER_ID=your_signer_id
 ```
 
-## Relevant Links
+## Links
 
 - [Privy Dashboard](https://dashboard.privy.io)
-- [Privy Documentation](https://docs.privy.io)
-- [React SDK](https://www.npmjs.com/package/@privy-io/react-auth)
-- [Next.js Documentation](https://nextjs.org/docs)
+- [Compound Docs](https://docs.compound.finance)
+- [Arbitrum](https://arbiscan.io)
