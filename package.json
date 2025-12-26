@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "vitest run && next build --turbopack",
+    "build:only": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "test:unit": "vitest",
