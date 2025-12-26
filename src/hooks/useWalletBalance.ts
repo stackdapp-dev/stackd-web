@@ -47,23 +47,26 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
   >({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { publicClient, walletClient } = useWeb3();
+  const { publicClient, walletClient, isExternalWallet } = useWeb3();
 
   const tokenEntries = useMemo(() => Object.entries(TOKEN_ADDRESSES), []);
 
   const assets: Asset[] = useMemo(() => {
-    return Object.entries(TOKEN_METADATA).map(([key, meta]) => {
-      const amount = key === "ETH" ? ethBalance : tokenBalances[key]?.balance;
-      const usdValue = amount * (tokenPrices[key]?.usd ?? 0);
-      return {
-        symbol: meta.symbol,
-        name: meta.name,
-        amount,
-        usdValue,
-        icon: meta.icon,
-      };
-    });
-  }, [ethBalance, tokenBalances, tokenPrices]);
+    return Object.entries(TOKEN_METADATA)
+      // Only show ETH for external wallets (they need it for gas)
+      .filter(([key]) => key !== "ETH" || isExternalWallet)
+      .map(([key, meta]) => {
+        const amount = key === "ETH" ? ethBalance : tokenBalances[key]?.balance;
+        const usdValue = amount * (tokenPrices[key]?.usd ?? 0);
+        return {
+          symbol: meta.symbol,
+          name: meta.name,
+          amount,
+          usdValue,
+          icon: meta.icon,
+        };
+      });
+  }, [ethBalance, tokenBalances, tokenPrices, isExternalWallet]);
 
   const totalBalance = useMemo(() => {
     return assets.reduce((sum, a) => sum + a.usdValue, 0);

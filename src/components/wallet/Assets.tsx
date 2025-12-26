@@ -47,8 +47,7 @@ const tokenLetters: Record<string, string> = {
 export default function Assets({ items }: AssetsProps) {
   const visibility = useVisibility();
 
-  // Filter out ETH from the assets list
-  const filteredItems = items.filter((it) => it.symbol !== "ETH");
+  // ETH filtering is now handled in useWalletBalance based on wallet type
 
   return (
     <div className="w-full px-4">
@@ -58,7 +57,7 @@ export default function Assets({ items }: AssetsProps) {
       </h2>
 
       <div className="flex flex-col gap-3">
-        {filteredItems.map((it) => {
+        {items.map((it) => {
           const change = it.change24h ?? 0;
           const isPositive = change >= 0;
           const changeColor = isPositive ? "text-green-400" : "text-red-400";

@@ -40,6 +40,7 @@ type Web3ProviderValue = {
   clearWalletState: () => void;
   sendSponsoredTransaction: (params: SendTransactionParams) => Promise<{ hash: string | null; error: string | null }>;
   isSendingTransaction: boolean;
+  isExternalWallet: boolean;
 };
 
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
@@ -283,6 +284,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         clearWalletState,
         sendSponsoredTransaction,
         isSendingTransaction: isSending,
+        // Only true when there's an active wallet AND it's not embedded (privy)
+        isExternalWallet: Boolean(activeWallet && activeWallet.walletClientType !== "privy"),
       }}
     >
       {children}
