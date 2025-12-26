@@ -23,7 +23,7 @@ declare global {
         __PRIVY_MOCK_WALLET__?: {
             address: string;
             walletClientType: string;
-            chainId: number;
+            chainId?: number;
         };
     }
 }
