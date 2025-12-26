@@ -3,16 +3,16 @@ import { C_COMPOUND_ADDR } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
 import {
   borrowBalanceOf,
-  supply as compoundSupply,
-  withdraw as compoundWithdraw,
   getAssetInfo,
   getBorrowRate,
   getUtilization,
   userCollateral,
+  encodeSupplyData,
+  encodeWithdrawData,
+  encodeApproveData,
 } from "@/lib/web3/compound";
 import {
   allowance as compoundAllowance,
-  approve as compoundApprove,
 } from "@/lib/web3/erc20";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useWeb3 } from "@/providers/Web3Provider";
@@ -77,7 +77,7 @@ type UseCompoundResult = {
 };
 
 export function useCompound(): UseCompoundResult {
-  const { publicClient, walletClient, activeWalletAddress, ensureCorrectNetwork } = useWeb3();
+  const { publicClient, walletClient, activeWalletAddress, ensureCorrectNetwork, sendSponsoredTransaction } = useWeb3();
   const getTokenPrice = useGetTokenPrice();
   const acct = walletClient?.account?.address || activeWalletAddress;
 
@@ -230,21 +230,24 @@ export function useCompound(): UseCompoundResult {
       amount: bigint,
       spender: Address = C_COMPOUND_ADDR
     ): Promise<{ txHash: Hex | null; error: string | null }> => {
-      if (!walletClient || !acct) {
-        return { txHash: null, error: "walletClient or account not available" };
+      if (!acct) {
+        return { txHash: null, error: "Account not available" };
       }
 
       try {
         await ensureCorrectNetwork();
 
-        const tx = await compoundApprove(
-          walletClient,
-          formatAddress(acct),
-          token,
-          spender,
-          amount
-        );
-        return { txHash: tx, error: null };
+        // Use sponsored transaction for gas-free approval
+        const data = encodeApproveData(spender, amount);
+        const result = await sendSponsoredTransaction({
+          to: token,
+          data,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown approval error";
@@ -252,7 +255,7 @@ export function useCompound(): UseCompoundResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [walletClient, acct, ensureCorrectNetwork]
+    [acct, ensureCorrectNetwork, sendSponsoredTransaction]
   );
 
   const allowance = useCallback(
@@ -282,20 +285,24 @@ export function useCompound(): UseCompoundResult {
       token: Address,
       amount: bigint
     ): Promise<{ txHash: Hex | null; error: string | null }> => {
-      if (!walletClient || !acct) {
-        return { txHash: null, error: "walletClient or account not available" };
+      if (!acct) {
+        return { txHash: null, error: "Account not available" };
       }
 
       try {
         await ensureCorrectNetwork();
 
-        const tx = await compoundSupply(
-          walletClient,
-          formatAddress(acct),
-          token,
-          amount
-        );
-        return { txHash: tx, error: null };
+        // Use sponsored transaction for gas-free supply
+        const data = encodeSupplyData(token, amount);
+        const result = await sendSponsoredTransaction({
+          to: C_COMPOUND_ADDR as `0x${string}`,
+          data,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown supply error";
@@ -303,7 +310,7 @@ export function useCompound(): UseCompoundResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [walletClient, acct, ensureCorrectNetwork]
+    [acct, ensureCorrectNetwork, sendSponsoredTransaction]
   );
 
   const withdraw = useCallback(
@@ -311,20 +318,24 @@ export function useCompound(): UseCompoundResult {
       token: Address,
       amount: bigint
     ): Promise<{ txHash: Hex | null; error: string | null }> => {
-      if (!walletClient || !acct) {
-        return { txHash: null, error: "walletClient or account not available" };
+      if (!acct) {
+        return { txHash: null, error: "Account not available" };
       }
 
       try {
         await ensureCorrectNetwork();
 
-        const tx = await compoundWithdraw(
-          walletClient,
-          formatAddress(acct),
-          token,
-          amount
-        );
-        return { txHash: tx, error: null };
+        // Use sponsored transaction for gas-free withdraw
+        const data = encodeWithdrawData(token, amount);
+        const result = await sendSponsoredTransaction({
+          to: C_COMPOUND_ADDR as `0x${string}`,
+          data,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown withdraw error";
@@ -332,7 +343,7 @@ export function useCompound(): UseCompoundResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [walletClient, acct, ensureCorrectNetwork]
+    [acct, ensureCorrectNetwork, sendSponsoredTransaction]
   );
 
   const refetch = useCallback(() => fetch(true), [fetch]);

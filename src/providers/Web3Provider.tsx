@@ -192,7 +192,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     console.log("[WALLET] Wallet state cleared");
   };
 
-  // Send transaction with Privy gas sponsorship
+  // Send transaction - sponsored for embedded wallets, regular for external wallets
   const sendSponsoredTransaction = async (
     params: SendTransactionParams
   ): Promise<{ hash: string | null; error: string | null }> => {
@@ -204,36 +204,68 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       setIsSending(true);
       await ensureCorrectNetwork();
 
-      console.log("[TX] Sending sponsored transaction:", params);
+      console.log("[TX] Sending transaction:", params);
       console.log("[TX] Using wallet address:", activeWallet.address);
+      console.log("[TX] Wallet client type:", activeWallet.walletClientType);
 
-      // Use Privy's sendTransaction with gas sponsorship
-      const txReceipt = await privySendTransaction(
-        {
-          to: params.to,
-          data: params.data,
-          value: params.value ? BigInt(params.value) : undefined,
-          chainId: NETWORK.id,
-        },
-        {
-          // Enable gas sponsorship (requires dashboard configuration)
-          sponsor: true,
-          // Specify the wallet to use for the transaction
-          address: activeWallet.address as `0x${string}`,
-          uiOptions: {
-            description: "Approve this sponsored transaction",
-            buttonText: "Sign",
+      // Check if this is an embedded wallet (supports gas sponsorship)
+      const isEmbeddedWallet = activeWallet.walletClientType === "privy";
+
+      if (isEmbeddedWallet) {
+        // Use Privy's sendTransaction with gas sponsorship for embedded wallets
+        console.log("[TX] Using sponsored transaction (embedded wallet)");
+        const txReceipt = await privySendTransaction(
+          {
+            to: params.to,
+            data: params.data,
+            value: params.value ? BigInt(params.value) : undefined,
+            chainId: NETWORK.id,
           },
-        }
-      );
+          {
+            // Enable gas sponsorship (requires dashboard configuration)
+            sponsor: true,
+            // Specify the wallet to use for the transaction
+            address: activeWallet.address as `0x${string}`,
+            uiOptions: {
+              description: "Approve this sponsored transaction",
+              buttonText: "Sign",
+            },
+          }
+        );
 
-      console.log("[TX] Sponsored transaction hash:", txReceipt.hash);
-      setIsSending(false);
-      return { hash: txReceipt.hash, error: null };
+        console.log("[TX] Sponsored transaction hash:", txReceipt.hash);
+        setIsSending(false);
+        return { hash: txReceipt.hash, error: null };
+      } else {
+        // For external wallets, use Privy's sendTransaction without sponsorship
+        // Privy will show the transaction prompt where user can pay their own gas
+        console.log("[TX] Using regular transaction (external wallet)");
+        const txReceipt = await privySendTransaction(
+          {
+            to: params.to,
+            data: params.data,
+            value: params.value ? BigInt(params.value) : undefined,
+            chainId: NETWORK.id,
+          },
+          {
+            // No sponsorship for external wallets - user pays gas
+            sponsor: false,
+            address: activeWallet.address as `0x${string}`,
+            uiOptions: {
+              description: "Confirm transaction",
+              buttonText: "Confirm",
+            },
+          }
+        );
+
+        console.log("[TX] External wallet transaction hash:", txReceipt.hash);
+        setIsSending(false);
+        return { hash: txReceipt.hash, error: null };
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown transaction error";
-      console.error("[TX] Sponsored transaction failed:", err);
+      console.error("[TX] Transaction failed:", err);
       setIsSending(false);
       return { hash: null, error: errorMessage };
     }
