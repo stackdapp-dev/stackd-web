@@ -31,6 +31,7 @@
     "@solana/kit": "2.3.0",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
+    "@supabase/supabase-js": "^2.89.0",
     "@tanstack/react-form": "^1.23.8",
     "@tanstack/zod-form-adapter": "^0.42.1",
     "bs58": "^6.0.0",
