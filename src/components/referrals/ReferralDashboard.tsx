@@ -98,26 +98,56 @@ export function ReferralDashboard() {
 
     const tierStyle = tierStyles[stats.tier];
 
+    // Calculate total earnings (inflation avoided + referral rewards)
+    const referralRewards = stats.total_earnings;
+    const totalEarnings = stats.inflation_avoided + referralRewards;
+
     return (
         <div className="space-y-6">
-            {/* Header Card - Inflation Avoided */}
-            <GlassCard variant="green" className="p-6 relative overflow-hidden">
+            {/* Hero Card - Total Earnings with Breakdown */}
+            <GlassCard variant="dark" className="p-6 relative overflow-hidden">
                 <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className="text-xs text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-1.5">
-                            <TrendingUp className="w-3 h-3" />
-                            Inflation Avoided
+                    {/* Total Earnings */}
+                    <p className="text-white/60 text-sm mb-2">Total Earnings</p>
+                    <h1 className="text-4xl text-white font-medium mb-6">
+                        ${totalEarnings.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </h1>
+
+                    {/* Breakdown Row */}
+                    <div className="flex gap-8 mb-4">
+                        <div>
+                            <p className="text-white/40 text-xs mb-1">Inflation Avoided</p>
+                            <p className="text-white text-xl font-medium">
+                                ${stats.inflation_avoided.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-white/40 text-xs mb-1">Referral Rewards</p>
+                            <p className="text-white text-xl font-medium">
+                                ${referralRewards.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Tier Badge */}
+                    <div className="mb-5">
+                        <span className={cn(
+                            "text-xs px-3 py-1.5 rounded-full border",
+                            tierStyle.bg, tierStyle.border, tierStyle.text
+                        )}>
+                            {stats.tier.charAt(0) + stats.tier.slice(1).toLowerCase()} Tier
                         </span>
                     </div>
-                    <h1 className="text-4xl text-white font-medium">
-                        ${stats.inflation_avoided.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </h1>
-                    <p className="text-white/40 text-sm mt-3">
-                        Your network saved ${stats.interest_saved.toFixed(2)} in interest this month
-                    </p>
+
+                    {/* Claim Rewards Button */}
+                    <button
+                        className="w-full bg-gradient-to-r from-[#ffa02d] to-[#ff8c00] text-black py-3.5 
+                                   rounded-xl hover:shadow-[0_0_20px_rgba(255,160,45,0.5)] 
+                                   transition-all duration-300 font-medium"
+                    >
+                        Claim Rewards
+                    </button>
                 </div>
-                {/* Decorative background glow */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2" />
             </GlassCard>
 
             {/* Referral Link Card */}
@@ -299,6 +329,6 @@ export function ReferralDashboard() {
                     </div>
                 </div>
             </GlassCard>
-        </div>
+        </div >
     );
 }
