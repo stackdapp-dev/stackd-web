@@ -29,7 +29,8 @@ class ReferralDatabaseService {
     async getOrCreateUser(walletAddress: string): Promise<User | null> {
         if (!isSupabaseConfigured()) {
             // Fall back to mock
-            return mockDbService.getUser('user_123') as unknown as User;
+            const mockUser = await mockDbService.getUser('user_123');
+            return mockUser as unknown as User;
         }
 
         const normalizedAddress = walletAddress.toLowerCase();

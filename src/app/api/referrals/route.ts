@@ -5,27 +5,39 @@ import { verifyAuthToken, isPrivyServerConfigured } from '@/lib/auth/privy-serve
 /**
  * GET /api/referrals
  * Fetch referral stats for the authenticated user
+ * Auto-creates user and referral code if they don't exist
  */
 export async function GET(req: Request) {
-    // Try to authenticate with Privy
-    let userId = 'user_123'; // Default for development
+    let userId = 'user_123';
     let walletAddress: string | null = null;
+    let referralCode: string | null = null;
+    const isDev = process.env.NODE_ENV === 'development';
 
     if (isPrivyServerConfigured()) {
+        // Try to authenticate with Privy
         const authUser = await verifyAuthToken(req);
-        if (!authUser) {
+        if (authUser) {
+            userId = authUser.userId;
+            walletAddress = authUser.walletAddress;
+        } else if (!isDev) {
+            // Production: require authentication
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        } else {
+            // Development: use mock wallet when no auth token
+            walletAddress = '0xdev123abc';
         }
-        userId = authUser.userId;
-        walletAddress = authUser.walletAddress;
+    } else {
+        // Privy not configured: use mock wallet
+        walletAddress = '0xdev123abc';
     }
 
     try {
-        // Get or create user in database by wallet
+        // Get or create user in database by wallet (auto-generates referral code)
         if (walletAddress) {
             const dbUser = await referralDb.getOrCreateUser(walletAddress);
             if (dbUser) {
                 userId = dbUser.id;
+                referralCode = dbUser.referral_code;
             }
         }
 
@@ -34,6 +46,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             ...stats,
+            referral_code: referralCode,
             unclaimed_earnings: unclaimedEarnings,
         });
     } catch (error) {
