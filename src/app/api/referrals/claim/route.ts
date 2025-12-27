@@ -1,25 +1,40 @@
 import { NextResponse } from 'next/server';
 import { referralDb } from '@/lib/db/referralDb';
 import { getUserTier, canWithdrawEarnings } from '@/lib/referrals/tiers';
+import { verifyAuthToken, isPrivyServerConfigured } from '@/lib/auth/privy-server';
 
 /**
  * POST /api/referrals/claim
  * Claim accumulated referral rewards
- * 
  * Requires Silver tier (personal loan >= $500) to withdraw
- * 
- * TODO: Integrate with Privy for authentication
- * TODO: Integrate with on-chain data for tier verification
  */
 export async function POST(req: Request) {
-    // TODO: Get userId from Privy session
-    const MOCK_USER_ID = 'user_123';
+    // Authenticate with Privy
+    let userId = 'user_123';
+    let walletAddress: string | null = null;
+
+    if (isPrivyServerConfigured()) {
+        const authUser = await verifyAuthToken(req);
+        if (!authUser) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        userId = authUser.userId;
+        walletAddress = authUser.walletAddress;
+    }
 
     try {
-        // For now, use mock tier data
+        // Get user from database
+        if (walletAddress) {
+            const dbUser = await referralDb.getUserByWallet(walletAddress);
+            if (dbUser) {
+                userId = dbUser.id;
+            }
+        }
+
         // TODO: Get actual personal loan and network volume from on-chain
-        const personalLoanBalance = 1000; // Mock: $1000 personal loan
-        const networkVolume = 5500; // Mock: $5500 network volume
+        // For now use mock values
+        const personalLoanBalance = 1000;
+        const networkVolume = 5500;
 
         const tier = getUserTier({ personalLoanBalance, networkVolume });
 
@@ -32,7 +47,7 @@ export async function POST(req: Request) {
         }
 
         // Attempt to claim
-        const result = await referralDb.claimEarnings(MOCK_USER_ID);
+        const result = await referralDb.claimEarnings(userId);
 
         if (!result.success) {
             return NextResponse.json({
