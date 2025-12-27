@@ -40,6 +40,7 @@ export interface Database {
                     referred_by?: string | null;
                     created_at?: string;
                 };
+                Relationships: [];
             };
             referral_earnings: {
                 Row: {
@@ -75,6 +76,7 @@ export interface Database {
                     claimed_at?: string | null;
                     created_at?: string;
                 };
+                Relationships: [];
             };
         };
         Views: Record<string, never>;
@@ -82,6 +84,7 @@ export interface Database {
         Enums: {
             user_tier: UserTier;
         };
+        CompositeTypes: Record<string, never>;
     };
 }
 
