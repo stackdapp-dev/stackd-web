@@ -1,25 +1,45 @@
 "use client";
 
 import LoginScreen from "@/components/modules/auth/LoginScreen";
+import ReferralGate from "@/components/modules/auth/ReferralGate";
 import { FullScreenLoader } from "@/components/orig/ui/fullscreen-loader";
+import { useReferralGate } from "@/hooks/useReferralGate";
 import { usePrivy } from "@privy-io/react-auth";
 import { redirect } from "next/navigation";
 import { ToastContainer } from "react-toastify";
+import { useState } from "react";
 
 function Home() {
   const { ready, authenticated } = usePrivy();
+  const { isValidated, isLoading, error, validateCode } = useReferralGate();
+  const [showLogin, setShowLogin] = useState(false);
 
-  if (!ready) {
+  // Show loader while Privy or referral gate is initializing
+  if (!ready || isLoading) {
     return <FullScreenLoader />;
   }
 
+  // Authenticated users go to wallet
   if (authenticated) {
     redirect("/wallet");
   }
 
+  // If referral is validated, allow login
+  // Also allow if showLogin is true (user just validated)
+  const canShowLogin = isValidated || showLogin;
+
   return (
     <div>
-      <LoginScreen />
+      {canShowLogin ? (
+        <LoginScreen />
+      ) : (
+        <ReferralGate
+          onValidated={() => setShowLogin(true)}
+          initialError={error}
+          validateCode={validateCode}
+          isLoading={isLoading}
+        />
+      )}
 
       <ToastContainer
         position="top-center"

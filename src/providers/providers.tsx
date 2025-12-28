@@ -1,6 +1,8 @@
 "use client";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { InstallBanner } from "@/components/common/InstallBanner";
+import { ServiceWorkerUpdater } from "@/components/common/ServiceWorkerUpdater";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -36,6 +38,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <TokenPriceProvider>
           <Web3Provider>
             <UserProvider>
+              <InstallBanner />
+              <ServiceWorkerUpdater />
               {children}
               <ToastContainer
                 position="top-center"

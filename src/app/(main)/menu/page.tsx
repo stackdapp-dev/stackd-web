@@ -5,11 +5,17 @@ import {
   CircleDollarSignIcon,
   MessageSquareIcon,
   UserIcon,
+  FileTextIcon,
+  ShieldCheckIcon,
 } from "lucide-react";
 
 const Menu = () => {
   const handleContactUs = () => {
     (window as any).OpenWidget?.call("maximize");
+  };
+
+  const handleOpenExternal = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -53,9 +59,34 @@ const Menu = () => {
             label="Profile"
           />
         </li>
+        <li>
+          <MenuItem
+            href="#"
+            leading={
+              <div className="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center">
+                <FileTextIcon className="h-5 w-5 text-amber-500" />
+              </div>
+            }
+            label="Terms of Service"
+            onClick={() => handleOpenExternal("https://www.stackdapp.co/terms")}
+          />
+        </li>
+        <li>
+          <MenuItem
+            href="#"
+            leading={
+              <div className="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center">
+                <ShieldCheckIcon className="h-5 w-5 text-amber-500" />
+              </div>
+            }
+            label="Privacy Policy"
+            onClick={() => handleOpenExternal("https://www.stackdapp.co/privacy")}
+          />
+        </li>
       </ul>
     </div>
   );
 };
 
 export default Menu;
+
