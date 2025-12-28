@@ -30,18 +30,30 @@ const BottomNav = () => {
     },
   ];
 
+  // Detect if running as iOS PWA (standalone mode)
+  const isIOSPWA = typeof window !== 'undefined' &&
+    (("standalone" in navigator && (navigator as unknown as { standalone: boolean }).standalone) ||
+      window.matchMedia("(display-mode: standalone)").matches);
+
   const handleNavigation = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
     e.stopPropagation();
-    // Force navigation to stay within PWA WebView
-    router.push(href);
+
+    if (isIOSPWA) {
+      // On iOS PWA, use window.location to ensure navigation stays within app
+      // This is more reliable than router.push() for iOS WebView
+      window.location.href = href;
+    } else {
+      // On regular browsers, use Next.js router for SPA navigation
+      router.push(href);
+    }
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+12px)] px-4 pointer-events-none">
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+8px)] px-4 pointer-events-none">
       {/* Liquid Glass Floating Pill */}
       <div
-        className="pointer-events-auto flex items-center justify-around gap-2 px-6 py-3 rounded-[28px] border border-white/20"
+        className="pointer-events-auto flex items-center justify-around gap-1 px-4 py-2 rounded-[24px] border border-white/20"
         style={{
           background: 'rgba(30, 30, 35, 0.75)',
           backdropFilter: 'blur(40px) saturate(180%)',
@@ -57,7 +69,7 @@ const BottomNav = () => {
               onClick={(e) => handleNavigation(e, href)}
               aria-label={label}
               className={cn(
-                "relative flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-200",
+                "relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200",
                 isActive
                   ? "text-[#ffa02d] bg-[#ffa02d]/15"
                   : "text-white/50 hover:text-white/70 active:bg-white/5"

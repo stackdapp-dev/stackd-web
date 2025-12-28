@@ -23,6 +23,11 @@ const MenuItem = ({
 }) => {
   const router = useRouter();
 
+  // Detect if running as iOS PWA (standalone mode)
+  const isIOSPWA = typeof window !== 'undefined' &&
+    (("standalone" in navigator && (navigator as unknown as { standalone: boolean }).standalone) ||
+      window.matchMedia("(display-mode: standalone)").matches);
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -30,8 +35,13 @@ const MenuItem = ({
     if (onClick) {
       onClick();
     } else if (href && href !== "#") {
-      // Use router.push to ensure navigation stays within PWA on iOS
-      router.push(href);
+      if (isIOSPWA) {
+        // On iOS PWA, use window.location to ensure navigation stays within app
+        window.location.href = href;
+      } else {
+        // On regular browsers, use Next.js router for SPA navigation
+        router.push(href);
+      }
     }
   };
 
