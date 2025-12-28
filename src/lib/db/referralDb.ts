@@ -11,10 +11,15 @@ import { dbService as mockDbService } from './mock';
 import type { User } from './supabase.types';
 import type { ReferralStats } from './types';
 
-// Create an untyped Supabase client to avoid complex generic type issues
+// Create Supabase client with service role key for server-side operations (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const db = createClient(supabaseUrl, supabaseKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const db = createClient(supabaseUrl, supabaseServiceKey);
+
+// Check if service role key is configured (needed for write operations)
+function hasServiceRoleKey(): boolean {
+    return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 
 /**
  * Generate a unique referral code
@@ -61,6 +66,16 @@ class ReferralDatabaseService {
             .single();
 
         if (error) {
+            // Handle race condition: if duplicate key error, fetch the existing user
+            if (error.code === '23505') {
+                const { data: raceUser } = await db.from('users')
+                    .select('*')
+                    .eq('wallet_address', normalizedAddress)
+                    .single();
+                if (raceUser) {
+                    return raceUser as User;
+                }
+            }
             console.error('[ReferralDB] Error creating user:', error);
             return null;
         }
