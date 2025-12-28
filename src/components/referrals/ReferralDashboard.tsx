@@ -9,7 +9,6 @@ import {
 import { useState } from "react";
 import { cn, shortenAddress } from "@/lib/utils";
 import { UserTier, RecentInvite } from "@/lib/db/types";
-import { FullScreenLoader } from "@/components/orig/ui/fullscreen-loader";
 
 // Format wallet address as 0x12...3456
 function formatWalletDisplay(invite: RecentInvite): string {
@@ -68,7 +67,33 @@ export function ReferralDashboard() {
     };
 
     if (loading) {
-        return <FullScreenLoader />;
+        return (
+            <div className="flex flex-col gap-4">
+                {/* Skeleton for Total Earnings card */}
+                <div className="rounded-2xl border border-white/10 p-6 space-y-4 bg-white/5">
+                    <div className="h-4 w-24 bg-white/10 rounded skeleton-shimmer" />
+                    <div className="h-10 w-48 bg-white/10 rounded skeleton-shimmer" />
+                    <div className="h-4 w-32 bg-white/10 rounded skeleton-shimmer" />
+                    <div className="h-12 w-full bg-white/10 rounded-xl skeleton-shimmer" />
+                </div>
+
+                {/* Skeleton for Referral Link card */}
+                <div className="rounded-2xl border border-white/10 p-5 space-y-4 bg-white/5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 skeleton-shimmer" />
+                        <div className="space-y-2">
+                            <div className="h-4 w-40 bg-white/10 rounded skeleton-shimmer" />
+                            <div className="h-3 w-56 bg-white/10 rounded skeleton-shimmer" />
+                        </div>
+                    </div>
+                    <div className="h-14 w-full bg-white/10 rounded-xl skeleton-shimmer" />
+                    <div className="flex gap-2">
+                        <div className="flex-1 h-12 bg-white/10 rounded-2xl skeleton-shimmer" />
+                        <div className="flex-1 h-12 bg-white/10 rounded-2xl skeleton-shimmer" />
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     if (!stats) {
