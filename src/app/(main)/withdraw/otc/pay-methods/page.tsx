@@ -2,13 +2,20 @@
 
 import MenuItem from "@/components/common/MenuItem";
 import PageHeader from "@/components/common/PageHeader";
-import BottomSheet from "@/components/ui/bottomSheet";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { deleteUserPaymentMethod, UserPaymentMethod } from "@/lib/api/user";
 import { useUser } from "@/providers/UserProvider";
 import { useWithdrawOTC } from "@/providers/WithrawOTCProvider";
-import { AlertTriangleIcon, EllipsisVerticalIcon } from "lucide-react";
+import { AlertTriangleIcon, EllipsisVerticalIcon, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -18,7 +25,7 @@ const PayMethods = () => {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<UserPaymentMethod | null>(null);
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleDelete = async () => {
     if (!selectedMethod) return;
@@ -68,8 +75,7 @@ const PayMethods = () => {
                     e.stopPropagation();
                     e.preventDefault();
                     setSelectedMethod(paymentMethod);
-                    // open bottom sheet with actions
-                    setIsBottomSheetOpen(true);
+                    setIsDrawerOpen(true);
                   }}
                   className="p-1"
                 >
@@ -80,14 +86,33 @@ const PayMethods = () => {
           </li>
         ))}
       </ul>
-      <BottomSheet
-        isOpen={isBottomSheetOpen}
-        onClose={() => setIsBottomSheetOpen(false)}
-        onDelete={() => {
-          setIsBottomSheetOpen(false);
-          setIsModalOpen(true);
-        }}
-      />
+
+      {/* Action Drawer - replaces old BottomSheet */}
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Payment Method Actions</DrawerTitle>
+          </DrawerHeader>
+          <DrawerFooter>
+            <button
+              onClick={() => {
+                setIsDrawerOpen(false);
+                setIsModalOpen(true);
+              }}
+              className="w-full bg-black/80 border border-neutral-700 rounded-lg px-4 py-3 flex items-center justify-center gap-3 hover:bg-white/5 transition touch-active"
+              aria-label="Delete payment method"
+            >
+              <Trash2 className="h-5 w-5 text-white" />
+              <span className="text-white font-semibold">Delete</span>
+            </button>
+            <DrawerClose asChild>
+              <Button variant="outline" className="w-full">
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       <Modal
         isOpen={isModalOpen}
@@ -113,3 +138,4 @@ const PayMethods = () => {
 };
 
 export default PayMethods;
+
