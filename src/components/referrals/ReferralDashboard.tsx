@@ -158,6 +158,23 @@ export function ReferralDashboard() {
                         <p className="text-white/40 text-xs">Friends beat inflation, you earn while helping them</p>
                     </div>
                 </div>
+
+                {/* Referral Code Display */}
+                {referralCode && (
+                    <button
+                        onClick={copyToClipboard}
+                        className="mb-4 p-3 bg-white/5 rounded-xl border border-white/10 text-center w-full 
+                                   hover:bg-white/10 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                    >
+                        <p className="text-white/50 text-xs mb-1">
+                            {copied ? 'Copied!' : 'Your Referral Code (tap to copy)'}
+                        </p>
+                        <p className={`text-lg font-mono font-bold tracking-wider ${copied ? 'text-emerald-400' : 'text-white'}`} data-testid="referral-code">
+                            {referralCode}
+                        </p>
+                    </button>
+                )}
+
                 <div className="flex gap-2">
                     <button
                         onClick={copyToClipboard}

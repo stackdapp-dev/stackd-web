@@ -21,10 +21,11 @@ export function useReferral(): UseReferralResult {
             setLoading(true);
             setError(null);
             const res = await fetch("/api/referrals");
+
             if (!res.ok) throw new Error("Failed to fetch referral data");
 
             const data = await res.json();
-            const { referral_code, ...restStats } = data;
+            const { referral_code, unclaimed_earnings, ...restStats } = data;
 
             setReferralCode(referral_code);
             setStats(restStats);
