@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * @deprecated Use the new Drawer component from "@/components/ui/drawer" instead.
+ * This component is kept for backwards compatibility only.
+ * @see {@link file:///c:/Users/chris/Documents/Projects/Stack'd/stackd-web/stackd-native-ux/src/components/ui/drawer.tsx}
+ */
+
 import { Trash2 } from "lucide-react";
 import Card from "./card";
 
@@ -25,24 +31,24 @@ export default function BottomSheet({ isOpen, onClose, onDelete }: BottomSheetPr
         <div className="pb-[env(safe-area-inset-bottom,1rem)]">
           <Card appearance="container" className="rounded-t-2xl overflow-visible w-full relative z-10">
             <div className="py-6">
-            <ul className="flex flex-col gap-3">
-              <li>
-                <div className="px-2">
-                  <button
-                    onClick={() => {
-                      onDelete();
-                    }}
-                    className="w-full"
-                    aria-label="Delete payment method"
-                  >
-                    <div className="w-full bg-black/80 border border-neutral-700 rounded-lg px-4 py-3 flex items-center justify-center gap-3 hover:bg-white/5 transition">
-                      <Trash2 className="h-5 w-5 text-white" />
-                      <span className="text-white font-semibold">Delete</span>
-                    </div>
-                  </button>
-                </div>
-              </li>
-            </ul>
+              <ul className="flex flex-col gap-3">
+                <li>
+                  <div className="px-2">
+                    <button
+                      onClick={() => {
+                        onDelete();
+                      }}
+                      className="w-full"
+                      aria-label="Delete payment method"
+                    >
+                      <div className="w-full bg-black/80 border border-neutral-700 rounded-lg px-4 py-3 flex items-center justify-center gap-3 hover:bg-white/5 transition">
+                        <Trash2 className="h-5 w-5 text-white" />
+                        <span className="text-white font-semibold">Delete</span>
+                      </div>
+                    </button>
+                  </div>
+                </li>
+              </ul>
             </div>
           </Card>
         </div>

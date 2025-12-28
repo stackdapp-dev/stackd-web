@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { History, Menu, Wallet } from "lucide-react";
+import { History, Menu, Wallet, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +16,12 @@ const BottomNav = () => {
       subHrefs: ["/wallet/tx/borrow", "/wallet/tx/repay"],
     },
     { href: "/history", icon: History, label: "History", subHrefs: [] },
+    {
+      href: "/referrals",
+      icon: Sparkles,
+      label: "Rewards",
+      subHrefs: []
+    },
     {
       href: "/menu",
       icon: Menu,
