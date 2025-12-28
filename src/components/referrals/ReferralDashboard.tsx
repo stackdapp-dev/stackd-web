@@ -9,6 +9,7 @@ import {
 import { useState } from "react";
 import { cn, shortenAddress } from "@/lib/utils";
 import { UserTier, RecentInvite } from "@/lib/db/types";
+import { showSuccessToast, showInfoToast } from "@/components/ui/custom-toast";
 
 // Format wallet address as 0x12...3456
 function formatWalletDisplay(invite: RecentInvite): string {
@@ -49,6 +50,7 @@ export function ReferralDashboard() {
         const link = `${window.location.origin}?ref=${referralCode}`;
         navigator.clipboard.writeText(link);
         setCopied(true);
+        showSuccessToast("Link copied to clipboard!");
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -163,6 +165,7 @@ export function ReferralDashboard() {
 
                     {/* Claim Rewards Button */}
                     <button
+                        onClick={() => showInfoToast('🎉 Season 1 Rewards Coming Soon!')}
                         className="w-full bg-gradient-to-r from-[#ffa02d] to-[#ff8c00] text-black py-3.5 
                                    rounded-xl hover:shadow-[0_0_20px_rgba(255,160,45,0.5)] 
                                    transition-all duration-300 font-medium"
