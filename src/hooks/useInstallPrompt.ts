@@ -54,6 +54,21 @@ function detectIOS(): boolean {
 }
 
 /**
+ * Detect if running on a mobile device (excludes desktop)
+ */
+function detectMobile(): boolean {
+    if (typeof window === "undefined") return false;
+
+    const ua = navigator.userAgent;
+    // Check for common mobile indicators
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+        ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+
+    return isMobile;
+}
+
+/**
  * Hook to capture and manage the PWA install prompt.
  * Provides methods to check install status, trigger installation,
  * and manage dismissal state.
@@ -64,6 +79,7 @@ export function useInstallPrompt(): InstallPromptReturn {
     const [isPrompting, setIsPrompting] = useState(false);
     const [isDismissed, setIsDismissed] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     // Check if running in standalone mode (already installed)
     useEffect(() => {
@@ -76,6 +92,7 @@ export function useInstallPrompt(): InstallPromptReturn {
 
         setIsInstalled(isStandalone);
         setIsIOS(detectIOS());
+        setIsMobile(detectMobile());
 
         // Check dismissal state
         const dismissedAt = localStorage.getItem(DISMISS_KEY);
@@ -139,19 +156,21 @@ export function useInstallPrompt(): InstallPromptReturn {
         localStorage.setItem(DISMISS_KEY, Date.now().toString());
     }, []);
 
-    // Show install prompt for: Android/Chrome (native), or iOS Safari (manual)
-    const canShowPrompt = !isInstalled && !isDismissed;
+    // Show install prompt for Android/Chrome only (native prompt)
+    // iOS PWA has navigation issues - disabled until fixed
+    // See: bugfix branch for iOS PWA investigation
+    const canShowPrompt = !isInstalled && !isDismissed && isMobile;
     const hasNativePrompt = !!installPrompt;
 
     return {
-        canInstall: canShowPrompt && (hasNativePrompt || isIOS),
+        canInstall: canShowPrompt && hasNativePrompt, // Removed iOS - only show for native prompts
         isInstalled,
         isPrompting,
         promptInstall,
         dismiss,
         isDismissed,
         isIOS,
-        showIOSInstall: canShowPrompt && isIOS && !hasNativePrompt,
+        showIOSInstall: false, // Disabled iOS install banner
     };
 }
 

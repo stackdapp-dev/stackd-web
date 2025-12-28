@@ -3,6 +3,7 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InstallBanner } from "@/components/common/InstallBanner";
 import { ServiceWorkerUpdater } from "@/components/common/ServiceWorkerUpdater";
+import { PWANavigationInterceptor } from "@/components/common/PWANavigationInterceptor";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -40,6 +41,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <UserProvider>
               <InstallBanner />
               <ServiceWorkerUpdater />
+              <PWANavigationInterceptor />
               {children}
               <ToastContainer
                 position="top-center"

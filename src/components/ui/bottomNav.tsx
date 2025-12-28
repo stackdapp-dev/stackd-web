@@ -2,11 +2,11 @@
 
 import { cn } from "@/lib/utils";
 import { History, Menu, Wallet, Sparkles } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const BottomNav = () => {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     {
@@ -30,36 +30,69 @@ const BottomNav = () => {
     },
   ];
 
+  // Detect if running as iOS PWA (standalone mode)
+  const isIOSPWA = typeof window !== 'undefined' &&
+    (("standalone" in navigator && (navigator as unknown as { standalone: boolean }).standalone) ||
+      window.matchMedia("(display-mode: standalone)").matches);
+
+  const handleNavigation = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isIOSPWA) {
+      // On iOS PWA, use window.location to ensure navigation stays within app
+      // This is more reliable than router.push() for iOS WebView
+      window.location.href = href;
+    } else {
+      // On regular browsers, use Next.js router for SPA navigation
+      router.push(href);
+    }
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-sm w-full z-50 pb-[env(safe-area-inset-bottom)]">
-      <div className="m-4 mb-4 backdrop-blur-2xl bg-black/30 border border-white/10 rounded-3xl px-6 py-3 shadow-2xl shadow-black/50">
-        <div className="flex items-center justify-around">
-          {navItems.map(({ href, icon: Icon, label, subHrefs }) => {
-            const isActive = pathname === href || subHrefs.includes(pathname);
-            return (
-              <Link
-                key={href}
-                href={href}
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+8px)] px-4 pointer-events-none">
+      {/* Liquid Glass Floating Pill */}
+      <div
+        className="pointer-events-auto flex items-center justify-around gap-1 px-4 py-2 rounded-[24px] border border-white/20"
+        style={{
+          background: 'rgba(30, 30, 35, 0.75)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        }}
+      >
+        {navItems.map(({ href, icon: Icon, label, subHrefs }) => {
+          const isActive = pathname === href || subHrefs.includes(pathname);
+          return (
+            <button
+              key={href}
+              onClick={(e) => handleNavigation(e, href)}
+              aria-label={label}
+              className={cn(
+                "relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200",
+                isActive
+                  ? "text-[#ffa02d] bg-[#ffa02d]/15"
+                  : "text-white/50 hover:text-white/70 active:bg-white/5"
+              )}
+            >
+              <Icon
                 className={cn(
-                  "flex flex-col items-center gap-1 transition-all relative",
-                  isActive
-                    ? "text-[#ffa02d]"
-                    : "text-white/60 hover:text-white/80"
+                  "w-6 h-6 transition-transform duration-200",
+                  isActive && "scale-110 drop-shadow-[0_0_12px_rgba(255,160,45,0.6)]"
                 )}
-                prefetch={false}
-              >
-                {isActive && (
-                  <div className="absolute -inset-2 bg-[#ffa02d]/10 rounded-xl backdrop-blur-sm" />
-                )}
-                <Icon className={cn("w-6 h-6 relative z-10", isActive && "drop-shadow-[0_0_8px_rgba(255,160,45,0.5)]")} />
-                <span className="text-xs relative z-10">{label}</span>
-              </Link>
-            );
-          })}
-        </div>
+                strokeWidth={isActive ? 2.5 : 2}
+              />
+              {isActive && (
+                <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-[#ffa02d] shadow-[0_0_6px_#ffa02d]" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 };
 
 export default BottomNav;
+
+
