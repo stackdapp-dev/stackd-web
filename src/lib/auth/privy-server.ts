@@ -37,12 +37,14 @@ export interface AuthenticatedUser {
 export async function verifyAuthToken(request: Request): Promise<AuthenticatedUser | null> {
     const privy = getPrivyClient();
     if (!privy) {
+        console.log('[Auth] Privy client not configured');
         return null;
     }
 
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log('[Auth] No Bearer token found');
         return null;
     }
 
@@ -51,22 +53,46 @@ export async function verifyAuthToken(request: Request): Promise<AuthenticatedUs
     try {
         // Verify the token with Privy
         const verifiedClaims = await privy.verifyAuthToken(token);
+        console.log('[Auth] Token verified for userId:', verifiedClaims.userId);
 
         // Get user data to find wallet address
         const user = await privy.getUser(verifiedClaims.userId);
 
-        // Find the wallet address (prefer embedded, then external)
+        // Debug: log the user object structure
+        console.log('[Auth] User wallet:', user.wallet?.address);
+        console.log('[Auth] LinkedAccounts types:', user.linkedAccounts?.map((a: any) => a.type));
+
+        // Find the wallet address (check multiple sources)
         let walletAddress: string | null = null;
 
+        // 1. Check user.wallet (standard wallet)
         if (user.wallet?.address) {
             walletAddress = user.wallet.address;
-        } else if (user.linkedAccounts) {
-            const walletAccount = user.linkedAccounts.find(
-                (account: any) => account.type === 'wallet'
+            console.log('[Auth] Found wallet via user.wallet:', walletAddress);
+        }
+        // 2. Check linkedAccounts for various wallet types
+        else if (user.linkedAccounts) {
+            // Look for embedded_wallet first (for passkey users)
+            const embeddedWallet = user.linkedAccounts.find(
+                (account: any) => account.type === 'embedded_wallet'
             );
-            if (walletAccount && 'address' in walletAccount) {
-                walletAddress = walletAccount.address as string;
+            if (embeddedWallet && 'address' in embeddedWallet) {
+                walletAddress = embeddedWallet.address as string;
+                console.log('[Auth] Found wallet via embedded_wallet:', walletAddress);
+            } else {
+                // Fall back to regular wallet type
+                const walletAccount = user.linkedAccounts.find(
+                    (account: any) => account.type === 'wallet'
+                );
+                if (walletAccount && 'address' in walletAccount) {
+                    walletAddress = walletAccount.address as string;
+                    console.log('[Auth] Found wallet via linkedAccounts wallet:', walletAddress);
+                }
             }
+        }
+
+        if (!walletAddress) {
+            console.log('[Auth] No wallet address found for user');
         }
 
         return {
