@@ -30,32 +30,49 @@ const BottomNav = () => {
     },
   ];
 
-  const handleNavigation = (href: string) => {
-    // Use router.push to ensure navigation stays within PWA on iOS
+  const handleNavigation = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Force navigation to stay within PWA WebView
     router.push(href);
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+12px)] px-4 pointer-events-none">
+      {/* Liquid Glass Floating Pill */}
+      <div
+        className="pointer-events-auto flex items-center justify-around gap-2 px-6 py-3 rounded-[28px] border border-white/20"
+        style={{
+          background: 'rgba(30, 30, 35, 0.75)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        }}
+      >
         {navItems.map(({ href, icon: Icon, label, subHrefs }) => {
           const isActive = pathname === href || subHrefs.includes(pathname);
           return (
             <button
               key={href}
-              onClick={() => handleNavigation(href)}
+              onClick={(e) => handleNavigation(e, href)}
+              aria-label={label}
               className={cn(
-                "flex flex-col items-center justify-center gap-1.5 transition-all relative w-16 h-full",
+                "relative flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-200",
                 isActive
-                  ? "text-[#ffa02d]"
-                  : "text-white/40 hover:text-white/60 active:text-white/80"
+                  ? "text-[#ffa02d] bg-[#ffa02d]/15"
+                  : "text-white/50 hover:text-white/70 active:bg-white/5"
               )}
             >
+              <Icon
+                className={cn(
+                  "w-6 h-6 transition-transform duration-200",
+                  isActive && "scale-110 drop-shadow-[0_0_12px_rgba(255,160,45,0.6)]"
+                )}
+                strokeWidth={isActive ? 2.5 : 2}
+              />
               {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#ffa02d] rounded-b-full shadow-[0_0_8px_#ffa02d]" />
+                <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-[#ffa02d] shadow-[0_0_6px_#ffa02d]" />
               )}
-              <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_rgba(255,160,45,0.4)]")} />
-              <span className="text-[10px] font-medium">{label}</span>
             </button>
           );
         })}
@@ -65,4 +82,5 @@ const BottomNav = () => {
 };
 
 export default BottomNav;
+
 
