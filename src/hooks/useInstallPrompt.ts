@@ -30,10 +30,28 @@ interface InstallPromptReturn {
     dismiss: () => void;
     /** Whether the user has previously dismissed the prompt */
     isDismissed: boolean;
+    /** Whether running on iOS Safari (requires manual install instructions) */
+    isIOS: boolean;
+    /** Whether we should show the iOS install modal */
+    showIOSInstall: boolean;
 }
 
 const DISMISS_KEY = "stackd-install-dismissed";
 const DISMISS_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/**
+ * Detect if running on iOS Safari
+ */
+function detectIOS(): boolean {
+    if (typeof window === "undefined") return false;
+
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
+
+    return isIOS && isSafari;
+}
 
 /**
  * Hook to capture and manage the PWA install prompt.
@@ -45,6 +63,7 @@ export function useInstallPrompt(): InstallPromptReturn {
     const [isInstalled, setIsInstalled] = useState(false);
     const [isPrompting, setIsPrompting] = useState(false);
     const [isDismissed, setIsDismissed] = useState(false);
+    const [isIOS, setIsIOS] = useState(false);
 
     // Check if running in standalone mode (already installed)
     useEffect(() => {
@@ -56,6 +75,7 @@ export function useInstallPrompt(): InstallPromptReturn {
             ("standalone" in navigator && (navigator as unknown as { standalone: boolean }).standalone);
 
         setIsInstalled(isStandalone);
+        setIsIOS(detectIOS());
 
         // Check dismissal state
         const dismissedAt = localStorage.getItem(DISMISS_KEY);
@@ -119,12 +139,19 @@ export function useInstallPrompt(): InstallPromptReturn {
         localStorage.setItem(DISMISS_KEY, Date.now().toString());
     }, []);
 
+    // Show install prompt for: Android/Chrome (native), or iOS Safari (manual)
+    const canShowPrompt = !isInstalled && !isDismissed;
+    const hasNativePrompt = !!installPrompt;
+
     return {
-        canInstall: !!installPrompt && !isInstalled && !isDismissed,
+        canInstall: canShowPrompt && (hasNativePrompt || isIOS),
         isInstalled,
         isPrompting,
         promptInstall,
         dismiss,
         isDismissed,
+        isIOS,
+        showIOSInstall: canShowPrompt && isIOS && !hasNativePrompt,
     };
 }
+
