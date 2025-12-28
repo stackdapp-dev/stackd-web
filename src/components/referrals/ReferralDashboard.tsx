@@ -9,7 +9,7 @@ import {
 import { useState } from "react";
 import { cn, shortenAddress } from "@/lib/utils";
 import { UserTier, RecentInvite } from "@/lib/db/types";
-import { FullScreenLoader } from "@/components/orig/ui/fullscreen-loader";
+import { showSuccessToast, showInfoToast } from "@/components/ui/custom-toast";
 
 // Format wallet address as 0x12...3456
 function formatWalletDisplay(invite: RecentInvite): string {
@@ -50,6 +50,7 @@ export function ReferralDashboard() {
         const link = `${window.location.origin}?ref=${referralCode}`;
         navigator.clipboard.writeText(link);
         setCopied(true);
+        showSuccessToast("Link copied to clipboard!");
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -68,7 +69,33 @@ export function ReferralDashboard() {
     };
 
     if (loading) {
-        return <FullScreenLoader />;
+        return (
+            <div className="flex flex-col gap-4">
+                {/* Skeleton for Total Earnings card */}
+                <div className="rounded-2xl border border-white/10 p-6 space-y-4 bg-white/5">
+                    <div className="h-4 w-24 bg-white/10 rounded skeleton-shimmer" />
+                    <div className="h-10 w-48 bg-white/10 rounded skeleton-shimmer" />
+                    <div className="h-4 w-32 bg-white/10 rounded skeleton-shimmer" />
+                    <div className="h-12 w-full bg-white/10 rounded-xl skeleton-shimmer" />
+                </div>
+
+                {/* Skeleton for Referral Link card */}
+                <div className="rounded-2xl border border-white/10 p-5 space-y-4 bg-white/5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 skeleton-shimmer" />
+                        <div className="space-y-2">
+                            <div className="h-4 w-40 bg-white/10 rounded skeleton-shimmer" />
+                            <div className="h-3 w-56 bg-white/10 rounded skeleton-shimmer" />
+                        </div>
+                    </div>
+                    <div className="h-14 w-full bg-white/10 rounded-xl skeleton-shimmer" />
+                    <div className="flex gap-2">
+                        <div className="flex-1 h-12 bg-white/10 rounded-2xl skeleton-shimmer" />
+                        <div className="flex-1 h-12 bg-white/10 rounded-2xl skeleton-shimmer" />
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     if (!stats) {
@@ -138,6 +165,7 @@ export function ReferralDashboard() {
 
                     {/* Claim Rewards Button */}
                     <button
+                        onClick={() => showInfoToast('🎉 Season 1 Rewards Coming Soon!')}
                         className="w-full bg-gradient-to-r from-[#ffa02d] to-[#ff8c00] text-black py-3.5 
                                    rounded-xl hover:shadow-[0_0_20px_rgba(255,160,45,0.5)] 
                                    transition-all duration-300 font-medium"
@@ -158,6 +186,23 @@ export function ReferralDashboard() {
                         <p className="text-white/40 text-xs">Friends beat inflation, you earn while helping them</p>
                     </div>
                 </div>
+
+                {/* Referral Code Display */}
+                {referralCode && (
+                    <button
+                        onClick={copyToClipboard}
+                        className="mb-4 p-3 bg-white/5 rounded-xl border border-white/10 text-center w-full 
+                                   hover:bg-white/10 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                    >
+                        <p className="text-white/50 text-xs mb-1">
+                            {copied ? 'Copied!' : 'Your Referral Code (tap to copy)'}
+                        </p>
+                        <p className={`text-lg font-mono font-bold tracking-wider ${copied ? 'text-emerald-400' : 'text-white'}`} data-testid="referral-code">
+                            {referralCode}
+                        </p>
+                    </button>
+                )}
+
                 <div className="flex gap-2">
                     <button
                         onClick={copyToClipboard}

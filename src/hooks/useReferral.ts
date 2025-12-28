@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import { ReferralStats } from "@/lib/db/types";
 
 interface UseReferralResult {
@@ -11,6 +12,7 @@ interface UseReferralResult {
 }
 
 export function useReferral(): UseReferralResult {
+    const { getAccessToken, authenticated } = usePrivy();
     const [stats, setStats] = useState<ReferralStats | null>(null);
     const [referralCode, setReferralCode] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -20,11 +22,20 @@ export function useReferral(): UseReferralResult {
         try {
             setLoading(true);
             setError(null);
-            const res = await fetch("/api/referrals");
+
+            // Get auth token from Privy
+            const token = await getAccessToken();
+
+            const res = await fetch("/api/referrals", {
+                headers: token ? {
+                    'Authorization': `Bearer ${token}`
+                } : {}
+            });
+
             if (!res.ok) throw new Error("Failed to fetch referral data");
 
             const data = await res.json();
-            const { referral_code, ...restStats } = data;
+            const { referral_code, unclaimed_earnings, ...restStats } = data;
 
             setReferralCode(referral_code);
             setStats(restStats);
@@ -33,15 +44,26 @@ export function useReferral(): UseReferralResult {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [getAccessToken]);
 
     useEffect(() => {
-        fetchStats();
-    }, [fetchStats]);
+        // Only fetch when authenticated
+        if (authenticated) {
+            fetchStats();
+        } else {
+            setLoading(false);
+        }
+    }, [fetchStats, authenticated]);
 
     const createCode = async () => {
         try {
-            const res = await fetch("/api/referrals", { method: "POST" });
+            const token = await getAccessToken();
+            const res = await fetch("/api/referrals", {
+                method: "POST",
+                headers: token ? {
+                    'Authorization': `Bearer ${token}`
+                } : {}
+            });
             if (!res.ok) throw new Error("Failed to create code");
             const { code } = await res.json();
             setReferralCode(code);
@@ -61,3 +83,4 @@ export function useReferral(): UseReferralResult {
         refetch: fetchStats
     };
 }
+
