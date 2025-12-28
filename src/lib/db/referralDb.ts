@@ -255,11 +255,115 @@ class ReferralDatabaseService {
 
     /**
      * Get referral stats (for dashboard display)
+     * Fetches real data from Supabase when available
      */
     async getReferralStats(userId: string): Promise<ReferralStats> {
-        // Always use mock stats until we have real loan data integration
-        return mockDbService.getReferralStats(userId);
+        // Fallback to mock if Supabase not configured
+        if (!isSupabaseConfigured()) {
+            return mockDbService.getReferralStats(userId);
+        }
+
+        try {
+            // 1. Get total referral earnings (sum of all earnings for this user)
+            const { data: earningsData } = await db.from('referral_earnings')
+                .select('amount')
+                .eq('referrer_id', userId);
+
+            const totalEarnings = earningsData
+                ? (earningsData as { amount: number }[]).reduce((sum, row) => sum + Number(row.amount), 0)
+                : 0;
+
+            // 2. Get unclaimed earnings
+            const { data: unclaimedData } = await db.from('referral_earnings')
+                .select('amount')
+                .eq('referrer_id', userId)
+                .eq('claimed', false);
+
+            const unclaimedEarnings = unclaimedData
+                ? (unclaimedData as { amount: number }[]).reduce((sum, row) => sum + Number(row.amount), 0)
+                : 0;
+
+            // 3. Count direct referrals (L1 - users who have referred_by = this user)
+            const { count: directReferrals } = await db.from('users')
+                .select('*', { count: 'exact', head: true })
+                .eq('referred_by', userId);
+
+            const totalInvites = directReferrals || 0;
+
+            // 4. Get network size (L1 + L2 + L3)
+            const network = await this.getReferralNetwork(userId);
+            const networkSize = network.length;
+
+            // 5. Calculate tier based on total invites (simplified - real tier calculation needs loan volume)
+            let tier: 'BRONZE' | 'SILVER' | 'GOLD' = 'BRONZE';
+            if (totalInvites >= 10) {
+                tier = 'GOLD';
+            } else if (totalInvites >= 3) {
+                tier = 'SILVER';
+            }
+
+            // 6. Calculate progress to next tier
+            let nextTierProgress = 0;
+            let nextTierRemaining = '';
+            if (tier === 'BRONZE') {
+                nextTierProgress = Math.min(100, Math.round((totalInvites / 3) * 100));
+                nextTierRemaining = `${totalInvites}/3 Referrals`;
+            } else if (tier === 'SILVER') {
+                nextTierProgress = Math.min(100, Math.round(((totalInvites - 3) / 7) * 100));
+                nextTierRemaining = `${totalInvites}/10 Referrals`;
+            } else {
+                nextTierProgress = 100;
+                nextTierRemaining = 'Max tier reached';
+            }
+
+            // 7. Get recent invites (last 5 direct referrals)
+            const { data: recentReferrals } = await db.from('users')
+                .select('wallet_address, created_at')
+                .eq('referred_by', userId)
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            const recentInvites = recentReferrals
+                ? (recentReferrals as { wallet_address: string; created_at: string }[]).map(ref => ({
+                    wallet_address: ref.wallet_address,
+                    display_name: `${ref.wallet_address.slice(0, 6)}...${ref.wallet_address.slice(-4)}`,
+                    tier: 'BRONZE' as const,
+                    joined_at: new Date(ref.created_at).toISOString().split('T')[0],
+                    saved_monthly: 0, // Requires on-chain loan data
+                    status: 'active' as const,
+                }))
+                : [];
+
+            return {
+                tier,
+                total_earnings: totalEarnings,
+                total_invites: totalInvites,
+                network_volume: 0, // Requires on-chain loan data
+                network_size: networkSize,
+                inflation_avoided: 0, // Requires on-chain loan data
+                interest_saved: unclaimedEarnings, // Show unclaimed as "interest saved"
+                next_tier_progress: nextTierProgress,
+                next_tier_remaining: nextTierRemaining,
+                recent_invites: recentInvites,
+            };
+        } catch (error) {
+            console.error('[ReferralDB] Error fetching stats:', error);
+            // Return empty stats on error
+            return {
+                tier: 'BRONZE',
+                total_earnings: 0,
+                total_invites: 0,
+                network_volume: 0,
+                network_size: 0,
+                inflation_avoided: 0,
+                interest_saved: 0,
+                next_tier_progress: 0,
+                next_tier_remaining: '0/3 Referrals',
+                recent_invites: [],
+            };
+        }
     }
 }
 
 export const referralDb = new ReferralDatabaseService();
+
