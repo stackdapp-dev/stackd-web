@@ -6,15 +6,20 @@
  */
 
 import { isSupabaseConfigured } from './supabase';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { dbService as mockDbService } from './mock';
 import type { User } from './supabase.types';
 import type { ReferralStats } from './types';
 
 // Create Supabase client with service role key for server-side operations (bypasses RLS)
+// Only create if env vars are present (prevents CI/CD failures)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const db = createClient(supabaseUrl, supabaseServiceKey);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let db: SupabaseClient<any, "public", any> | null = null;
+if (supabaseUrl && supabaseServiceKey) {
+    db = createClient(supabaseUrl, supabaseServiceKey);
+}
 
 /**
  * Generate a unique referral code
@@ -33,7 +38,7 @@ class ReferralDatabaseService {
      * Get or create a user by wallet address
      */
     async getOrCreateUser(walletAddress: string): Promise<User | null> {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             const mockUser = await mockDbService.getUser('user_123');
             return mockUser as unknown as User;
         }
@@ -82,7 +87,7 @@ class ReferralDatabaseService {
      * Get user by wallet address
      */
     async getUserByWallet(walletAddress: string): Promise<User | null> {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             const mockUser = await mockDbService.getUser('user_123');
             return mockUser as unknown as User;
         }
@@ -103,7 +108,7 @@ class ReferralDatabaseService {
      * Get user by referral code
      */
     async getUserByReferralCode(code: string): Promise<User | null> {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             return null;
         }
 
@@ -123,7 +128,7 @@ class ReferralDatabaseService {
      * Link a referee to a referrer via referral code
      */
     async joinReferral(refereeWallet: string, referralCode: string): Promise<boolean> {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             return mockDbService.joinReferral('referee_999', referralCode);
         }
 
@@ -157,7 +162,7 @@ class ReferralDatabaseService {
      * Get referral network for a user (L1, L2, L3)
      */
     async getReferralNetwork(userId: string): Promise<{ level: 1 | 2 | 3; user: User }[]> {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             return [];
         }
 
@@ -200,7 +205,7 @@ class ReferralDatabaseService {
      * Get unclaimed earnings for a user
      */
     async getUnclaimedEarnings(userId: string): Promise<number> {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             return 42.85;
         }
 
@@ -220,7 +225,7 @@ class ReferralDatabaseService {
      * Claim earnings for a user
      */
     async claimEarnings(userId: string): Promise<{ success: boolean; amount: number }> {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             return { success: true, amount: 42.85 };
         }
 
@@ -254,7 +259,7 @@ class ReferralDatabaseService {
      */
     async getReferralStats(userId: string): Promise<ReferralStats> {
         // Fallback to mock if Supabase not configured
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseConfigured() || !db) {
             return mockDbService.getReferralStats(userId);
         }
 
