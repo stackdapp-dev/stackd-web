@@ -3,12 +3,13 @@
 import { useReferral } from "@/hooks/useReferral";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
-    Loader2, Copy, Share2, Lock, Trophy, Users,
-    TrendingUp, CreditCard, Check, Sparkles
+    Copy, Share2, Lock, Trophy, Users,
+    CreditCard, Check, Sparkles
 } from "lucide-react";
 import { useState } from "react";
 import { cn, shortenAddress } from "@/lib/utils";
 import { UserTier, RecentInvite } from "@/lib/db/types";
+import { FullScreenLoader } from "@/components/orig/ui/fullscreen-loader";
 
 // Format wallet address as 0x12...3456
 function formatWalletDisplay(invite: RecentInvite): string {
@@ -67,11 +68,7 @@ export function ReferralDashboard() {
     };
 
     if (loading) {
-        return (
-            <div className="flex justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#ffa02d]" />
-            </div>
-        );
+        return <FullScreenLoader />;
     }
 
     if (!stats) {
