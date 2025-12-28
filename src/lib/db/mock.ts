@@ -17,9 +17,9 @@ class MockDatabaseService {
             id: 'user_123',
             wallet_address: '0x123...abc',
             created_at: new Date().toISOString(),
-            referral_code: 'STACK123'
+            referral_code: 'STACKM0CK1'
         });
-        this.referralCodes.set('STACK123', 'user_123');
+        this.referralCodes.set('STACKM0CK1', 'user_123');
     }
 
     async getUser(id: string): Promise<DbUser | null> {
