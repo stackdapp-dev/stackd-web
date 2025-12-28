@@ -2,11 +2,11 @@
 
 import { cn } from "@/lib/utils";
 import { History, Menu, Wallet, Sparkles } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const BottomNav = () => {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     {
@@ -30,36 +30,39 @@ const BottomNav = () => {
     },
   ];
 
+  const handleNavigation = (href: string) => {
+    // Use router.push to ensure navigation stays within PWA on iOS
+    router.push(href);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-sm w-full z-50 pb-[env(safe-area-inset-bottom)]">
-      <div className="m-4 mb-4 backdrop-blur-2xl bg-black/30 border border-white/10 rounded-3xl px-6 py-3 shadow-2xl shadow-black/50">
-        <div className="flex items-center justify-around">
-          {navItems.map(({ href, icon: Icon, label, subHrefs }) => {
-            const isActive = pathname === href || subHrefs.includes(pathname);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex flex-col items-center gap-1 transition-all relative",
-                  isActive
-                    ? "text-[#ffa02d]"
-                    : "text-white/60 hover:text-white/80"
-                )}
-                prefetch={false}
-              >
-                {isActive && (
-                  <div className="absolute -inset-2 bg-[#ffa02d]/10 rounded-xl backdrop-blur-sm" />
-                )}
-                <Icon className={cn("w-6 h-6 relative z-10", isActive && "drop-shadow-[0_0_8px_rgba(255,160,45,0.5)]")} />
-                <span className="text-xs relative z-10">{label}</span>
-              </Link>
-            );
-          })}
-        </div>
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">
+        {navItems.map(({ href, icon: Icon, label, subHrefs }) => {
+          const isActive = pathname === href || subHrefs.includes(pathname);
+          return (
+            <button
+              key={href}
+              onClick={() => handleNavigation(href)}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1.5 transition-all relative w-16 h-full",
+                isActive
+                  ? "text-[#ffa02d]"
+                  : "text-white/40 hover:text-white/60 active:text-white/80"
+              )}
+            >
+              {isActive && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#ffa02d] rounded-b-full shadow-[0_0_8px_#ffa02d]" />
+              )}
+              <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_rgba(255,160,45,0.4)]")} />
+              <span className="text-[10px] font-medium">{label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 };
 
 export default BottomNav;
+
