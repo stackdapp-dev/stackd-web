@@ -156,20 +156,21 @@ export function useInstallPrompt(): InstallPromptReturn {
         localStorage.setItem(DISMISS_KEY, Date.now().toString());
     }, []);
 
-    // Show install prompt for mobile devices only (iOS or Android/Chrome)
-    // Desktop users won't see the banner
+    // Show install prompt for Android/Chrome only (native prompt)
+    // iOS PWA has navigation issues - disabled until fixed
+    // See: bugfix branch for iOS PWA investigation
     const canShowPrompt = !isInstalled && !isDismissed && isMobile;
     const hasNativePrompt = !!installPrompt;
 
     return {
-        canInstall: canShowPrompt && (hasNativePrompt || isIOS),
+        canInstall: canShowPrompt && hasNativePrompt, // Removed iOS - only show for native prompts
         isInstalled,
         isPrompting,
         promptInstall,
         dismiss,
         isDismissed,
         isIOS,
-        showIOSInstall: canShowPrompt && isIOS && !hasNativePrompt,
+        showIOSInstall: false, // Disabled iOS install banner
     };
 }
 
