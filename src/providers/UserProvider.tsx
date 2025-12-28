@@ -2,7 +2,9 @@
 
 import { getUserPaymentMethods, UserPaymentMethod } from "@/lib/api/user";
 import { usePrivy } from "@privy-io/react-auth";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { getStoredReferralCode, clearStoredReferralCode } from "@/hooks/useReferralGate";
+import { useWallets } from "@privy-io/react-auth";
 
 /**
  * Define the shape of your context value
@@ -30,13 +32,15 @@ interface UserProviderProps {
  */
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const { getAccessToken, authenticated } = usePrivy();
+  const { wallets } = useWallets();
 
   const [paymentMethods, setPaymentMethods] = useState<UserPaymentMethod[]>([]);
+  const referralLinked = useRef(false);
 
   useEffect(() => {
     if (!authenticated) return;
 
-    const getchUserResources = async () => {
+    const fetchUserResources = async () => {
       const accessToken = await getAccessToken();
       console.log("Access token:", accessToken);
       if (!accessToken) {
@@ -49,8 +53,46 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         setPaymentMethods(data);
       }
     };
-    getchUserResources();
+    fetchUserResources();
   }, [authenticated, getAccessToken]);
+
+  // Link referral after authentication (runs once)
+  useEffect(() => {
+    if (!authenticated || referralLinked.current) return;
+
+    const linkReferral = async () => {
+      const storedCode = getStoredReferralCode();
+      if (!storedCode) return;
+
+      // Get wallet address from Privy
+      const wallet = wallets[0];
+      if (!wallet?.address) return;
+
+      try {
+        const response = await fetch('/api/referrals/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: storedCode,
+            walletAddress: wallet.address,
+          }),
+        });
+
+        if (response.ok) {
+          console.log('[UserProvider] Successfully linked referral:', storedCode);
+          clearStoredReferralCode();
+        } else {
+          console.warn('[UserProvider] Failed to link referral:', await response.text());
+        }
+      } catch (error) {
+        console.error('[UserProvider] Error linking referral:', error);
+      }
+
+      referralLinked.current = true;
+    };
+
+    linkReferral();
+  }, [authenticated, wallets]);
 
   const refetchPaymentMethods = async () => {
     const accessToken = await getAccessToken();
