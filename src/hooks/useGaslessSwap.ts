@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useWeb3 } from "@/providers/Web3Provider";
+import { formatTokenAmount } from "@/lib/utils";
 
 interface Quote {
     liquidityAvailable: boolean;
@@ -252,15 +253,7 @@ export function useGaslessSwap() {
     const getDestAmount = useCallback(
         (destDecimals: number): string | null => {
             if (!quote) return null;
-
-            const amount = BigInt(quote.buyAmount);
-            const divisor = BigInt(10 ** destDecimals);
-            const wholePart = amount / divisor;
-            const fractionalPart = amount % divisor;
-
-            const formatted = `${wholePart}.${fractionalPart.toString().padStart(destDecimals, "0")}`;
-            // Remove trailing zeros but keep at least 2 decimal places
-            return formatted.replace(/(\.\d{2})\d*$/, "$1").replace(/\.?0+$/, "") || formatted;
+            return formatTokenAmount(quote.buyAmount, destDecimals);
         },
         [quote]
     );

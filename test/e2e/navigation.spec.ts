@@ -25,7 +25,7 @@ test.describe("Navigation", () => {
 
     test("bottom nav should have navigation items", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         const content = await page.content();
         expect(content).toContain("Wallet");
