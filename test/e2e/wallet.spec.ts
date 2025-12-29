@@ -23,7 +23,7 @@ test.describe("Wallet Page - Embedded Wallet (No Loan)", () => {
 
     test("should display Wallet title", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         const content = await page.content();
         expect(content).toContain("Wallet");
@@ -31,7 +31,7 @@ test.describe("Wallet Page - Embedded Wallet (No Loan)", () => {
 
     test("should contain Assets text or loading state", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(3000);
 
         const content = await page.content();
@@ -43,7 +43,7 @@ test.describe("Wallet Page - Embedded Wallet (No Loan)", () => {
 
     test("should display action buttons", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(3000);
 
         const content = await page.content();
@@ -59,7 +59,7 @@ test.describe("Wallet Page - External Wallet (With Loan)", () => {
 
     test("should render wallet page content", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(3000);
 
         // Verify page loads with content

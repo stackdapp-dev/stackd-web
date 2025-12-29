@@ -11,7 +11,7 @@ test.describe("History Page", () => {
 
     test("should display History title", async ({ page }) => {
         await page.goto("/history");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         const content = await page.content();
         expect(content).toContain("History");
@@ -19,7 +19,7 @@ test.describe("History Page", () => {
 
     test("should have page content", async ({ page }) => {
         await page.goto("/history");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(2000);
 
         const content = await page.content();
