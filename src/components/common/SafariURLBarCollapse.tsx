@@ -3,74 +3,90 @@
 import { useEffect } from "react";
 
 /**
- * Safari URL Bar Collapse Component
+ * Safari Toolbar Hide Component
  *
- * On iOS Safari (non-PWA mode), the URL bar can overlap with the bottom navigation.
- * This component automatically scrolls the page slightly on load to trigger Safari
- * to hide the URL bar, providing more space for the app's bottom navbar.
+ * Programmatically hides Safari's toolbar on iOS (similar to "Hide Toolbar" menu option)
+ * by triggering minimal UI mode through strategic scrolling.
+ * This provides maximum screen space for the app's bottom navbar.
  *
- * Note: This only runs in browser (non-PWA) mode on iOS Safari.
+ * Note: Only runs in browser mode on iOS Safari (not in PWA standalone mode).
  */
 export function SafariURLBarCollapse() {
     useEffect(() => {
-        // Only run on client side
         if (typeof window === "undefined") return;
 
-        // Check if we're on iOS
+        // Detect iOS
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-        // Check if we're in Safari (not Chrome, Firefox, etc.)
+        // Detect Safari (not Chrome, Firefox, etc.)
         const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
 
-        // Check if we're NOT in standalone PWA mode
+        // Check if NOT in standalone PWA mode
         const isStandalone =
             window.matchMedia("(display-mode: standalone)").matches ||
             ("standalone" in navigator && (navigator as unknown as { standalone: boolean }).standalone);
 
-        // Only proceed if we're on iOS Safari in browser mode (not PWA)
+        // Only proceed on iOS Safari in browser mode
         if (!isIOS || !isSafari || isStandalone) return;
 
-        // Function to collapse the URL bar
-        const collapseURLBar = () => {
-            // Scroll down slightly to trigger URL bar collapse
-            // Safari hides the URL bar when user scrolls down
-            window.scrollTo(0, 1);
+        /**
+         * Hide Safari toolbar by entering minimal UI mode
+         * This mimics the "Hide Toolbar" button behavior
+         */
+        const hideToolbar = () => {
+            // Ensure body is scrollable (Safari requires scrollable content for minimal UI)
+            const originalMinHeight = document.body.style.minHeight;
+            document.body.style.minHeight = `calc(100vh + 1px)`;
 
-            // After a brief delay, scroll back to top if we're at the very top
-            // This maintains the collapsed state while keeping content visible
-            setTimeout(() => {
-                if (window.scrollY === 1) {
-                    window.scrollTo(0, 0);
-                }
-            }, 50);
+            // Small delay to ensure body height change is applied
+            requestAnimationFrame(() => {
+                // Scroll down to trigger Safari minimal UI
+                // This hides both top and bottom toolbars
+                window.scrollTo({
+                    top: 1,
+                    behavior: 'smooth'
+                });
+
+                // After toolbar animation completes, scroll back to top
+                // but keep the minimal UI state
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+
+                    // Restore original min-height after animations
+                    setTimeout(() => {
+                        document.body.style.minHeight = originalMinHeight;
+                    }, 300);
+                }, 300);
+            });
         };
 
-        // Collapse on initial load
-        // Use setTimeout to ensure DOM is fully loaded
-        const initialTimeout = setTimeout(() => {
-            collapseURLBar();
-        }, 100);
+        // Initial hide on page load
+        const loadTimeout = setTimeout(hideToolbar, 150);
 
-        // Re-collapse when page becomes visible (user switches back to tab)
+        // Re-hide when returning to tab
         const handleVisibilityChange = () => {
             if (!document.hidden) {
-                collapseURLBar();
+                hideToolbar();
             }
         };
 
-        // Re-collapse on window resize (orientation change)
-        const handleResize = () => {
-            collapseURLBar();
+        // Re-hide on orientation change
+        const handleOrientationChange = () => {
+            hideToolbar();
         };
 
         document.addEventListener("visibilitychange", handleVisibilityChange);
-        window.addEventListener("resize", handleResize);
+        window.addEventListener("orientationchange", handleOrientationChange);
 
+        // Cleanup
         return () => {
-            clearTimeout(initialTimeout);
+            clearTimeout(loadTimeout);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
-            window.removeEventListener("resize", handleResize);
+            window.removeEventListener("orientationchange", handleOrientationChange);
         };
     }, []);
 
