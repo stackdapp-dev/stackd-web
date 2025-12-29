@@ -1,7 +1,6 @@
 import Providers from "@/providers/providers";
 import type { Metadata } from "next";
 import "./globals.css";
-import { SafariURLBarCollapse } from "@/components/common/SafariURLBarCollapse";
 
 export const metadata: Metadata = {
   title: "Stack'd",
@@ -74,7 +73,6 @@ export default function RootLayout({
       <body
         className="antialiased w-full min-h-[100dvh] md:max-w-sm md:mx-auto"
       >
-        <SafariURLBarCollapse />
         <div className="w-full pb-[calc(56px+env(safe-area-inset-bottom))]">
           <Providers>{children}</Providers>
         </div>
