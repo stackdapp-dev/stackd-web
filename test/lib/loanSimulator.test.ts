@@ -1,0 +1,2 @@
+import { describe, it, expect } from 'vitest';
+import { calculateCollateralValueUsd, calculateLtv, calculateTotalInterest, calculateMonthlyPayment, calculateLiquidationPrice, calculateHealthFactor, getHealthStatus, calculateBorrowCapacity, calculateAvailableToBorrow, simulateLoan, simulatePriceDrop, simulateAddCollateral, simulateRepayment, generateWhatIfScenarios, type LoanSimulatorInputs } from "@/lib/loanSimulator";
