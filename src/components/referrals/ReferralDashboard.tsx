@@ -4,8 +4,9 @@ import { useReferral } from "@/hooks/useReferral";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
     Copy, Share2, Lock, Trophy, Users,
-    CreditCard, Check, Sparkles
+    CreditCard, Check, Sparkles, Medal
 } from "lucide-react";
+import { LeaderboardModal } from "@/components/referrals/LeaderboardModal";
 import { useState } from "react";
 import { cn, shortenAddress } from "@/lib/utils";
 import { UserTier, RecentInvite } from "@/lib/db/types";
@@ -44,6 +45,7 @@ const tierStyles: Record<UserTier, { bg: string; border: string; text: string; i
 export function ReferralDashboard() {
     const { stats, referralCode, loading, createCode } = useReferral();
     const [copied, setCopied] = useState(false);
+    const [leaderboardOpen, setLeaderboardOpen] = useState(false);
 
     const copyToClipboard = () => {
         if (!referralCode) return;
@@ -298,7 +300,18 @@ export function ReferralDashboard() {
                         <Users className="w-4 h-4 text-white/60" />
                         Community Impact
                     </h3>
-                    <span className="text-white/40 text-xs">{stats.total_invites} referrals</span>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setLeaderboardOpen(true)}
+                            className="flex items-center gap-1.5 text-[#ffa02d] text-xs font-medium
+                                       hover:text-[#ffa02d]/80 transition-colors"
+                            data-testid="leaderboard-button"
+                        >
+                            <Medal className="w-4 h-4" />
+                            Leaderboard
+                        </button>
+                        <span className="text-white/40 text-xs">{stats.total_invites} referrals</span>
+                    </div>
                 </div>
 
                 {stats.recent_invites.length === 0 ? (
@@ -371,6 +384,12 @@ export function ReferralDashboard() {
                     </div>
                 </div>
             </GlassCard>
+
+            {/* Leaderboard Modal */}
+            <LeaderboardModal
+                open={leaderboardOpen}
+                onOpenChange={setLeaderboardOpen}
+            />
         </div >
     );
 }
