@@ -10,7 +10,7 @@ interface PriceHistoryData {
 }
 
 interface PriceHistory {
-  [symbol: string]: PriceHistoryData | null;
+  data: Record<string, PriceHistoryData | null>;
   isLoading: boolean;
 }
 
@@ -21,25 +21,24 @@ interface PriceHistory {
  */
 export function usePriceHistory(): PriceHistory {
   const { tokenPrices } = useTokenPrices();
-  const [isLoading, setIsLoading] = useState(true);
 
   // Derive historical prices from current prices and 24h change
   // This is a simplified approach - in production, we'd fetch actual historical data
-  const calculateHistoricalPrices = useCallback(() => {
+  const calculateHistoricalPrices = useCallback((): PriceHistory => {
     if (!tokenPrices || Object.keys(tokenPrices).length === 0) {
-      return { isLoading: true } as PriceHistory;
+      return { data: {}, isLoading: true };
     }
 
-    const history: PriceHistory = { isLoading: false };
+    const data: Record<string, PriceHistoryData | null> = {};
 
     Object.entries(tokenPrices).forEach(([symbol, priceData]) => {
       if (!priceData) {
-        history[symbol] = null;
+        data[symbol] = null;
         return;
       }
 
       const currentPrice = priceData.usd ?? 0;
-      const change24h = (priceData as any).usd_24h_change ?? 0;
+      const change24h = (priceData as Record<string, number>).usd_24h_change ?? 0;
 
       // Calculate price 24h ago based on current price and 24h change
       // If price went up 5%, then price24hAgo = currentPrice / 1.05
@@ -52,22 +51,21 @@ export function usePriceHistory(): PriceHistory {
       const price7dAgo = price24hAgo * 0.98;  // ~2% difference from 24h
       const price30dAgo = price24hAgo * 0.95; // ~5% difference from 24h
 
-      history[symbol] = {
+      data[symbol] = {
         price24hAgo,
         price7dAgo,
         price30dAgo,
       };
     });
 
-    return history;
+    return { data, isLoading: false };
   }, [tokenPrices]);
 
-  const [priceHistory, setPriceHistory] = useState<PriceHistory>({ isLoading: true });
+  const [priceHistory, setPriceHistory] = useState<PriceHistory>({ data: {}, isLoading: true });
 
   useEffect(() => {
     const history = calculateHistoricalPrices();
     setPriceHistory(history);
-    setIsLoading(history.isLoading);
   }, [calculateHistoricalPrices]);
 
   return priceHistory;

@@ -48,7 +48,7 @@ const tierStyles: Record<UserTier, { bg: string; border: string; text: string; i
 /**
  * Calculate loan progress percentage towards Silver tier ($500 threshold)
  */
-export function calculateLoanProgress(loanBalance: number, threshold = TIER_THRESHOLDS.SILVER): number {
+export function calculateLoanProgress(loanBalance: number, threshold: number = TIER_THRESHOLDS.SILVER): number {
     if (loanBalance <= 0) return 0;
     return Math.min((loanBalance / threshold) * 100, 100);
 }
@@ -56,7 +56,7 @@ export function calculateLoanProgress(loanBalance: number, threshold = TIER_THRE
 /**
  * Calculate network volume progress percentage towards Gold tier ($5000 threshold)
  */
-export function calculateNetworkProgress(networkVolume: number, threshold = TIER_THRESHOLDS.GOLD): number {
+export function calculateNetworkProgress(networkVolume: number, threshold: number = TIER_THRESHOLDS.GOLD): number {
     if (networkVolume <= 0) return 0;
     return Math.min((networkVolume / threshold) * 100, 100);
 }
@@ -198,7 +198,7 @@ export function TierProgress({
             {/* Max Tier Message */}
             {!nextTierInfo.nextTier && (
                 <div className="text-center py-4">
-                    <p className="text-white/60 text-sm">You've reached the highest tier!</p>
+                    <p className="text-white/60 text-sm">You&apos;ve reached the highest tier!</p>
                 </div>
             )}
         </div>

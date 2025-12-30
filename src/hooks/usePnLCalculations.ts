@@ -56,7 +56,7 @@ export function usePnLCalculations(): PnLCalculations {
 
     assets.forEach((asset) => {
       const currentPrice = tokenPrices?.[asset.symbol]?.usd ?? 0;
-      const price24hAgo = priceHistory?.[asset.symbol]?.price24hAgo ?? currentPrice;
+      const price24hAgo = priceHistory?.data?.[asset.symbol]?.price24hAgo ?? currentPrice;
 
       const amount = asset.amount ?? 0;
       currentTotalValue += amount * currentPrice;
@@ -82,7 +82,7 @@ export function usePnLCalculations(): PnLCalculations {
 
     return assets.map((asset) => {
       const currentPrice = tokenPrices?.[asset.symbol]?.usd ?? 0;
-      const costBasisPrice = priceHistory?.[asset.symbol]?.price30dAgo ?? currentPrice;
+      const costBasisPrice = priceHistory?.data?.[asset.symbol]?.price30dAgo ?? currentPrice;
 
       const amount = asset.amount ?? 0;
       const currentValue = amount * currentPrice;
