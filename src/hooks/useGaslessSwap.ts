@@ -76,7 +76,7 @@ function parseApiError(errorString: string): string {
 }
 
 export function useGaslessSwap() {
-    const { walletClient, activeWalletAddress } = useWeb3();
+    const { walletClient, activeWalletAddress, ensureCorrectNetwork } = useWeb3();
     const [isLoading, setIsLoading] = useState(false);
     const [quote, setQuote] = useState<Quote | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -166,6 +166,13 @@ export function useGaslessSwap() {
         setError(null);
 
         try {
+            // Ensure wallet is on the correct network before signing
+            // This fixes the "chainId should be same as current chainId" error
+            // when external wallets are connected to a different network (e.g., Ethereum)
+            console.log("[0x] Ensuring correct network...");
+            await ensureCorrectNetwork();
+            console.log("[0x] Network check passed");
+
             const submitPayload: Record<string, unknown> = {
                 chainId: 42161,
             };
@@ -247,7 +254,7 @@ export function useGaslessSwap() {
         } finally {
             setIsLoading(false);
         }
-    }, [quote, walletClient, activeWalletAddress]);
+    }, [quote, walletClient, activeWalletAddress, ensureCorrectNetwork]);
 
     // Get destination amount from quote
     const getDestAmount = useCallback(
