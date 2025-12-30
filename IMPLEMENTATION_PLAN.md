@@ -334,3 +334,73 @@ No new dependencies required. Uses existing:
 - lucide-react (icons)
 - Tailwind CSS (styling)
 - Existing UI component library
+
+---
+---
+
+# Loan Simulator Implementation Plan (feat/5)
+
+## Overview
+
+This document outlines the implementation plan for adding a Loan Simulator feature to the Stack'd crypto wallet app. The simulator will allow users to preview how different collateral and borrow amounts affect their loan metrics before committing to any transactions.
+
+---
+
+## 1. Existing Loan Detail Files
+
+### Main Pages
+
+| File | Description |
+|------|-------------|
+| `src/app/(main)/wallet/loan/page.tsx` | **Loan Details Page** - Full-page view showing loan summary, collateral, and statistics |
+| `src/app/(main)/wallet/tx/[mode]/page.tsx` | **Transaction Page** - Handles borrow/repay flows with amount input and preview |
+
+### Components
+
+| File | Description |
+|------|-------------|
+| `src/components/wallet/LoanInfo.tsx` | Displays loan info card with supplied/borrowed assets, LTV, APR, borrowable amount |
+| `src/components/wallet/ActiveLoans.tsx` | Shows active loan summary card on wallet home with LTV progress bar |
+| `src/components/wallet/TransactionOverview.tsx` | Shows transaction preview with before/after values for loan metrics |
+
+---
+
+## 2. Current Loan Calculation Logic
+
+### Hooks
+
+#### `src/hooks/useCompound.ts`
+Main hook for interacting with Compound protocol. Provides:
+- `collateralRaw` / `borrowRaw` - Raw on-chain values
+- `suppliedAssets` / `borrowedAssets` - Formatted asset arrays with amounts and USD values
+- `maxLtv` - Maximum loan-to-value ratio (from `borrowCollateralFactor`)
+- `liquidationRatio` - Liquidation threshold (from `liquidateCollateralFactor`)
+- `borrowApr` - Current borrow APR calculated from utilization rate
+- `netLoanValue` - Collateral USD - Borrowed USD
+
+#### `src/hooks/useLoanCalculations.ts`
+Pure calculation hook that takes assets and preview amount.
+
+### Key Formulas
+
+| Metric | Formula |
+|--------|---------|
+| LTV | `(totalBorrowedUSD / totalSuppliedUSD) * 100` |
+| Borrowable Amount | `totalSuppliedUSD * (maxLtv / 100) - totalBorrowedUSD` |
+| Liquidation Price | `totalBorrowedUSD * (100 / liquidationRatio)` |
+| Borrow Capacity | `totalSuppliedUSD * (maxLtv / 100)` |
+| Borrow APR | `(borrowRate / 10^18) * secondsPerYear * 100` |
+
+---
+
+## 3. Key Components Created
+
+1. **`LoanSimulator.tsx`** - Main simulator component with collateral and borrow sliders
+2. **`SimulatorGauge.tsx`** - Visual LTV gauge showing current vs simulated position
+3. **`SimulatorResults.tsx`** - Results grid showing borrowable, liquidation price, health factor, monthly cost
+
+### Integration Points
+
+- Uses existing `Tabs` component from `@/components/ui/tabs`
+- Uses existing `Card` component for consistent styling
+- Reuses `useLoanCalculations` with `previewBorrowAmount` parameter
