@@ -3,7 +3,7 @@
  * TDD: Write tests FIRST, then implement
  */
 import { describe, it, expect } from "vitest";
-import { getUserTier, TIER_THRESHOLDS, type UserTier } from "@/lib/referrals/tiers";
+import { getUserTier, getTierBenefits, TIER_THRESHOLDS, type UserTier } from "@/lib/referrals/tiers";
 
 describe("getUserTier", () => {
     describe("Bronze Tier (Default)", () => {
@@ -146,5 +146,19 @@ describe("TIER_THRESHOLDS", () => {
         expect(TIER_THRESHOLDS.GOLD).toBe(5000);
         expect(TIER_THRESHOLDS.PLATINUM).toBe(10000);
         expect(TIER_THRESHOLDS.BLACK).toBe(50000);
+    });
+});
+
+describe("getTierBenefits", () => {
+    describe("GOLD tier benefits - APY removal regression test", () => {
+        it("should NOT contain APY in GOLD tier benefits", () => {
+            const benefits = getTierBenefits("GOLD");
+            expect(benefits.toUpperCase()).not.toContain("APY");
+        });
+
+        it("should return 'Priority support' for GOLD tier", () => {
+            const benefits = getTierBenefits("GOLD");
+            expect(benefits).toBe("Priority support");
+        });
     });
 });

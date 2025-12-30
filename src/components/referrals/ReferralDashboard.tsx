@@ -275,7 +275,7 @@ export function ReferralDashboard() {
                         <Trophy className="w-5 h-5 text-yellow-500/50" />
                     </div>
                     <p className="text-white/60 font-medium text-sm">Gold Status</p>
-                    <p className="text-white/30 text-xs mt-1">+5% APY Boost</p>
+                    <p className="text-white/30 text-xs mt-1">Priority Support</p>
                 </GlassCard>
 
                 {/* Metal Visa Card - Locked */}
