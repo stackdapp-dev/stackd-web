@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * Unit tests for TierCard component
  * TDD: Write tests FIRST, then implement
  *
@@ -9,6 +12,7 @@
  * - Current/Locked/Unlocked states
  */
 import { describe, it, expect, vi } from "vitest";
+import "@testing-library/jest-dom";
 import { render, screen, within } from "@testing-library/react";
 import { TierCard } from "@/components/referrals/TierCard";
 import type { UserTier } from "@/lib/referrals/tiers";

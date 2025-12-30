@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * Unit tests for TierExplainer page component
  * TDD: Write tests FIRST, then implement
  *
@@ -6,6 +9,7 @@
  * current user tier, requirements, benefits, and progress.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import "@testing-library/jest-dom";
 import { render, screen, within } from "@testing-library/react";
 import type { UserTier } from "@/lib/referrals/tiers";
 

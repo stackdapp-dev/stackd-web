@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * Unit tests for TierComparisonGrid component
  * TDD: Write tests FIRST, then implement
  *
@@ -6,6 +9,7 @@
  * side by side with requirements and benefits.
  */
 import { describe, it, expect, vi } from "vitest";
+import "@testing-library/jest-dom";
 import { render, screen, within } from "@testing-library/react";
 import { TierComparisonGrid } from "@/components/referrals/TierComparisonGrid";
 import type { UserTier } from "@/lib/referrals/tiers";
