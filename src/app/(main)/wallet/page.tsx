@@ -6,6 +6,7 @@ import ActionButtons from "@/components/wallet/ActionButtons";
 import ActiveLoans from "@/components/wallet/ActiveLoans";
 import Assets from "@/components/wallet/Assets";
 import CollateralCard from "@/components/wallet/CollateralCard";
+import { PnLCarousel } from "@/components/wallet/PnLCarousel";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useMemo } from "react";
@@ -29,6 +30,9 @@ const Wallet = () => {
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
       />
+
+      {/* PnL Breakdown Carousel */}
+      <PnLCarousel />
 
       {/* Action Buttons */}
       <ActionButtons />

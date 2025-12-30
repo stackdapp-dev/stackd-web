@@ -404,3 +404,28 @@ Pure calculation hook that takes assets and preview amount.
 - Uses existing `Tabs` component from `@/components/ui/tabs`
 - Uses existing `Card` component for consistent styling
 - Reuses `useLoanCalculations` with `previewBorrowAmount` parameter
+
+---
+---
+
+# PnL Breakdown Carousel Implementation Plan (feat/7)
+
+## Overview
+
+PnL (Profit and Loss) breakdown carousel on the wallet page providing users with portfolio performance insights through a swipeable card interface.
+
+## Key Components Created
+
+1. **`PnLCarousel.tsx`** - Main carousel wrapper with Framer Motion swipe gestures
+2. **`PnLOverviewCard.tsx`** - Total PnL summary with 24h change
+3. **`PnLByAssetCard.tsx`** - Asset-wise breakdown with best/worst performers
+4. **`PnLBySourceCard.tsx`** - Source-wise breakdown (Holdings, Lending, Referrals)
+
+## New Hooks
+
+- `usePnLCalculations.ts` - Aggregates PnL from all sources
+- `usePriceHistory.ts` - Fetches/caches historical prices
+
+## Integration
+
+Carousel is integrated into `src/app/(main)/wallet/page.tsx` after the Balance component.
