@@ -1,7 +1,9 @@
 "use client";
 
 import { useReferral } from "@/hooks/useReferral";
+import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { TierProgress } from "@/components/referrals/TierProgress";
 import {
     Copy, Share2, Lock, Trophy, Users,
     CreditCard, Check, Sparkles
@@ -43,7 +45,14 @@ const tierStyles: Record<UserTier, { bg: string; border: string; text: string; i
 
 export function ReferralDashboard() {
     const { stats, referralCode, loading, createCode } = useReferral();
+    const { loanCalcs } = useLoanCalculationsContext();
     const [copied, setCopied] = useState(false);
+
+    // Get personal loan balance from borrowed assets (USDT)
+    const personalLoanBalance = loanCalcs.borrowedAssets.reduce(
+        (sum, asset) => sum + asset.usdValue,
+        0
+    );
 
     const copyToClipboard = () => {
         if (!referralCode) return;
@@ -232,37 +241,13 @@ export function ReferralDashboard() {
                 </div>
             </GlassCard>
 
-            {/* Tier Progress - Current Tier (Silver) */}
-            <GlassCard variant="dark" className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", tierStyle.bg)}>
-                            <Trophy className={cn("w-5 h-5", tierStyle.icon)} />
-                        </div>
-                        <div>
-                            <p className={cn("font-medium", tierStyle.text)}>{stats.tier} Status</p>
-                            <p className="text-white/40 text-xs">Global payouts unlocked</p>
-                        </div>
-                    </div>
-                    <span className={cn("text-xs px-2.5 py-1 rounded-full", tierStyle.bg, tierStyle.border, tierStyle.text, "border")}>
-                        Active
-                    </span>
-                </div>
-
-                {/* Progress to next tier */}
-                <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                        <span className="text-white/60">Progress to Gold</span>
-                        <span className="text-[#ffa02d]">{stats.next_tier_remaining}</span>
-                    </div>
-                    <div className="w-full bg-white/5 rounded-full h-2">
-                        <div
-                            className="bg-gradient-to-r from-[#ffa02d] to-[#ff8c00] h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${stats.next_tier_progress}%` }}
-                        />
-                    </div>
-                </div>
-            </GlassCard>
+            {/* Tier Progress - Dual Progress Bars (Loan Size + Network Volume) */}
+            <TierProgress
+                currentTier={stats.tier}
+                personalLoanBalance={personalLoanBalance}
+                networkVolume={stats.network_volume}
+                totalReferrals={stats.total_invites}
+            />
 
             {/* Locked Tiers Grid */}
             <div className="grid grid-cols-2 gap-3">
