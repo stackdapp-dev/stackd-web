@@ -5,16 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TIER_THRESHOLDS } from "@/lib/referrals/tiers";
-
-// Placeholder component - tests will fail until implementation
-interface TierProgressProps {
-    currentTier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM" | "BLACK";
-    personalLoanBalance: number;
-    networkVolume: number;
-    totalReferrals: number;
-}
-
-const TierProgress = (_props: TierProgressProps) => null;
+import { TierProgress, calculateLoanProgress } from "@/components/referrals/TierProgress";
 
 describe("TierProgress Component", () => {
     beforeEach(() => {
@@ -116,11 +107,6 @@ describe("TierProgress Component", () => {
 });
 
 describe("Progress Calculation Helpers", () => {
-    const calculateLoanProgress = (loanBalance: number, threshold = TIER_THRESHOLDS.SILVER): number => {
-        if (loanBalance <= 0) return 0;
-        return Math.min((loanBalance / threshold) * 100, 100);
-    };
-
     it("should return 0 for zero balance", () => {
         expect(calculateLoanProgress(0)).toBe(0);
     });
