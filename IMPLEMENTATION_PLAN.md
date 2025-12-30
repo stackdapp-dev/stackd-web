@@ -429,3 +429,33 @@ PnL (Profit and Loss) breakdown carousel on the wallet page providing users with
 ## Integration
 
 Carousel is integrated into `src/app/(main)/wallet/page.tsx` after the Balance component.
+
+---
+---
+
+# Tier Explainer Page Implementation Plan (feat/4)
+
+## Overview
+
+Tier explainer page at `/referrals/tiers` that helps users understand the Stack'd referral tier system, benefits, and how to advance through tiers.
+
+## Key Components Created
+
+1. **`tierExplainer.ts`** - Helper functions for tier requirements and benefits
+2. **`TierCard.tsx`** - Individual tier display card with locked/unlocked states
+3. **`TierComparisonGrid.tsx`** - Grid comparing all tiers with benefits
+4. **`TierExplainer.tsx`** - Main page component with current tier progress
+
+## Tier Structure
+
+| Tier | Requirement | Key Benefit |
+|------|-------------|-------------|
+| Bronze | Default | Base earnings (0.5%/0.1%/0.1%) |
+| Silver | Personal loan >= $500 | Payouts unlocked |
+| Gold | Network volume >= $5,000 | +5% APY boost |
+| Platinum | Network volume >= $10,000 | Priority support |
+| Black | Network volume >= $50,000 | Metal Visa card |
+
+## Integration
+
+Page is accessible at `/referrals/tiers` with link from ReferralDashboard.
