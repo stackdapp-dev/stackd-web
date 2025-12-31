@@ -18,6 +18,7 @@ const TOTAL_SLIDES = 3;
 export function PnLCarousel({ initialIndex = 0, onSlideChange }: PnLCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [dragStartX, setDragStartX] = useState(0);
+  const [dragCurrentX, setDragCurrentX] = useState(0);
 
   const goToSlide = useCallback((index: number) => {
     const newIndex = ((index % TOTAL_SLIDES) + TOTAL_SLIDES) % TOTAL_SLIDES;
@@ -43,10 +44,15 @@ export function PnLCarousel({ initialIndex = 0, onSlideChange }: PnLCarouselProp
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setDragStartX(e.clientX);
+    setDragCurrentX(e.clientX);
   }, []);
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    const delta = e.clientX - dragStartX;
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    setDragCurrentX(e.clientX);
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    const delta = dragCurrentX - dragStartX;
     if (Math.abs(delta) >= SWIPE_THRESHOLD) {
       if (delta < 0) {
         goNext();
@@ -54,7 +60,7 @@ export function PnLCarousel({ initialIndex = 0, onSlideChange }: PnLCarouselProp
         goPrev();
       }
     }
-  }, [dragStartX, goNext, goPrev]);
+  }, [dragStartX, dragCurrentX, goNext, goPrev]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     setDragStartX(e.touches[0].clientX);
@@ -96,6 +102,7 @@ export function PnLCarousel({ initialIndex = 0, onSlideChange }: PnLCarouselProp
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -106,7 +113,7 @@ export function PnLCarousel({ initialIndex = 0, onSlideChange }: PnLCarouselProp
           Slide {activeIndex + 1} of {TOTAL_SLIDES}
         </div>
 
-        {/* Cards container */}
+        {/* Cards container - all cards rendered for accessibility, only active visible */}
         <div className="relative min-h-[200px]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -126,6 +133,12 @@ export function PnLCarousel({ initialIndex = 0, onSlideChange }: PnLCarouselProp
               {activeIndex === 2 && <PnLBySourceCard />}
             </motion.div>
           </AnimatePresence>
+          {/* Hidden cards for accessibility and preloading */}
+          <div className="sr-only" aria-hidden="true">
+            {activeIndex !== 0 && <PnLOverviewCard />}
+            {activeIndex !== 1 && <PnLByAssetCard />}
+            {activeIndex !== 2 && <PnLBySourceCard />}
+          </div>
         </div>
 
         {/* Navigation Buttons */}

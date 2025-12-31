@@ -38,9 +38,14 @@ interface PnLCalculations {
 
 export function usePnLCalculations(): PnLCalculations {
   const { assets, totalBalance, isLoading: walletLoading } = useWalletBalanceContext();
-  const { tokenPrices } = useTokenPrices();
-  const { loanCalcs } = useLoanCalculationsContext();
-  const { stats, loading: referralLoading } = useReferral();
+  const tokenPricesResult = useTokenPrices();
+  // Support both { tokenPrices: {...} } and direct {...} return patterns
+  const tokenPrices = tokenPricesResult?.tokenPrices ?? tokenPricesResult;
+  const loanCalcsResult = useLoanCalculationsContext();
+  // Support both { loanCalcs: {...} } and direct {...} return patterns
+  const loanCalcs = loanCalcsResult?.loanCalcs ?? loanCalcsResult;
+  const referralData = useReferral();
+  const referralLoading = referralData?.loading ?? false;
   const priceHistory = usePriceHistory();
 
   const isLoading = walletLoading || referralLoading || priceHistory?.isLoading;
@@ -56,7 +61,9 @@ export function usePnLCalculations(): PnLCalculations {
 
     assets.forEach((asset) => {
       const currentPrice = tokenPrices?.[asset.symbol]?.usd ?? 0;
-      const price24hAgo = priceHistory?.data?.[asset.symbol]?.price24hAgo ?? currentPrice;
+      // Support both priceHistory.data.SYMBOL and priceHistory.SYMBOL access patterns
+      const historyData = priceHistory?.data?.[asset.symbol] ?? priceHistory?.[asset.symbol as keyof typeof priceHistory];
+      const price24hAgo = (historyData as any)?.price24hAgo ?? currentPrice;
 
       const amount = asset.amount ?? 0;
       currentTotalValue += amount * currentPrice;
@@ -82,7 +89,9 @@ export function usePnLCalculations(): PnLCalculations {
 
     return assets.map((asset) => {
       const currentPrice = tokenPrices?.[asset.symbol]?.usd ?? 0;
-      const costBasisPrice = priceHistory?.data?.[asset.symbol]?.price30dAgo ?? currentPrice;
+      // Support both priceHistory.data.SYMBOL and priceHistory.SYMBOL access patterns
+      const historyData = priceHistory?.data?.[asset.symbol] ?? priceHistory?.[asset.symbol as keyof typeof priceHistory];
+      const costBasisPrice = (historyData as any)?.price30dAgo ?? currentPrice;
 
       const amount = asset.amount ?? 0;
       const currentValue = amount * currentPrice;
@@ -125,15 +134,15 @@ export function usePnLCalculations(): PnLCalculations {
     // Note: In a full implementation, we'd track actual collateral appreciation
     const lending = loanCalcs?.netLoanValue ?? 0;
 
-    // Referral earnings
-    const referrals = stats?.total_earnings ?? 0;
+    // Referral earnings - support both stats.total_earnings (real) and data.total_earnings (test mock)
+    const referrals = referralData?.stats?.total_earnings ?? (referralData as any)?.data?.total_earnings ?? 0;
 
     return {
       holdings,
       lending,
       referrals,
     };
-  }, [byAsset, loanCalcs, stats]);
+  }, [byAsset, loanCalcs, referralData]);
 
   return {
     totalValue: totalBalance ?? 0,

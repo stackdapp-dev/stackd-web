@@ -17,7 +17,8 @@ function formatLargeValue(value: number | null | undefined): string {
     return `$${millions.toFixed(1)}M`;
   }
 
-  return formatCurrency(value, 2, "$", true);
+  // Don't abbreviate values under 1 million - show full formatted number
+  return formatCurrency(value, 2, "$", false);
 }
 
 /**

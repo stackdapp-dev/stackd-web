@@ -3,6 +3,7 @@
  * Fetches live prices from CoinGecko and prepares wallet fixtures
  */
 import { beforeAll, vi } from "vitest";
+import "@testing-library/jest-dom";
 
 // CoinGecko free API for live prices
 const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd";

@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * TDD Tests for TransactionProgressIndicator Component
  *
  * These tests define the expected behavior of the TransactionProgressIndicator

@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * TDD Tests for usePnLCalculations Hook
  *
  * This hook aggregates PnL data from multiple sources:
@@ -21,8 +24,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
-// Mock dependencies
-vi.mock("@/hooks/useWalletBalance", () => ({
+// Mock dependencies - paths must match actual imports in usePnLCalculations.ts
+vi.mock("@/app/(main)/wallet/layout", () => ({
     useWalletBalanceContext: vi.fn(),
 }));
 
@@ -30,7 +33,7 @@ vi.mock("@/hooks/usePriceHistory", () => ({
     usePriceHistory: vi.fn(),
 }));
 
-vi.mock("@/hooks/useLoanCalculations", () => ({
+vi.mock("@/providers/LoanCalculationsProvider", () => ({
     useLoanCalculationsContext: vi.fn(),
 }));
 
@@ -49,10 +52,10 @@ describe("usePnLCalculations", () => {
 
     describe("Total PnL Calculation", () => {
         it("should calculate total PnL from assets", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             // Mock current wallet state
@@ -114,10 +117,10 @@ describe("usePnLCalculations", () => {
         });
 
         it("should calculate total PnL percentage", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -160,10 +163,10 @@ describe("usePnLCalculations", () => {
 
     describe("24h Change Calculation", () => {
         it("should calculate 24h change from price history", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -205,10 +208,10 @@ describe("usePnLCalculations", () => {
         });
 
         it("should handle negative 24h change", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -251,10 +254,10 @@ describe("usePnLCalculations", () => {
 
     describe("Missing Price Data Handling", () => {
         it("should handle missing price data gracefully", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -298,10 +301,10 @@ describe("usePnLCalculations", () => {
         });
 
         it("should show loading while fetching price data", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -333,10 +336,10 @@ describe("usePnLCalculations", () => {
 
     describe("By Asset Breakdown", () => {
         it("should return PnL breakdown by asset", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -389,10 +392,10 @@ describe("usePnLCalculations", () => {
 
     describe("By Source Breakdown", () => {
         it("should include holdings PnL", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -432,10 +435,10 @@ describe("usePnLCalculations", () => {
         });
 
         it("should include lending PnL from collateral appreciation", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -477,10 +480,10 @@ describe("usePnLCalculations", () => {
         });
 
         it("should include referral earnings", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -521,10 +524,10 @@ describe("usePnLCalculations", () => {
 
     describe("Edge Cases", () => {
         it("should handle empty wallet", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({
@@ -555,10 +558,10 @@ describe("usePnLCalculations", () => {
         });
 
         it("should handle stablecoins correctly (minimal PnL)", async () => {
-            const { useWalletBalanceContext } = await import("@/hooks/useWalletBalance");
+            const { useWalletBalanceContext } = await import("@/app/(main)/wallet/layout");
             const { useTokenPrices } = await import("@/providers/TokenPriceProvider");
             const { usePriceHistory } = await import("@/hooks/usePriceHistory");
-            const { useLoanCalculationsContext } = await import("@/hooks/useLoanCalculations");
+            const { useLoanCalculationsContext } = await import("@/providers/LoanCalculationsProvider");
             const { useReferral } = await import("@/hooks/useReferral");
 
             (useWalletBalanceContext as any).mockReturnValue({

@@ -133,7 +133,7 @@ export function TierExplainer() {
                 <div data-testid="tier-progress" className="space-y-2">
                     <div className="flex justify-between text-sm">
                         <span className="text-white/60">
-                            {nextTier ? `Progress to ${getTierDisplayName(nextTier)}` : 'Max tier reached'}
+                            {nextTier ? `Progress to ${getTierDisplayName(nextTier)}` : 'Tier Progress'}
                         </span>
                         <span className="text-amber-400">{stats.next_tier_remaining}</span>
                     </div>
@@ -157,6 +157,8 @@ export function TierExplainer() {
                             tier={tier}
                             isCurrent={tier === currentTier}
                             isUnlocked={isTierUnlocked(tier, currentTier)}
+                            hideTitle={tier === currentTier}
+                            genericRequirementText
                         />
                     ))}
                 </div>
@@ -165,7 +167,7 @@ export function TierExplainer() {
             {/* Tier Comparison Grid */}
             <div>
                 <h2 className="text-white text-lg font-medium mb-4">Compare Tiers</h2>
-                <TierComparisonGrid currentTier={currentTier} />
+                <TierComparisonGrid currentTier={currentTier} abbreviatedHeaders />
             </div>
         </div>
     );

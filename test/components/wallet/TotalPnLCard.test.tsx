@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * TDD Tests for TotalPnLCard Component (PnLOverviewCard)
  *
  * This card displays the total portfolio PnL including:

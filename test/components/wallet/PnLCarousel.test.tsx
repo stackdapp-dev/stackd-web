@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * TDD Tests for PnLCarousel Component
  *
  * The PnLCarousel is a swipeable carousel that displays PnL data across 3 cards:

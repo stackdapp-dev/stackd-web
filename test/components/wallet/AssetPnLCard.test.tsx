@@ -1,4 +1,7 @@
 /**
+ * @vitest-environment jsdom
+ */
+/**
  * TDD Tests for AssetPnLCard Component (PnLByAssetCard)
  *
  * This card displays PnL breakdown by individual asset:

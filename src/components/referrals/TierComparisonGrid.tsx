@@ -7,6 +7,8 @@ import { UserTier, getTierDisplayName, TIER_THRESHOLDS } from "@/lib/referrals/t
 
 export interface TierComparisonGridProps {
     currentTier: UserTier;
+    /** Hide full tier names in headers (use abbreviated form) to avoid duplicate text when used alongside TierCards */
+    abbreviatedHeaders?: boolean;
 }
 
 // All tiers in order
@@ -63,6 +65,15 @@ function tierHasBenefit(tier: UserTier, benefit: BenefitRow): boolean {
     return tierIndex >= benefitTierIndex;
 }
 
+// Abbreviated tier names for compact display
+const tierAbbreviations: Record<UserTier, string> = {
+    BRONZE: 'Br',
+    SILVER: 'Sv',
+    GOLD: 'Au',
+    PLATINUM: 'Pt',
+    BLACK: 'Bk',
+};
+
 // Get requirement text for a tier
 function getTierRequirement(tier: UserTier): string {
     switch (tier) {
@@ -79,7 +90,7 @@ function getTierRequirement(tier: UserTier): string {
     }
 }
 
-export function TierComparisonGrid({ currentTier }: TierComparisonGridProps) {
+export function TierComparisonGrid({ currentTier, abbreviatedHeaders = false }: TierComparisonGridProps) {
     return (
         <Card
             appearance="glassDark"
@@ -110,7 +121,7 @@ export function TierComparisonGrid({ currentTier }: TierComparisonGridProps) {
                                     )}
                                 >
                                     <div className="flex flex-col items-center gap-1">
-                                        <span>{getTierDisplayName(tier)}</span>
+                                        <span>{abbreviatedHeaders ? tierAbbreviations[tier] : getTierDisplayName(tier)}</span>
                                         {isCurrent && (
                                             <span className="text-xs text-amber-400 font-normal">
                                                 Your Tier

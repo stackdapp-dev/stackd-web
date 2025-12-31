@@ -1,4 +1,5 @@
 /**
+ * @vitest-environment jsdom
  * Unit tests for TierProgress component - Loan Size Criteria
  * TDD: Write tests FIRST, then implement
  */

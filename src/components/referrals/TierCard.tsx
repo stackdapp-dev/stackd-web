@@ -10,6 +10,10 @@ export interface TierCardProps {
     tier: UserTier;
     isCurrent: boolean;
     isUnlocked: boolean;
+    /** Hide the tier name in the header (used when tier is shown elsewhere) */
+    hideTitle?: boolean;
+    /** Use generic text instead of tier-specific text (avoids duplicate text when rendered with other components) */
+    genericRequirementText?: boolean;
 }
 
 // Tier color styles
@@ -70,7 +74,7 @@ function getTierIconType(tier: UserTier): string {
     }
 }
 
-export function TierCard({ tier, isCurrent, isUnlocked }: TierCardProps) {
+export function TierCard({ tier, isCurrent, isUnlocked, hideTitle = false, genericRequirementText = false }: TierCardProps) {
     const colors = tierColors[tier];
     const requirements = getTierRequirements(tier);
     const benefits = getTierBenefitsList(tier);
@@ -115,9 +119,11 @@ export function TierCard({ tier, isCurrent, isUnlocked }: TierCardProps) {
                     />
                 </div>
                 <div>
-                    <h3 className={cn("text-lg font-medium", colors.text)}>
-                        {getTierDisplayName(tier)}
-                    </h3>
+                    {!hideTitle && (
+                        <h3 className={cn("text-lg font-medium", colors.text)}>
+                            {getTierDisplayName(tier)}
+                        </h3>
+                    )}
                     <div data-testid="tier-status" className="flex items-center gap-1 text-xs text-white/50">
                         {isLocked ? (
                             <>
@@ -145,7 +151,9 @@ export function TierCard({ tier, isCurrent, isUnlocked }: TierCardProps) {
                     ) : (
                         <>
                             <p>Network volume of at least {requirements.formattedRequirement}</p>
-                            <p className="text-white/40 text-xs">Requires Silver status</p>
+                            <p className="text-white/40 text-xs">
+                                {genericRequirementText ? 'Prerequisite tier required' : 'Requires Silver status'}
+                            </p>
                         </>
                     )}
                 </div>
@@ -166,7 +174,10 @@ export function TierCard({ tier, isCurrent, isUnlocked }: TierCardProps) {
                         <li className="flex items-start gap-2 text-sm">
                             <Check className="w-4 h-4 mt-0.5 shrink-0 text-white/40" />
                             <span className="text-white/50">
-                                All {getTierDisplayName(getPreviousTier(tier))} benefits
+                                {genericRequirementText
+                                    ? 'All previous tier benefits'
+                                    : `All ${getTierDisplayName(getPreviousTier(tier))} benefits`
+                                }
                             </span>
                         </li>
                     )}

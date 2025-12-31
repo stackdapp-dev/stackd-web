@@ -189,7 +189,7 @@ export function TierProgress({
                     {/* Explanation text */}
                     <p className="text-white/40 text-xs italic">
                         {currentTier === "BRONZE"
-                            ? "* Loan size of $500 required for Silver"
+                            ? "* Minimum loan required for Silver tier"
                             : "* Both criteria required for next tier"}
                     </p>
                 </div>
