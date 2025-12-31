@@ -2,11 +2,13 @@
 
 import PageHeader from "@/components/common/PageHeader";
 import TokenIcon from "@/components/common/TokenIcon";
+import LoanSimulator from "@/components/wallet/LoanSimulator";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import MaskedValue from "@/components/ui/maskedValue";
 import Modal from "@/components/ui/modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Text from "@/components/ui/text";
 import { useAutoLend } from "@/hooks/useAutoLend";
 import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
@@ -90,138 +92,158 @@ export default function LoanDetailsPage() {
                 />
             )}
 
-            {/* Loan Summary Card */}
-            <div className="relative rounded-2xl p-[1px] bg-gradient-to-r from-amber-500/60 via-amber-600/40 to-purple-600/40">
-                <Card appearance="container" className="bg-slate-900/95" padding="default">
-                    <div className="flex flex-col gap-4">
-                        <p className="text-amber-500 text-xs font-medium uppercase tracking-wider">
-                            USDT Loan #1
-                        </p>
+            {/* Tabs: Overview / Simulator */}
+            <Tabs defaultValue="overview" className="w-full">
+                <TabsList className="w-full">
+                    <TabsTrigger value="overview" className="flex-1">
+                        Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="simulator" className="flex-1">
+                        Simulator
+                    </TabsTrigger>
+                </TabsList>
 
-                        <div className="flex items-baseline gap-2">
-                            <MaskedValue
-                                value={borrowed?.usdValue || 0}
-                                mask="long"
-                                className="text-4xl font-bold text-white"
-                            />
-                            <span className="text-white/50">borrowed</span>
-                        </div>
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="flex flex-col gap-6 mt-4">
+                    {/* Loan Summary Card */}
+                    <div className="relative rounded-2xl p-[1px] bg-gradient-to-r from-amber-500/60 via-amber-600/40 to-purple-600/40">
+                        <Card appearance="container" className="bg-slate-900/95" padding="default">
+                            <div className="flex flex-col gap-4">
+                                <p className="text-amber-500 text-xs font-medium uppercase tracking-wider">
+                                    USDT Loan #1
+                                </p>
 
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-white/50 text-sm">Net PnL</p>
-                                <p className="text-green-400 font-semibold text-lg">
-                                    {maskString(formatCurrency(netLoanValue), visibility.visible, MASK_LONG)}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-white/50 text-sm">APR</p>
-                                <p className="text-white font-semibold text-lg">
-                                    {maskString(formatPercent(borrowApr), visibility.visible, MASK_SHORT)}
-                                </p>
-                            </div>
-                        </div>
+                                <div className="flex items-baseline gap-2">
+                                    <MaskedValue
+                                        value={borrowed?.usdValue || 0}
+                                        mask="long"
+                                        className="text-4xl font-bold text-white"
+                                    />
+                                    <span className="text-white/50">borrowed</span>
+                                </div>
 
-                        {/* LTV Progress Bar */}
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <p className="text-white/50 text-sm">Loan-to-Value Ratio</p>
-                                <p className="text-amber-400 font-semibold">
-                                    {maskString(formatPercent(ltv), visibility.visible, MASK_SHORT)} LTV
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <p className="text-white/50 text-sm">Net PnL</p>
+                                        <p className="text-green-400 font-semibold text-lg">
+                                            {maskString(formatCurrency(netLoanValue), visibility.visible, MASK_LONG)}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-white/50 text-sm">APR</p>
+                                        <p className="text-white font-semibold text-lg">
+                                            {maskString(formatPercent(borrowApr), visibility.visible, MASK_SHORT)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* LTV Progress Bar */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <p className="text-white/50 text-sm">Loan-to-Value Ratio</p>
+                                        <p className="text-amber-400 font-semibold">
+                                            {maskString(formatPercent(ltv), visibility.visible, MASK_SHORT)} LTV
+                                        </p>
+                                    </div>
+                                    <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-purple-500 transition-all duration-500"
+                                            style={{ width: `${ltvBarWidth}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Borrow Button */}
+                    <Button
+                        onClick={handleBorrow}
+                        variant="default"
+                        size="lg"
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                    >
+                        Borrow USDT
+                    </Button>
+
+                    {/* Collateral Section */}
+                    <div>
+                        <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
+                            Collateral
+                        </h2>
+                        <Card appearance="glassDark" padding="default">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <TokenIcon symbol="WBTC" width={48} height={48} />
+                                    <div>
+                                        <p className="text-white font-semibold">Wrapped Bitcoin</p>
+                                        <p className="text-white/50 text-sm">WBTC</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-white font-semibold">
+                                        {maskString(formatAmount(collateral?.amount || 0), visibility.visible, MASK_SHORT)} WBTC
+                                    </p>
+                                    <p className="text-white/50 text-sm">
+                                        {maskString(formatCurrency(collateral?.usdValue || 0), visibility.visible, MASK_LONG)}
+                                    </p>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Loan Statistics */}
+                    <div>
+                        <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
+                            Loan Statistics
+                        </h2>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Card appearance="glassDark" padding="default">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <DollarSign className="w-4 h-4 text-amber-500" />
+                                    <p className="text-white/50 text-sm">Borrowable Amount</p>
+                                </div>
+                                <p className="text-white font-bold text-xl">
+                                    {maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}
                                 </p>
-                            </div>
-                            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-purple-500 transition-all duration-500"
-                                    style={{ width: `${ltvBarWidth}%` }}
-                                />
-                            </div>
+                            </Card>
+                            <Card appearance="glassDark" padding="default">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                    <p className="text-white/50 text-sm">Collateral Liquidation Price</p>
+                                </div>
+                                <p className="text-white font-bold text-xl">
+                                    {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
+                                </p>
+                            </Card>
                         </div>
                     </div>
-                </Card>
-            </div>
 
-            {/* Borrow Button */}
-            <Button
-                onClick={handleBorrow}
-                variant="default"
-                size="lg"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
-            >
-                Borrow USDT
-            </Button>
-
-            {/* Collateral Section */}
-            <div>
-                <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
-                    Collateral
-                </h2>
-                <Card appearance="glassDark" padding="default">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <TokenIcon symbol="WBTC" width={48} height={48} />
-                            <div>
-                                <p className="text-white font-semibold">Wrapped Bitcoin</p>
-                                <p className="text-white/50 text-sm">WBTC</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-white font-semibold">
-                                {maskString(formatAmount(collateral?.amount || 0), visibility.visible, MASK_SHORT)} WBTC
-                            </p>
-                            <p className="text-white/50 text-sm">
-                                {maskString(formatCurrency(collateral?.usdValue || 0), visibility.visible, MASK_LONG)}
-                            </p>
-                        </div>
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-3 pb-8">
+                        <Button
+                            onClick={() => router.push("/wallet/deposit/WBTC")}
+                            variant="ghost"
+                            className="bg-white/5 border border-white/10 hover:bg-white/10"
+                        >
+                            Add Collateral
+                        </Button>
+                        <Button
+                            onClick={() => router.push("/wallet/tx/repay")}
+                            variant="ghost"
+                            className="bg-white/5 border border-white/10 hover:bg-white/10"
+                            disabled={!hasBorrowed}
+                        >
+                            Repay Loan
+                        </Button>
                     </div>
-                </Card>
-            </div>
+                </TabsContent>
 
-            {/* Loan Statistics */}
-            <div>
-                <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
-                    Loan Statistics
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                    <Card appearance="glassDark" padding="default">
-                        <div className="flex items-center gap-2 mb-2">
-                            <DollarSign className="w-4 h-4 text-amber-500" />
-                            <p className="text-white/50 text-sm">Borrowable Amount</p>
-                        </div>
-                        <p className="text-white font-bold text-xl">
-                            {maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}
-                        </p>
-                    </Card>
-                    <Card appearance="glassDark" padding="default">
-                        <div className="flex items-center gap-2 mb-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-500" />
-                            <p className="text-white/50 text-sm">Collateral Liquidation Price</p>
-                        </div>
-                        <p className="text-white font-bold text-xl">
-                            {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
-                        </p>
-                    </Card>
-                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 pb-8">
-                <Button
-                    onClick={() => router.push("/wallet/deposit/WBTC")}
-                    variant="ghost"
-                    className="bg-white/5 border border-white/10 hover:bg-white/10"
-                >
-                    Add Collateral
-                </Button>
-                <Button
-                    onClick={() => router.push("/wallet/tx/repay")}
-                    variant="ghost"
-                    className="bg-white/5 border border-white/10 hover:bg-white/10"
-                    disabled={!hasBorrowed}
-                >
-                    Repay Loan
-                </Button>
-            </div>
+                {/* Simulator Tab */}
+                <TabsContent value="simulator" className="mt-4 pb-8">
+                    <LoanSimulator />
+                </TabsContent>
+            </Tabs>
 
             {/* Insufficient Collateral Modal */}
             <Modal

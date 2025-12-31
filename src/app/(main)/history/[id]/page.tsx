@@ -1,6 +1,7 @@
 "use client";
 
 import PageHeader from "@/components/common/PageHeader";
+import { TransactionProgressIndicator } from "@/components/transactions";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
@@ -89,6 +90,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
       <PageHeader title="Order Details" />
+
+      <TransactionProgressIndicator status={tx.status} type={tx.type} />
 
       <Card appearance="container" className="rounded-xl overflow-hidden mb-4">
         <div className="relative">

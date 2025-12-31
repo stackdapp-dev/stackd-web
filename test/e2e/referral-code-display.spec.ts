@@ -39,7 +39,7 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
     test('Rewards page displays referral code element', async ({ page }) => {
         // Navigate to rewards page (uses unauthenticated flow in test)
         await page.goto('/referrals');
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         // The page should either show:
         // 1. A referral code (if user/mock data exists)
@@ -61,7 +61,7 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
     test('referral code element is tappable with copy hint', async ({ page }) => {
         // Navigate to referrals page
         await page.goto('/referrals');
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         // Check for the "tap to copy" hint (only visible if referral code is shown)
         const tapToCopy = page.getByText('tap to copy');
