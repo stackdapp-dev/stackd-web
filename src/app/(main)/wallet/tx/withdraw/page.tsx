@@ -4,7 +4,6 @@ import InputAmountCard from "@/components/common/InputAmountCard";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
-import Text from "@/components/ui/text";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useCompound } from "@/hooks/useCompound";
@@ -77,30 +76,32 @@ export default function WithdrawCollateralPage() {
 
             {/* Collateral Summary */}
             <Card appearance="glassDark" padding="default">
-                <div className="space-y-3">
+                <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <Text tone="muted">Total Collateral</Text>
-                        <Text weight="semibold">
-                            {formatAmount(breakdown.totalCollateralBtc)} WBTC
-                        </Text>
+                        <span className="text-white/70 text-sm">Total Collateral</span>
+                        <span className="text-white font-semibold">
+                            {formatAmount(breakdown.totalCollateralBtc, 4)} WBTC
+                        </span>
                     </div>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Lock className="w-4 h-4 text-amber-400" />
-                            <Text tone="muted">Locked (backing loans)</Text>
+                            <span className="text-white/70 text-sm">Locked (backing loans)</span>
                         </div>
-                        <Text weight="semibold" className="text-amber-400">
-                            {formatAmount(breakdown.lockedCollateralBtc)} WBTC
-                        </Text>
+                        <span className="text-amber-400 font-semibold">
+                            {formatAmount(breakdown.lockedCollateralBtc, 4)} WBTC
+                        </span>
                     </div>
-                    <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                    <div className="flex items-center justify-between border-t border-white/10 pt-4">
                         <div className="flex items-center gap-2">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                            <Text tone="muted">Available to Withdraw</Text>
+                            <span className="text-white/70 text-sm">Available to Withdraw</span>
                         </div>
-                        <Text weight="semibold" className="text-emerald-400">
-                            {formatAmount(available)} WBTC
-                        </Text>
+                        <span className="text-emerald-400 font-semibold">
+                            {available < 0.0001 && available > 0
+                                ? "< 0.0001"
+                                : formatAmount(available, 4)} WBTC
+                        </span>
                     </div>
                 </div>
             </Card>
@@ -120,43 +121,43 @@ export default function WithdrawCollateralPage() {
 
                 {/* Error messages */}
                 {!withdrawCheck.allowed && amount > 0 && (
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
                         <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                        <Text className="text-red-400 text-sm">{withdrawCheck.reason}</Text>
+                        <p className="text-red-400 text-sm leading-relaxed">{withdrawCheck.reason}</p>
                     </div>
                 )}
             </div>
 
             {/* Warning for partial withdrawal */}
             {available > 0 && breakdown.lockedCollateralBtc > 0 && (
-                <Card appearance="glassDark" padding="default">
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
                     <div className="flex items-start gap-3">
                         <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                         <div>
-                            <Text className="text-amber-400 font-medium">Collateral Restriction</Text>
-                            <Text tone="muted" className="text-sm mt-1">
-                                You have {formatCurrency(breakdown.lockedCollateralUsd)} of collateral locked to back your loans.
-                                Withdrawing more than {formatAmount(available)} WBTC would under-collateralize your position.
-                            </Text>
+                            <p className="text-amber-400 font-semibold text-sm">Collateral Restriction</p>
+                            <p className="text-white/80 text-sm mt-2 leading-relaxed">
+                                You have <span className="text-amber-400 font-medium">{formatCurrency(breakdown.lockedCollateralUsd)}</span> of collateral locked to back your loans.
+                                Withdrawing more than <span className="text-emerald-400 font-medium">{available < 0.0001 ? "< 0.0001" : formatAmount(available, 4)} WBTC</span> would under-collateralize your position.
+                            </p>
                         </div>
                     </div>
-                </Card>
+                </div>
             )}
 
             {/* Acknowledgment */}
-            <div className="flex items-start justify-center gap-3">
+            <label htmlFor="ack" className="flex items-start gap-3 cursor-pointer group">
                 <input
                     type="checkbox"
                     id="ack"
                     checked={ackChecked}
                     onChange={() => setAckChecked((v) => !v)}
                     aria-checked={ackChecked}
-                    className="mt-1"
+                    className="mt-0.5 w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-amber-500 checked:border-amber-500 focus:ring-amber-500 focus:ring-offset-0"
                 />
-                <label htmlFor="ack" className="text-sm text-white/70 cursor-pointer">
+                <span className="text-sm text-white/80 leading-relaxed group-hover:text-white transition-colors">
                     I understand withdrawing collateral may affect my loan health factor.
-                </label>
-            </div>
+                </span>
+            </label>
 
             {/* Action Button */}
             <Button onClick={handleAction} className="w-full" disabled={isDisabled}>
