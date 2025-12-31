@@ -8,6 +8,7 @@ import { Activity, AlertTriangle, DollarSign, TrendingDown } from "lucide-react"
 interface SimulatorResultsProps {
   currentResult: SimulationResult;
   simulatedResult: SimulationResult;
+  borrowApr: number;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ interface SimulatorResultsProps {
 export default function SimulatorResults({
   currentResult,
   simulatedResult,
+  borrowApr,
   className,
 }: SimulatorResultsProps) {
   const hasChanges = (current: number, simulated: number): boolean => {
@@ -129,20 +131,20 @@ export default function SimulatorResults({
         </div>
       </Card>
 
-      {/* Monthly Cost Card */}
-      <Card appearance="glassDark" padding="default" data-testid="monthly-cost-card">
+      {/* Yearly Interest Card */}
+      <Card appearance="glassDark" padding="default" data-testid="yearly-interest-card">
         <div className="flex items-center gap-2 mb-2">
           <TrendingDown className="w-4 h-4 text-amber-500" />
-          <p className="text-white/50 text-sm">Monthly Cost</p>
+          <p className="text-white/50 text-sm">Yearly Interest</p>
         </div>
         <div className="flex flex-col">
-          {hasChanges(currentResult.monthlyInterest, simulatedResult.monthlyInterest) && (
+          {hasChanges(currentResult.yearlyInterest, simulatedResult.yearlyInterest) && (
             <span className="text-white/40 text-sm line-through">
-              ~{formatCurrency(currentResult.monthlyInterest, 2)}
+              ~{formatCurrency(currentResult.yearlyInterest, 2)}
             </span>
           )}
-          <p className="text-white font-bold text-xl" data-testid="monthly-interest">
-            ~{formatCurrency(simulatedResult.monthlyInterest, 2)}
+          <p className="text-white font-bold text-xl" data-testid="yearly-interest">
+            {borrowApr.toFixed(1)}% APR
           </p>
           <p className="text-white/40 text-xs mt-1">
             ~{formatCurrency(simulatedResult.yearlyInterest, 2)}/year
