@@ -31,7 +31,7 @@ test.describe("Wallet Page - Embedded Wallet (No Loan)", () => {
 
     test("should contain Assets text or loading state", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         const content = await page.content();
         // Either shows Assets section or skeleton loading
@@ -42,7 +42,7 @@ test.describe("Wallet Page - Embedded Wallet (No Loan)", () => {
 
     test("should display action buttons", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         const content = await page.content();
         // Look for action-related content
@@ -57,7 +57,7 @@ test.describe("Wallet Page - External Wallet (With Loan)", () => {
 
     test("should render wallet page content", async ({ page }) => {
         await page.goto("/wallet");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         // Verify page loads with content
         const content = await page.content();
