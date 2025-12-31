@@ -13,6 +13,7 @@ interface WalletBalanceContextType {
   error: string | null;
   refetchBalances: () => Promise<void>;
   wbtcBalance: number;
+  usdtBalance: number;
 }
 
 const WalletBalanceContext = createContext<WalletBalanceContextType | undefined>(undefined);
@@ -25,10 +26,15 @@ function WalletBalanceProvider({ children }: { children: React.ReactNode }) {
     return walletBalanceData.assets.find((a) => a.symbol === "WBTC")?.amount || 0;
   }, [walletBalanceData.assets]);
 
+  const usdtBalance = useMemo(() => {
+    return walletBalanceData.assets.find((a) => a.symbol === "USDT")?.amount || 0;
+  }, [walletBalanceData.assets]);
+
   const contextValue = useMemo(() => ({
     ...walletBalanceData,
     wbtcBalance,
-  }), [walletBalanceData, wbtcBalance]);
+    usdtBalance,
+  }), [walletBalanceData, wbtcBalance, usdtBalance]);
 
   return (
     <WalletBalanceContext.Provider value={contextValue}>

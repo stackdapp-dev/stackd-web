@@ -2,7 +2,7 @@
 
 import PageHeader from "@/components/common/PageHeader";
 import TokenIcon from "@/components/common/TokenIcon";
-import LoanSimulator from "@/components/wallet/LoanSimulator";
+import LoanSimulator, { type SimulatorMode } from "@/components/wallet/LoanSimulator";
 import Card from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import MaskedValue from "@/components/ui/maskedValue";
@@ -21,7 +21,7 @@ export default function LoanDetailsPage() {
     const visibility = useVisibility();
     const router = useRouter();
     const [showCollateralModal, setShowCollateralModal] = useState(false);
-    const [showSimulatorModal, setShowSimulatorModal] = useState(false);
+    const [activeModal, setActiveModal] = useState<SimulatorMode | null>(null);
     const MIN_BORROWABLE_AMOUNT = 1;
 
     const { wbtcBalance, refetchBalances } = useWalletBalanceContext();
@@ -63,16 +63,24 @@ export default function LoanDetailsPage() {
                 const hasLent = await startLend();
                 if (hasLent) {
                     await Promise.all([refetchBalances(), refetchLoanData()]);
-                    setShowSimulatorModal(true);
+                    setActiveModal("borrow");
                 }
             } else if (borrowableAmount > MIN_BORROWABLE_AMOUNT) {
-                setShowSimulatorModal(true);
+                setActiveModal("borrow");
             } else {
                 setShowCollateralModal(true);
             }
         } catch (error) {
             console.error("Error during borrow process:", error);
         }
+    };
+
+    const handleAddCollateral = () => {
+        setActiveModal("addCollateral");
+    };
+
+    const handleRepay = () => {
+        setActiveModal("repay");
     };
 
     return (
@@ -162,25 +170,25 @@ export default function LoanDetailsPage() {
 
                 {/* Add Collateral Button */}
                 <button
-                    onClick={() => router.push("/wallet/deposit/WBTC")}
+                    onClick={handleAddCollateral}
                     className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
                 >
                     <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-500/20 border border-purple-500/30">
                         <Plus className="w-5 h-5 text-purple-400" />
                     </div>
-                    <span className="text-white/70 text-sm">Add</span>
+                    <span className="text-white/70 text-sm text-center leading-tight">Add<br/>Collateral</span>
                 </button>
 
-                {/* Repay Button */}
+                {/* Repay Loan Button */}
                 <button
-                    onClick={() => router.push("/wallet/tx/repay")}
+                    onClick={handleRepay}
                     disabled={!hasBorrowed}
                     className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:hover:bg-white/5"
                 >
                     <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-500/20 border border-blue-500/30">
                         <RotateCcw className="w-5 h-5 text-blue-400" />
                     </div>
-                    <span className="text-white/70 text-sm">Repay</span>
+                    <span className="text-white/70 text-sm text-center leading-tight">Repay<br/>Loan</span>
                 </button>
             </div>
 
@@ -273,12 +281,12 @@ export default function LoanDetailsPage() {
             </div>
 
             {/* Simulator Slide-up Modal */}
-            {showSimulatorModal && (
+            {activeModal && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/60 transition-opacity"
-                        onClick={() => setShowSimulatorModal(false)}
+                        onClick={() => setActiveModal(null)}
                     />
                     {/* Modal Content */}
                     <div className="relative w-full max-w-xl bg-slate-900 rounded-t-3xl p-6 pb-safe animate-slide-up max-h-[90vh] overflow-y-auto">
@@ -288,9 +296,13 @@ export default function LoanDetailsPage() {
                         </div>
                         {/* Header */}
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-white text-xl font-semibold">Borrow USDT</h2>
+                            <h2 className="text-white text-xl font-semibold">
+                                {activeModal === "borrow" && "Borrow USDT"}
+                                {activeModal === "addCollateral" && "Add Collateral"}
+                                {activeModal === "repay" && "Repay Loan"}
+                            </h2>
                             <button
-                                onClick={() => setShowSimulatorModal(false)}
+                                onClick={() => setActiveModal(null)}
                                 className="text-white/50 hover:text-white transition-colors"
                             >
                                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -299,7 +311,7 @@ export default function LoanDetailsPage() {
                             </button>
                         </div>
                         {/* Simulator Content */}
-                        <LoanSimulator />
+                        <LoanSimulator mode={activeModal} onComplete={() => setActiveModal(null)} />
                     </div>
                 </div>
             )}

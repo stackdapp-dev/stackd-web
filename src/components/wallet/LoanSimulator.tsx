@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
@@ -15,25 +15,35 @@ import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useCompound } from "@/hooks/useCompound";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
-import { RotateCcw, AlertTriangle } from "lucide-react";
+import { RotateCcw, AlertTriangle, CheckCircle } from "lucide-react";
 import { parseUnits } from "viem";
 
+export type SimulatorMode = "borrow" | "addCollateral" | "repay";
+
+interface LoanSimulatorProps {
+  mode?: SimulatorMode;
+  onComplete?: () => void;
+}
+
 /**
- * LoanSimulator - Main simulator component with collateral and borrow sliders
+ * LoanSimulator - Unified simulator component for borrow, add collateral, and repay
  *
- * Uses existing useLoanCalculationsContext for current loan data
- * Shows SimulatorGauge and SimulatorResults for visualization
- * "Apply to Loan" button navigates to borrow page
+ * Modes:
+ * - borrow: Withdraw USDT from Compound (increases debt)
+ * - addCollateral: Supply WBTC to Compound (increases collateral)
+ * - repay: Supply USDT to Compound (decreases debt)
  */
-export default function LoanSimulator() {
-  const { refetchBalances } = useWalletBalanceContext();
+export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimulatorProps) {
+  const { refetchBalances, wbtcBalance, usdtBalance } = useWalletBalanceContext();
   const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
   const getPrice = useGetTokenPrice();
-  const { withdraw } = useCompound();
+  const { withdraw, supply, approve, allowance } = useCompound();
 
   // Modal and processing state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [needsApproval, setNeedsApproval] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   const {
     suppliedAssets,
@@ -51,13 +61,73 @@ export default function LoanSimulator() {
   const currentCollateralAmount = currentCollateral?.amount || 0;
   const currentBorrowedAmount = currentBorrowed?.usdValue || 0;
 
-  // Simulator state - store borrow as string for input
-  const [borrowInput, setBorrowInput] = useState(String(currentBorrowedAmount));
+  // Mode-specific configuration
+  const modeConfig = useMemo(() => {
+    switch (mode) {
+      case "addCollateral":
+        return {
+          title: "Add Collateral",
+          inputLabel: "Collateral Amount (WBTC)",
+          tokenSymbol: "WBTC" as const,
+          actionButtonText: "Add Collateral",
+          maxValue: wbtcBalance, // Max is wallet WBTC balance
+          isRiskReducing: true,
+          warningText: "This will increase your collateral and reduce liquidation risk.",
+          successIcon: true,
+        };
+      case "repay":
+        return {
+          title: "Repay Loan",
+          inputLabel: "Repay Amount (USDT)",
+          tokenSymbol: "USDT" as const,
+          actionButtonText: "Repay Loan",
+          maxValue: Math.min(usdtBalance, currentBorrowedAmount), // Max is min of wallet balance and borrowed
+          isRiskReducing: true,
+          warningText: "This will reduce your borrowed amount and liquidation risk.",
+          successIcon: true,
+        };
+      default: // borrow
+        return {
+          title: "Borrow",
+          inputLabel: "Borrow Amount (USDT)",
+          tokenSymbol: "USDT" as const,
+          actionButtonText: "Borrow",
+          maxValue: 0, // Calculated dynamically based on borrowCapacity
+          isRiskReducing: false,
+          warningText: "This will increase your LTV and the risk of liquidation.",
+          successIcon: false,
+        };
+    }
+  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount]);
 
-  // Parse input value for calculations (collateral is fixed)
-  const simulatedBorrow = parseFloat(borrowInput) || 0;
+  // Simulator state - store input as string
+  const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "0");
 
-  // Calculate current simulation
+  // Parse input value for calculations
+  const parsedInput = parseFloat(inputValue) || 0;
+
+  // Calculate simulated values based on mode
+  const { simulatedCollateral, simulatedBorrow } = useMemo(() => {
+    switch (mode) {
+      case "addCollateral":
+        return {
+          simulatedCollateral: currentCollateralAmount + parsedInput,
+          simulatedBorrow: currentBorrowedAmount,
+        };
+      case "repay":
+        return {
+          simulatedCollateral: currentCollateralAmount,
+          simulatedBorrow: Math.max(0, currentBorrowedAmount - parsedInput),
+        };
+      default: // borrow
+        return {
+          simulatedCollateral: currentCollateralAmount,
+          simulatedBorrow: parsedInput,
+        };
+    }
+  }, [mode, currentCollateralAmount, currentBorrowedAmount, parsedInput]);
+
+  // Calculate current simulation result
   const currentResult = useMemo((): SimulationResult => {
     return simulateLoan({
       collateralWbtc: currentCollateralAmount,
@@ -69,75 +139,171 @@ export default function LoanSimulator() {
     });
   }, [currentCollateralAmount, currentBorrowedAmount, btcPrice, maxLtv, liquidationRatio, borrowApr]);
 
-  // Calculate simulated result (collateral is fixed, only borrow changes)
+  // Calculate simulated result
   const simulatedResult = useMemo((): SimulationResult => {
     return simulateLoan({
-      collateralWbtc: currentCollateralAmount,
+      collateralWbtc: simulatedCollateral,
       borrowedUsd: simulatedBorrow,
       btcPrice,
       maxLtv,
       liquidationRatio,
       borrowApr,
     });
-  }, [currentCollateralAmount, simulatedBorrow, btcPrice, maxLtv, liquidationRatio, borrowApr]);
+  }, [simulatedCollateral, simulatedBorrow, btcPrice, maxLtv, liquidationRatio, borrowApr]);
 
-  // Max borrow is capped at borrow capacity with a 1% safety buffer
-  // This prevents transaction failures due to precision differences between
-  // JS floating-point calculations and Compound's on-chain uint256 math
-  const maxBorrow = simulatedResult.borrowCapacity * 0.99;
+  // Calculate max borrow with safety buffer for borrow mode
+  const maxBorrow = useMemo(() => {
+    if (mode === "borrow") {
+      return simulatedResult.borrowCapacity * 0.99;
+    }
+    return modeConfig.maxValue;
+  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue]);
 
-  // Check if borrow value has changed
-  const hasChanges = Math.abs(simulatedBorrow - currentBorrowedAmount) > 0.01;
+  // Check if value has changed
+  const hasChanges = useMemo(() => {
+    switch (mode) {
+      case "borrow":
+        return Math.abs(parsedInput - currentBorrowedAmount) > 0.01;
+      case "addCollateral":
+      case "repay":
+        return parsedInput > 0;
+      default:
+        return false;
+    }
+  }, [mode, parsedInput, currentBorrowedAmount]);
 
-  // Handle borrow input change
-  const handleBorrowChange = useCallback(
+  // Calculate amount for transaction
+  const transactionAmount = useMemo(() => {
+    switch (mode) {
+      case "borrow":
+        return Math.max(0, parsedInput - currentBorrowedAmount);
+      case "addCollateral":
+      case "repay":
+        return parsedInput;
+      default:
+        return 0;
+    }
+  }, [mode, parsedInput, currentBorrowedAmount]);
+
+  // Check allowance for supply operations
+  useEffect(() => {
+    const checkAllowance = async () => {
+      if ((mode === "addCollateral" || mode === "repay") && transactionAmount > 0 && allowance) {
+        const tokenMeta = getTokenMetadata(modeConfig.tokenSymbol);
+        if (!tokenMeta) return;
+
+        const tokenAddress = tokenMeta.address as `0x${string}`;
+        const currentAllowance = await allowance(tokenAddress);
+        const amountBigInt = parseUnits(String(transactionAmount), tokenMeta.decimals);
+
+        setNeedsApproval(currentAllowance !== null && currentAllowance < amountBigInt);
+      } else {
+        setNeedsApproval(false);
+      }
+    };
+
+    void checkAllowance();
+  }, [mode, transactionAmount, allowance, modeConfig.tokenSymbol]);
+
+  // Handle input change
+  const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setBorrowInput(e.target.value);
+      setInputValue(e.target.value);
     },
     []
   );
 
-  // Reset to current values
+  // Reset to initial values
   const handleReset = useCallback(() => {
-    setBorrowInput(String(currentBorrowedAmount));
-  }, [currentBorrowedAmount]);
+    setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "0");
+  }, [mode, currentBorrowedAmount]);
 
-  // Calculate additional borrow amount
-  const additionalBorrowAmount = Math.max(0, simulatedBorrow - currentBorrowedAmount);
+  // Set to max value
+  const handleSetMax = useCallback(() => {
+    setInputValue(String(maxBorrow));
+  }, [maxBorrow]);
 
   // Show confirmation modal
-  const handleApplyToLoan = useCallback(() => {
+  const handleApply = useCallback(() => {
     setShowConfirmModal(true);
   }, []);
 
-  // Execute borrow transaction
-  const handleConfirmBorrow = useCallback(async () => {
-    if (isProcessing || additionalBorrowAmount <= 0) return;
+  // Handle approval
+  const handleApprove = useCallback(async () => {
+    if (isApproving) return;
+
+    setIsApproving(true);
+    try {
+      const tokenMeta = getTokenMetadata(modeConfig.tokenSymbol);
+      if (!tokenMeta) throw new Error(`${modeConfig.tokenSymbol} metadata not found`);
+
+      const tokenAddress = tokenMeta.address as `0x${string}`;
+      // Approve max uint256 for convenience
+      const maxAmount = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+      const result = await approve(tokenAddress, maxAmount);
+      if (result.error) throw new Error(result.error);
+
+      setNeedsApproval(false);
+    } catch (err) {
+      console.error("Approval failed:", err);
+    } finally {
+      setIsApproving(false);
+    }
+  }, [isApproving, approve, modeConfig.tokenSymbol]);
+
+  // Execute transaction
+  const handleConfirm = useCallback(async () => {
+    if (isProcessing || transactionAmount <= 0) return;
 
     setIsProcessing(true);
     try {
-      const tokenMeta = getTokenMetadata("USDT");
-      if (!tokenMeta) throw new Error("USDT metadata not found");
+      const tokenMeta = getTokenMetadata(modeConfig.tokenSymbol);
+      if (!tokenMeta) throw new Error(`${modeConfig.tokenSymbol} metadata not found`);
 
       const tokenAddress = tokenMeta.address as `0x${string}`;
-      const amountBigInt = parseUnits(String(additionalBorrowAmount), tokenMeta.decimals);
+      const amountBigInt = parseUnits(String(transactionAmount), tokenMeta.decimals);
 
-      const result = await withdraw(tokenAddress, amountBigInt);
+      let result;
+      if (mode === "borrow") {
+        // Borrow = withdraw USDT from Compound
+        result = await withdraw(tokenAddress, amountBigInt);
+      } else {
+        // Add collateral or repay = supply to Compound
+        result = await supply(tokenAddress, amountBigInt);
+      }
+
       if (result.error) throw new Error(result.error);
 
       await Promise.all([refetchBalances(), refetchLoanData()]);
       setShowConfirmModal(false);
-      setBorrowInput(String(simulatedBorrow)); // Update input to reflect new borrowed amount
+
+      // Reset input and call completion callback
+      if (mode !== "borrow") {
+        setInputValue("0");
+      } else {
+        setInputValue(String(parsedInput));
+      }
+
+      onComplete?.();
     } catch (err) {
-      console.error("Borrow failed:", err);
+      console.error(`${mode} failed:`, err);
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, additionalBorrowAmount, withdraw, refetchBalances, refetchLoanData, simulatedBorrow]);
+  }, [isProcessing, transactionAmount, mode, modeConfig.tokenSymbol, withdraw, supply, refetchBalances, refetchLoanData, parsedInput, onComplete]);
+
+  // Format display values based on mode
+  const formatInputDisplay = useCallback((value: number) => {
+    if (mode === "addCollateral") {
+      return `${formatAmount(value, 8)} WBTC`;
+    }
+    return formatCurrency(value, 2);
+  }, [mode]);
 
   return (
     <div className="flex flex-col gap-6">
-      {/* LTV Gauge with Borrow Input */}
+      {/* LTV Gauge with Input */}
       <Card appearance="glassDark" padding="default">
         <SimulatorGauge
           currentLtv={currentResult.ltv}
@@ -146,19 +312,22 @@ export default function LoanSimulator() {
           liquidationRatio={liquidationRatio}
         />
 
-        {/* Borrow Input */}
+        {/* Input Field */}
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-2">
-              <TokenIcon symbol="USDT" width={24} height={24} />
-              <span className="text-white/70 text-sm">Borrow Amount (USDT)</span>
+              <TokenIcon symbol={modeConfig.tokenSymbol} width={24} height={24} />
+              <span className="text-white/70 text-sm">{modeConfig.inputLabel}</span>
             </div>
             <button
               type="button"
-              onClick={() => setBorrowInput(String(maxBorrow))}
+              onClick={handleSetMax}
               className="text-amber-500 text-xs hover:text-amber-400 transition-colors"
             >
-              Max: {formatCurrency(maxBorrow, 0, "$", false)}
+              Max: {mode === "addCollateral"
+                ? `${formatAmount(maxBorrow, 6)} WBTC`
+                : formatCurrency(maxBorrow, 0, "$", false)
+              }
             </button>
           </div>
 
@@ -166,8 +335,8 @@ export default function LoanSimulator() {
             <input
               type="text"
               inputMode="decimal"
-              value={borrowInput}
-              onChange={handleBorrowChange}
+              value={inputValue}
+              onChange={handleInputChange}
               className={cn(
                 "w-full px-4 py-3 rounded-lg",
                 "bg-white/5 border border-white/10",
@@ -176,10 +345,10 @@ export default function LoanSimulator() {
                 "placeholder:text-white/30"
               )}
               placeholder="0"
-              data-testid="borrow-input"
+              data-testid="simulator-input"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">
-              USD
+              {mode === "addCollateral" ? "WBTC" : "USD"}
             </span>
           </div>
         </div>
@@ -202,8 +371,8 @@ export default function LoanSimulator() {
             <span className="text-white/70 text-sm">Reset</span>
           </button>
           <button
-            onClick={handleApplyToLoan}
-            disabled={!hasChanges}
+            onClick={handleApply}
+            disabled={!hasChanges || transactionAmount <= 0}
             className={cn(
               "flex flex-col items-center justify-center gap-2 py-4",
               "rounded-2xl border border-white/10 bg-white/5",
@@ -212,13 +381,36 @@ export default function LoanSimulator() {
             )}
             data-testid="apply-button"
           >
-            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-500/20 border border-amber-500/30">
-              <svg className="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className={cn(
+              "w-12 h-12 rounded-full flex items-center justify-center border",
+              mode === "borrow"
+                ? "bg-amber-500/20 border-amber-500/30"
+                : mode === "addCollateral"
+                  ? "bg-purple-500/20 border-purple-500/30"
+                  : "bg-blue-500/20 border-blue-500/30"
+            )}>
+              <svg
+                className={cn(
+                  "w-5 h-5",
+                  mode === "borrow" ? "text-amber-500" : mode === "addCollateral" ? "text-purple-400" : "text-blue-400"
+                )}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M22 2L11 13" />
                 <path d="M22 2L15 22L11 13L2 9L22 2Z" />
               </svg>
             </div>
-            <span className="text-amber-500 text-sm">Borrow</span>
+            <span className={cn(
+              "text-sm",
+              mode === "borrow" ? "text-amber-500" : mode === "addCollateral" ? "text-purple-400" : "text-blue-400"
+            )}>
+              {modeConfig.actionButtonText}
+            </span>
           </button>
         </div>
       </Card>
@@ -239,11 +431,16 @@ export default function LoanSimulator() {
             </div>
             <div className="text-right">
               <p className="text-white font-semibold">
-                {formatAmount(currentCollateralAmount, 4)} WBTC
+                {formatAmount(mode === "addCollateral" ? simulatedCollateral : currentCollateralAmount, 4)} WBTC
               </p>
               <p className="text-white/50 text-sm">
-                {formatCurrency(currentCollateralAmount * btcPrice)}
+                {formatCurrency((mode === "addCollateral" ? simulatedCollateral : currentCollateralAmount) * btcPrice)}
               </p>
+              {mode === "addCollateral" && parsedInput > 0 && (
+                <p className="text-green-400 text-xs mt-1">
+                  +{formatAmount(parsedInput, 6)} WBTC
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -261,17 +458,20 @@ export default function LoanSimulator() {
         />
       </div>
 
-      {/* Borrow Confirmation Modal */}
+      {/* Confirmation Modal */}
       <Modal
         isOpen={showConfirmModal}
-        onClose={() => !isProcessing && setShowConfirmModal(false)}
-        title={isProcessing ? "Processing" : "Confirm Borrow"}
+        onClose={() => !isProcessing && !isApproving && setShowConfirmModal(false)}
+        title={isProcessing || isApproving ? "Processing" : `Confirm ${modeConfig.title}`}
         icon={
-          isProcessing ? (
+          isProcessing || isApproving ? (
             <Loading />
           ) : (
-            <div className="bg-amber-500/20 rounded-full p-4">
-              <TokenIcon symbol="USDT" width={40} height={40} />
+            <div className={cn(
+              "rounded-full p-4",
+              modeConfig.successIcon ? "bg-green-500/20" : "bg-amber-500/20"
+            )}>
+              <TokenIcon symbol={modeConfig.tokenSymbol} width={40} height={40} />
             </div>
           )
         }
@@ -280,43 +480,97 @@ export default function LoanSimulator() {
             <Text tone="muted">
               Please confirm the transaction in your wallet.
             </Text>
+          ) : isApproving ? (
+            <Text tone="muted">
+              Please approve token spending in your wallet.
+            </Text>
           ) : (
             <div className="flex flex-col gap-4">
               {/* Amount Display */}
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <p className="text-white/50 text-sm mb-1">Borrow Amount</p>
+                <p className="text-white/50 text-sm mb-1">{modeConfig.title} Amount</p>
                 <p className="text-3xl font-bold text-white">
-                  {formatCurrency(additionalBorrowAmount, 2)}
+                  {formatInputDisplay(transactionAmount)}
                 </p>
-                <p className="text-white/40 text-sm mt-1">USDT</p>
+                <p className="text-white/40 text-sm mt-1">{modeConfig.tokenSymbol}</p>
               </div>
 
-              {/* Summary */}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">Current Borrowed</span>
-                <span className="text-white">{formatCurrency(currentBorrowedAmount, 2)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">New Total</span>
-                <span className="text-amber-400 font-semibold">{formatCurrency(simulatedBorrow, 2)}</span>
-              </div>
+              {/* Summary based on mode */}
+              {mode === "borrow" && (
+                <>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">Current Borrowed</span>
+                    <span className="text-white">{formatCurrency(currentBorrowedAmount, 2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">New Total</span>
+                    <span className="text-amber-400 font-semibold">{formatCurrency(parsedInput, 2)}</span>
+                  </div>
+                </>
+              )}
 
-              {/* Warning */}
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                <p className="text-amber-400/80 text-xs">
-                  This will increase your LTV and the risk of liquidation.
+              {mode === "addCollateral" && (
+                <>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">Current Collateral</span>
+                    <span className="text-white">{formatAmount(currentCollateralAmount, 4)} WBTC</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">New Total</span>
+                    <span className="text-purple-400 font-semibold">{formatAmount(simulatedCollateral, 4)} WBTC</span>
+                  </div>
+                </>
+              )}
+
+              {mode === "repay" && (
+                <>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">Current Borrowed</span>
+                    <span className="text-white">{formatCurrency(currentBorrowedAmount, 2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">Remaining Debt</span>
+                    <span className="text-blue-400 font-semibold">{formatCurrency(simulatedBorrow, 2)}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Warning/Success Banner */}
+              <div className={cn(
+                "border rounded-lg px-3 py-2 flex items-start gap-2",
+                modeConfig.successIcon
+                  ? "bg-green-500/10 border-green-500/20"
+                  : "bg-amber-500/10 border-amber-500/20"
+              )}>
+                {modeConfig.successIcon ? (
+                  <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                )}
+                <p className={cn(
+                  "text-xs",
+                  modeConfig.successIcon ? "text-green-400/80" : "text-amber-400/80"
+                )}>
+                  {modeConfig.warningText}
                 </p>
               </div>
             </div>
           )
         }
-        primaryButtonText={isProcessing ? "Processing..." : "Borrow"}
-        primaryButtonAction={handleConfirmBorrow}
+        primaryButtonText={
+          isProcessing
+            ? "Processing..."
+            : isApproving
+              ? "Approving..."
+              : needsApproval
+                ? "Approve & Continue"
+                : modeConfig.actionButtonText
+        }
+        primaryButtonAction={needsApproval ? handleApprove : handleConfirm}
         secondaryButtonText="Cancel"
         secondaryButtonAction={() => setShowConfirmModal(false)}
-        showCloseButton={!isProcessing}
-        showActionButtons={!isProcessing}
+        showCloseButton={!isProcessing && !isApproving}
+        showActionButtons={!isProcessing && !isApproving}
       />
     </div>
   );
