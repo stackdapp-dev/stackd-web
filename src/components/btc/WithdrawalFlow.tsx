@@ -216,6 +216,7 @@ export function WithdrawalFlow({
                 setError(null);
               }}
               className="bg-white/5 border-white/10 text-white"
+              data-testid="wbtc-amount-input"
             />
             {wbtcBalance && (
               <div className="flex justify-between text-xs">
@@ -255,9 +256,13 @@ export function WithdrawalFlow({
                 'bg-white/5 border-white/10 text-white',
                 addressError && addressTouched && 'border-red-500/50'
               )}
+              data-testid="btc-address-input"
             />
             {addressError && addressTouched && (
-              <p className="text-xs text-red-400">{addressError}</p>
+              <p className="text-xs text-red-400" data-testid="address-error">{addressError}</p>
+            )}
+            {!addressError && addressTouched && btcAddress && (
+              <p className="text-xs text-green-400" data-testid="address-valid">Valid address</p>
             )}
           </div>
 
@@ -272,6 +277,7 @@ export function WithdrawalFlow({
             onClick={handleGetQuote}
             disabled={isLoading || !canSubmit}
             className="w-full"
+            data-testid="get-quote-btn"
           >
             {isLoading ? (
               <>
@@ -298,17 +304,21 @@ export function WithdrawalFlow({
       </div>
 
       {/* Quote Display */}
-      <div className="bg-white/5 rounded-xl p-4 space-y-3">
+      <div className="bg-white/5 rounded-xl p-4 space-y-3" data-testid="fee-breakdown">
         <div className="flex justify-between text-sm">
           <span className="text-white/60">You send</span>
           <span className="text-white font-medium">{wbtcAmount} WBTC</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-white/60">Expected BTC</span>
-          <span className="text-[#ffa02d] font-medium">{quote.expectedOutput} BTC</span>
+          <span className="text-[#ffa02d] font-medium" data-testid="quote-output">{quote.expectedOutput} BTC</span>
         </div>
         <div className="border-t border-white/10 pt-3">
           <div className="flex justify-between text-sm">
+            <span className="text-white/60">Network Fee</span>
+            <span className="text-white font-mono text-xs">~0.0001 BTC</span>
+          </div>
+          <div className="flex justify-between text-sm mt-2">
             <span className="text-white/60">Destination</span>
             <span className="text-white font-mono text-xs">
               {btcAddress.slice(0, 10)}...{btcAddress.slice(-8)}
@@ -331,6 +341,7 @@ export function WithdrawalFlow({
             onClick={handleApprove}
             disabled={isApproving}
             className="w-full"
+            data-testid="approve-btn"
           >
             {isApproving ? (
               <>
@@ -346,6 +357,7 @@ export function WithdrawalFlow({
             onClick={handleWithdraw}
             disabled={isLoading}
             className="w-full"
+            data-testid="swap-btn"
           >
             {isLoading ? (
               <>
