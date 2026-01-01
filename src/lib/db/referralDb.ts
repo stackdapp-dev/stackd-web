@@ -10,6 +10,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { dbService as mockDbService } from './mock';
 import type { User } from './supabase.types';
 import type { ReferralStats } from './types';
+import { getTopDepositors, getDepositorByAddress } from '@/lib/compound/subgraph';
 
 // Create Supabase client with service role key for server-side operations (bypasses RLS)
 // Only create if env vars are present (prevents CI/CD failures)
@@ -361,6 +362,118 @@ class ReferralDatabaseService {
                 next_tier_remaining: '0/3 Referrals',
                 recent_invites: [],
             };
+        }
+    }
+
+    /**
+     * Get leaderboard data (top referrers and top by deposits)
+     */
+    async getLeaderboard(currentUserWallet?: string): Promise<{
+        topReferrers: { rank: number; walletAddress: string; referralCount: number; totalDeposits: number; isCurrentUser: boolean }[];
+        topByDeposits: { rank: number; walletAddress: string; referralCount: number; totalDeposits: number; isCurrentUser: boolean }[];
+        userRank: { byReferrals: number; byDeposits: number } | null;
+    }> {
+        // Fallback to empty data if Supabase not configured
+        if (!isSupabaseConfigured() || !db) {
+            return {
+                topReferrers: [],
+                topByDeposits: [],
+                userRank: null,
+            };
+        }
+
+        try {
+            const normalizedWallet = currentUserWallet?.toLowerCase();
+
+            // Get all users with their referral counts
+            // Note: total_deposits is not in the DB schema yet - would need on-chain data
+            const { data: usersWithReferrals, error: usersError } = await db.from('users')
+                .select(`
+                    id,
+                    wallet_address
+                `);
+
+            console.log('[ReferralDB] Leaderboard query - users count:', usersWithReferrals?.length || 0, 'error:', usersError);
+
+            if (!usersWithReferrals || usersError) {
+                console.error('[ReferralDB] Failed to fetch users:', usersError);
+                return { topReferrers: [], topByDeposits: [], userRank: null };
+            }
+
+            // Count referrals for each user (users who have referred_by = user.id)
+            const userReferralCounts: Map<string, number> = new Map();
+            for (const user of usersWithReferrals) {
+                const { count } = await db.from('users')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('referred_by', user.id);
+                userReferralCounts.set(user.id, count || 0);
+            }
+
+            // Build entries with referral counts
+            // Note: totalDeposits is 0 for now - would need on-chain data integration
+            const entries = usersWithReferrals.map(user => ({
+                walletAddress: user.wallet_address,
+                referralCount: userReferralCounts.get(user.id) || 0,
+                totalDeposits: 0,
+                isCurrentUser: normalizedWallet ? user.wallet_address.toLowerCase() === normalizedWallet : false,
+            }));
+
+            // Log referral counts for debugging
+            const usersWithReferrals2 = entries.filter(e => e.referralCount > 0);
+            console.log('[ReferralDB] Users with referrals:', usersWithReferrals2.length, usersWithReferrals2.slice(0, 3));
+
+            // Sort by referral count for top referrers
+            const sortedByReferrals = [...entries]
+                .filter(e => e.referralCount > 0)
+                .sort((a, b) => b.referralCount - a.referralCount)
+                .slice(0, 10)
+                .map((e, i) => ({ ...e, rank: i + 1 }));
+
+            // Fetch top depositors from Compound v3 subgraph
+            const subgraphDepositors = await getTopDepositors(10);
+            console.log('[ReferralDB] Subgraph depositors fetched:', subgraphDepositors.length);
+
+            // Transform subgraph data to leaderboard format
+            const sortedByDeposits = subgraphDepositors.map((depositor, index) => ({
+                rank: index + 1,
+                walletAddress: depositor.walletAddress,
+                referralCount: 0, // Deposits tab doesn't need referral count
+                totalDeposits: depositor.totalDepositsUsd,
+                isCurrentUser: normalizedWallet ? depositor.walletAddress.toLowerCase() === normalizedWallet : false,
+            }));
+
+            // Calculate user's rank if they're authenticated
+            let userRank: { byReferrals: number; byDeposits: number } | null = null;
+            if (normalizedWallet) {
+                const userEntry = entries.find(e => e.isCurrentUser);
+                if (userEntry) {
+                    // Count users with more referrals
+                    const referralRank = entries.filter(e => e.referralCount > userEntry.referralCount).length + 1;
+
+                    // Get user's deposit amount from subgraph for deposit rank
+                    let depositsRank = 0;
+                    const userDeposit = await getDepositorByAddress(normalizedWallet);
+                    if (userDeposit && userDeposit.totalDepositsUsd > 0) {
+                        // Count depositors with more deposits than user
+                        depositsRank = subgraphDepositors.filter(d => d.totalDepositsUsd > userDeposit.totalDepositsUsd).length + 1;
+                    }
+
+                    userRank = {
+                        byReferrals: referralRank,
+                        byDeposits: depositsRank,
+                    };
+                }
+            }
+
+            console.log('[ReferralDB] Final response - topReferrers:', sortedByReferrals.length, 'topByDeposits:', sortedByDeposits.length);
+            return {
+                topReferrers: sortedByReferrals,
+                topByDeposits: sortedByDeposits,
+                userRank,
+            };
+        } catch (error) {
+            console.error('[ReferralDB] Error fetching leaderboard:', error);
+            return { topReferrers: [], topByDeposits: [], userRank: null };
         }
     }
 }
