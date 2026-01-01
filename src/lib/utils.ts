@@ -134,6 +134,34 @@ export function shortenAddress(address: string, chars = 4): string {
  * @param user - Privy user object
  * @returns Human-readable identifier string
  */
+/**
+ * Formats a token amount from its smallest unit (wei) to a human-readable string.
+ * Preserves significant digits for small fractional amounts (e.g., 0.00012745 WBTC).
+ *
+ * @param amountWei - The amount in the token's smallest unit (as string or bigint)
+ * @param decimals - The number of decimals for the token (e.g., 8 for WBTC, 6 for USDT)
+ * @returns Formatted string with trailing zeros removed but significant digits preserved
+ */
+export function formatTokenAmount(amountWei: string | bigint, decimals: number): string {
+  const amount = typeof amountWei === "string" ? BigInt(amountWei) : amountWei;
+  const divisor = BigInt(10 ** decimals);
+  const wholePart = amount / divisor;
+  const fractionalPart = amount % divisor;
+
+  const formatted = `${wholePart}.${fractionalPart.toString().padStart(decimals, "0")}`;
+
+  // Remove trailing zeros but preserve significant digits
+  const trimmed = formatted.replace(/\.?0+$/, "");
+
+  // If trimming removed all decimals but there was a fractional part,
+  // keep the significant digits (e.g., 0.00012745 should not become 0)
+  if (trimmed === wholePart.toString() && fractionalPart > 0n) {
+    return formatted.replace(/0+$/, "") || formatted;
+  }
+
+  return trimmed || formatted;
+}
+
 export function getPrivyUserIdentifier(user: any): string {
   if (!user) return "--";
 

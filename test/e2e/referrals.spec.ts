@@ -14,9 +14,7 @@ test.describe("Rewards Page - Unauthenticated State", () => {
     test.beforeEach(async ({ page }) => {
         await page.goto("/referrals");
         // Wait for page to load
-        await page.waitForLoadState('networkidle');
-        // Give hydration time to complete
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState("domcontentloaded");
     });
 
     test("should display page header", async ({ page }) => {

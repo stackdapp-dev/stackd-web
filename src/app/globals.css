@@ -172,6 +172,26 @@ body::-webkit-scrollbar {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* Slide-up animation for bottom sheet modals */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Bottom safe area padding for modals */
+.pb-safe {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
 /* Native Touch Utilities */
 
 /* Prevent text selection on interactive elements */

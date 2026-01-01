@@ -1,15 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import LoanSimulator from "@/components/wallet/LoanSimulator";
+import { showInfoToast } from "@/components/ui/custom-toast";
+import { formatCurrency, formatPercent, maskString, MASK_LONG, MASK_SHORT } from "@/lib/utils";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
+import { useVisibility } from "@/providers/visibility";
 import { useRouter } from "next/navigation";
 
 export default function ActiveLoans() {
     const router = useRouter();
+    const visibility = useVisibility();
     const { loanCalcs } = useLoanCalculationsContext();
-    const { ltv, borrowApr, borrowedAssets, netLoanValue, maxLtv } = loanCalcs;
+    const [showSimulatorModal, setShowSimulatorModal] = useState(false);
+    const { ltv, borrowApr, borrowedAssets, netLoanValue, maxLtv, suppliedAssets } = loanCalcs;
+
+    // Check if user has WBTC collateral
+    const wbtcCollateral = suppliedAssets.find((a) => a.symbol === "WBTC");
+    const hasCollateral = (wbtcCollateral?.amount || 0) > 0;
+
+    const handleBorrowClick = () => {
+        if (!hasCollateral) {
+            showInfoToast("Bitcoin deposit required before borrowing");
+            setTimeout(() => {
+                router.push("/wallet/deposit/BTC");
+            }, 2000);
+            return;
+        }
+        setShowSimulatorModal(true);
+    };
 
     // Check if there's an active loan
     const hasActiveLoan = borrowedAssets.some((b) => b.amount > 0);
@@ -39,9 +60,9 @@ export default function ActiveLoans() {
                         </div>
                         <div className="text-right">
                             <p className="text-white font-semibold">
-                                Net PnL: <span className="text-green-400">{formatCurrency(netLoanValue)}</span>
+                                PnL: <span className="text-green-400">{maskString(formatCurrency(netLoanValue), visibility.visible, MASK_LONG)}</span>
                             </p>
-                            <p className="text-white/50 text-sm">{formatPercent(borrowApr)} APR</p>
+                            <p className="text-white/50 text-sm">{maskString(formatPercent(borrowApr), visibility.visible, MASK_SHORT)} APR</p>
                         </div>
                     </div>
 
@@ -53,18 +74,50 @@ export default function ActiveLoans() {
                                 style={{ width: `${ltvBarWidth}%` }}
                             />
                         </div>
-                        <p className="text-white/60 text-sm mt-1">{formatPercent(ltv)} LTV</p>
+                        <p className="text-white/60 text-sm mt-1">{maskString(formatPercent(ltv), visibility.visible, MASK_SHORT)} LTV</p>
                     </div>
                 </Card>
             ) : (
                 // Borrow USDT Button - for fresh wallets
                 <Button
-                    onClick={() => router.push("/wallet/loan")}
+                    onClick={handleBorrowClick}
                     size="lg"
                     className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
                 >
                     Borrow USDT
                 </Button>
+            )}
+
+            {/* Simulator Slide-up Modal */}
+            {showSimulatorModal && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 transition-opacity"
+                        onClick={() => setShowSimulatorModal(false)}
+                    />
+                    {/* Modal Content */}
+                    <div className="relative w-full max-w-xl bg-slate-900 rounded-t-3xl p-6 pb-safe animate-slide-up max-h-[90vh] overflow-y-auto">
+                        {/* Handle bar */}
+                        <div className="flex justify-center mb-4">
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+                        </div>
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-white text-xl font-semibold">Borrow USDT</h2>
+                            <button
+                                onClick={() => setShowSimulatorModal(false)}
+                                className="text-white/50 hover:text-white transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        {/* Simulator Content */}
+                        <LoanSimulator />
+                    </div>
+                </div>
             )}
         </div>
     );

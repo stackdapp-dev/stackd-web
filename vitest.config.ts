@@ -6,9 +6,12 @@ export default defineConfig({
     plugins: [react()],
     test: {
         globals: true,
-        environment: "jsdom",
+        environment: "node",
         setupFiles: ["./test/setup.ts"],
         include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
+        environmentMatchGlobs: [
+            ["test/**/*.tsx", "jsdom"],
+        ],
         coverage: {
             provider: "v8",
             reporter: ["text", "json", "html"],

@@ -80,7 +80,7 @@ export function getTierBenefits(tier: UserTier): string {
         case 'SILVER':
             return 'Payouts unlocked';
         case 'GOLD':
-            return '+5% APY boost';
+            return 'Priority support';
         case 'PLATINUM':
             return 'Priority support';
         case 'BLACK':

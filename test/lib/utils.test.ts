@@ -16,6 +16,7 @@ import {
     formatDate,
     shortenAddress,
     getPrivyUserIdentifier,
+    formatTokenAmount,
 } from "@/lib/utils";
 
 describe("cn (className merge)", () => {
@@ -261,5 +262,77 @@ describe("getPrivyUserIdentifier", () => {
 
     it("should return '--' for empty user", () => {
         expect(getPrivyUserIdentifier({})).toBe("--");
+    });
+});
+
+describe("formatTokenAmount", () => {
+    describe("WBTC formatting (8 decimals)", () => {
+        it("should format small WBTC amounts correctly (the bug fix)", () => {
+            // 12745 wei with 8 decimals = 0.00012745 WBTC
+            // This was the bug: it was returning "0" instead of "0.00012745"
+            expect(formatTokenAmount("12745", 8)).toBe("0.00012745");
+        });
+
+        it("should format very small WBTC amounts", () => {
+            // 1 wei = 0.00000001 WBTC
+            expect(formatTokenAmount("1", 8)).toBe("0.00000001");
+        });
+
+        it("should format whole WBTC amounts", () => {
+            // 100000000 wei = 1 WBTC
+            expect(formatTokenAmount("100000000", 8)).toBe("1");
+        });
+
+        it("should format WBTC with mixed whole and fractional parts", () => {
+            // 150000000 wei = 1.5 WBTC
+            expect(formatTokenAmount("150000000", 8)).toBe("1.5");
+        });
+
+        it("should handle WBTC amounts with trailing zeros in fractional part", () => {
+            // 123450000 wei = 1.2345 WBTC
+            expect(formatTokenAmount("123450000", 8)).toBe("1.2345");
+        });
+    });
+
+    describe("USDT formatting (6 decimals)", () => {
+        it("should format whole USDT amounts", () => {
+            // 1000000 wei = 1 USDT
+            expect(formatTokenAmount("1000000", 6)).toBe("1");
+        });
+
+        it("should format USDT with cents", () => {
+            // 1500000 wei = 1.5 USDT
+            expect(formatTokenAmount("1500000", 6)).toBe("1.5");
+        });
+
+        it("should format small USDT amounts", () => {
+            // 1000 wei = 0.001 USDT
+            expect(formatTokenAmount("1000", 6)).toBe("0.001");
+        });
+
+        it("should format USDT with full precision", () => {
+            // 1234567 wei = 1.234567 USDT
+            expect(formatTokenAmount("1234567", 6)).toBe("1.234567");
+        });
+    });
+
+    describe("edge cases", () => {
+        it("should handle zero amount", () => {
+            expect(formatTokenAmount("0", 8)).toBe("0");
+        });
+
+        it("should handle bigint input", () => {
+            expect(formatTokenAmount(12745n, 8)).toBe("0.00012745");
+        });
+
+        it("should handle large amounts", () => {
+            // 1000000000000 wei with 8 decimals = 10000 WBTC
+            expect(formatTokenAmount("1000000000000", 8)).toBe("10000");
+        });
+
+        it("should preserve all significant digits for fractional amounts", () => {
+            // 12345678 wei with 8 decimals = 0.12345678
+            expect(formatTokenAmount("12345678", 8)).toBe("0.12345678");
+        });
     });
 });
