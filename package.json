@@ -36,6 +36,7 @@
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.89.0",
     "@tanstack/react-form": "^1.23.8",
+    "@tanstack/react-query": "^5.90.16",
     "@tanstack/zod-form-adapter": "^0.42.1",
     "bs58": "^6.0.0",
     "class-variance-authority": "^0.7.1",
