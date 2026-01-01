@@ -13,7 +13,7 @@ import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, mas
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
-import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw, ArrowUpFromLine } from "lucide-react";
+import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw, ArrowUpFromLine, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -31,7 +31,6 @@ export default function LoanDetailsPage() {
         borrowApr,
         borrowableAmount,
         liquidationPrice,
-        netLoanValue,
         suppliedAssets,
         borrowedAssets,
         hasBorrowed,
@@ -125,19 +124,11 @@ export default function LoanDetailsPage() {
                             <span className="text-white/50">borrowed</span>
                         </div>
 
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-white/50 text-sm">Net PnL</p>
-                                <p className="text-green-400 font-semibold text-lg">
-                                    {maskString(formatCurrency(netLoanValue), visibility.visible, MASK_LONG)}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-white/50 text-sm">APR</p>
-                                <p className="text-white font-semibold text-lg">
-                                    {maskString(formatPercent(borrowApr), visibility.visible, MASK_SHORT)}
-                                </p>
-                            </div>
+                        <div>
+                            <p className="text-white/50 text-sm">APR</p>
+                            <p className="text-white font-semibold text-lg">
+                                {maskString(formatPercent(borrowApr), visibility.visible, MASK_SHORT)}
+                            </p>
                         </div>
 
                         {/* LTV Progress Bar */}
@@ -235,7 +226,7 @@ export default function LoanDetailsPage() {
             </div>
 
             {/* Loan Statistics */}
-            <div className="pb-8">
+            <div>
                 <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
                     Loan Statistics
                 </h2>
@@ -294,6 +285,17 @@ export default function LoanDetailsPage() {
                         </p>
                     </Card>
                 </div>
+            </div>
+
+            {/* View on Compound Button */}
+            <div className="pb-8">
+                <button
+                    onClick={() => window.open("https://app.compound.finance/?market=usdt-arb", "_blank")}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                >
+                    <span className="text-white/70">View Loan on Compound</span>
+                    <ExternalLink className="w-4 h-4 text-white/50" />
+                </button>
             </div>
 
             {/* Simulator Slide-up Modal */}
