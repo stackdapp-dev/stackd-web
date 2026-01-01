@@ -4,9 +4,7 @@ import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
 import { Balance } from "@/components/wallet";
 import ActionButtons from "@/components/wallet/ActionButtons";
 import ActiveLoans from "@/components/wallet/ActiveLoans";
-import Assets from "@/components/wallet/Assets";
 import CollateralCard from "@/components/wallet/CollateralCard";
-import { PnLCarousel } from "@/components/wallet/PnLCarousel";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useMemo } from "react";
@@ -17,7 +15,7 @@ const Wallet = () => {
   const { netLoanValue } = loanCalcs;
   const visibility = useVisibility();
 
-  // Filter out WBTC from assets list - it's now shown in CollateralCard
+  // Filter out WBTC from assets list - it's shown separately in CollateralCard with breakdown
   const nonCollateralAssets = useMemo(() => {
     return assets.filter(asset => asset.symbol !== "WBTC");
   }, [assets]);
@@ -31,17 +29,11 @@ const Wallet = () => {
         onToggleVisibility={visibility.toggle}
       />
 
-      {/* PnL Breakdown Carousel */}
-      <PnLCarousel />
-
       {/* Action Buttons */}
       <ActionButtons />
 
-      {/* Collateral Section - Shows unified BTC collateral view */}
-      <CollateralCard />
-
-      {/* Other Assets (USDT, USDC, etc. - not WBTC) */}
-      <Assets items={nonCollateralAssets} isLoading={isLoading} />
+      {/* Unified Assets Section - Other assets + WBTC with collateral breakdown */}
+      <CollateralCard otherAssets={nonCollateralAssets} isLoading={isLoading} />
 
       {/* Active Loans */}
       <ActiveLoans />

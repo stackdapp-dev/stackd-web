@@ -11,6 +11,7 @@ import SimulatorResults from "@/components/wallet/SimulatorResults";
 import { simulateLoan, type SimulationResult } from "@/lib/loans/loanSimulator";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useCompound } from "@/hooks/useCompound";
 import { getTokenMetadata } from "@/constants/Tokens";
@@ -18,7 +19,7 @@ import { formatAmount, formatCurrency, cn } from "@/lib/utils";
 import { RotateCcw, AlertTriangle, CheckCircle } from "lucide-react";
 import { parseUnits } from "viem";
 
-export type SimulatorMode = "borrow" | "addCollateral" | "repay";
+export type SimulatorMode = "borrow" | "addCollateral" | "repay" | "withdrawCollateral" | "simulate";
 
 interface LoanSimulatorProps {
   mode?: SimulatorMode;
@@ -38,6 +39,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
   const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
   const getPrice = useGetTokenPrice();
   const { withdraw, supply, approve, allowance } = useCompound();
+  const { breakdown } = useCollateralBreakdown();
 
   // Modal and processing state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -74,6 +76,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
           isRiskReducing: true,
           warningText: "This will increase your collateral and reduce liquidation risk.",
           successIcon: true,
+          useSlider: false,
         };
       case "repay":
         return {
@@ -85,6 +88,19 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
           isRiskReducing: true,
           warningText: "This will reduce your borrowed amount and liquidation risk.",
           successIcon: true,
+          useSlider: false,
+        };
+      case "withdrawCollateral":
+        return {
+          title: "Withdraw Collateral",
+          inputLabel: "Withdraw Amount (WBTC)",
+          tokenSymbol: "WBTC" as const,
+          actionButtonText: "Withdraw",
+          maxValue: breakdown.availableToWithdrawBtc * 0.99, // 1% safety buffer for precision
+          isRiskReducing: false,
+          warningText: "This will reduce your collateral and increase liquidation risk.",
+          successIcon: false,
+          useSlider: true,
         };
       default: // borrow
         return {
@@ -96,15 +112,20 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
           isRiskReducing: false,
           warningText: "This will increase your LTV and the risk of liquidation.",
           successIcon: false,
+          useSlider: false,
         };
     }
-  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount]);
+  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.availableToWithdrawBtc]);
 
   // Simulator state - store input as string
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "0");
 
+  // Sandbox mode - custom collateral input
+  const [sandboxCollateral, setSandboxCollateral] = useState("0");
+
   // Parse input value for calculations
   const parsedInput = parseFloat(inputValue) || 0;
+  const parsedSandboxCollateral = parseFloat(sandboxCollateral) || 0;
 
   // Calculate simulated values based on mode
   const { simulatedCollateral, simulatedBorrow } = useMemo(() => {
@@ -119,16 +140,37 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
           simulatedCollateral: currentCollateralAmount,
           simulatedBorrow: Math.max(0, currentBorrowedAmount - parsedInput),
         };
+      case "withdrawCollateral":
+        return {
+          simulatedCollateral: Math.max(0, currentCollateralAmount - parsedInput),
+          simulatedBorrow: currentBorrowedAmount,
+        };
+      case "simulate":
+        return {
+          simulatedCollateral: parsedSandboxCollateral,
+          simulatedBorrow: parsedInput,
+        };
       default: // borrow
         return {
           simulatedCollateral: currentCollateralAmount,
           simulatedBorrow: parsedInput,
         };
     }
-  }, [mode, currentCollateralAmount, currentBorrowedAmount, parsedInput]);
+  }, [mode, currentCollateralAmount, currentBorrowedAmount, parsedInput, parsedSandboxCollateral]);
 
   // Calculate current simulation result
   const currentResult = useMemo((): SimulationResult => {
+    // In simulate mode, start from blank state
+    if (mode === "simulate") {
+      return simulateLoan({
+        collateralWbtc: 0,
+        borrowedUsd: 0,
+        btcPrice,
+        maxLtv,
+        liquidationRatio,
+        borrowApr,
+      });
+    }
     return simulateLoan({
       collateralWbtc: currentCollateralAmount,
       borrowedUsd: currentBorrowedAmount,
@@ -137,7 +179,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
       liquidationRatio,
       borrowApr,
     });
-  }, [currentCollateralAmount, currentBorrowedAmount, btcPrice, maxLtv, liquidationRatio, borrowApr]);
+  }, [mode, currentCollateralAmount, currentBorrowedAmount, btcPrice, maxLtv, liquidationRatio, borrowApr]);
 
   // Calculate simulated result
   const simulatedResult = useMemo((): SimulationResult => {
@@ -156,8 +198,13 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
     if (mode === "borrow") {
       return simulatedResult.borrowCapacity * 0.99;
     }
+    if (mode === "simulate") {
+      // Max borrow based on sandbox collateral value
+      const collateralUsd = parsedSandboxCollateral * btcPrice;
+      return collateralUsd * (maxLtv / 100) * 0.99;
+    }
     return modeConfig.maxValue;
-  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue]);
+  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue, parsedSandboxCollateral, btcPrice, maxLtv]);
 
   // Check if value has changed
   const hasChanges = useMemo(() => {
@@ -166,11 +213,14 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
         return Math.abs(parsedInput - currentBorrowedAmount) > 0.01;
       case "addCollateral":
       case "repay":
+      case "withdrawCollateral":
         return parsedInput > 0;
+      case "simulate":
+        return parsedSandboxCollateral > 0 || parsedInput > 0;
       default:
         return false;
     }
-  }, [mode, parsedInput, currentBorrowedAmount]);
+  }, [mode, parsedInput, currentBorrowedAmount, parsedSandboxCollateral]);
 
   // Calculate amount for transaction
   const transactionAmount = useMemo(() => {
@@ -179,6 +229,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
         return Math.max(0, parsedInput - currentBorrowedAmount);
       case "addCollateral":
       case "repay":
+      case "withdrawCollateral":
         return parsedInput;
       default:
         return 0;
@@ -216,6 +267,9 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
   // Reset to initial values
   const handleReset = useCallback(() => {
     setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "0");
+    if (mode === "simulate") {
+      setSandboxCollateral("0");
+    }
   }, [mode, currentBorrowedAmount]);
 
   // Set to max value
@@ -265,8 +319,9 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
       const amountBigInt = parseUnits(String(transactionAmount), tokenMeta.decimals);
 
       let result;
-      if (mode === "borrow") {
+      if (mode === "borrow" || mode === "withdrawCollateral") {
         // Borrow = withdraw USDT from Compound
+        // Withdraw collateral = withdraw WBTC from Compound
         result = await withdraw(tokenAddress, amountBigInt);
       } else {
         // Add collateral or repay = supply to Compound
@@ -279,10 +334,10 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
       setShowConfirmModal(false);
 
       // Reset input and call completion callback
-      if (mode !== "borrow") {
-        setInputValue("0");
-      } else {
+      if (mode === "borrow") {
         setInputValue(String(parsedInput));
+      } else {
+        setInputValue("0");
       }
 
       onComplete?.();
@@ -314,76 +369,298 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
 
         {/* Input Field */}
         <div className="mt-6">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center gap-2">
-              <TokenIcon symbol={modeConfig.tokenSymbol} width={24} height={24} />
-              <span className="text-white/70 text-sm">{modeConfig.inputLabel}</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleSetMax}
-              className="text-amber-500 text-xs hover:text-amber-400 transition-colors"
-            >
-              Max: {mode === "addCollateral"
-                ? `${formatAmount(maxBorrow, 6)} WBTC`
-                : formatCurrency(maxBorrow, 0, "$", false)
-              }
-            </button>
-          </div>
+          {mode === "simulate" ? (
+            /* Sandbox Mode - Collateral Input + Borrow Slider */
+            <div className="flex flex-col gap-6">
+              {/* Collateral Input */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <TokenIcon symbol="WBTC" width={24} height={24} />
+                    <span className="text-white/70 text-sm">Collateral Amount (WBTC)</span>
+                  </div>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={sandboxCollateral}
+                    onChange={(e) => setSandboxCollateral(e.target.value)}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-lg",
+                      "bg-white/5 border border-white/10",
+                      "text-white font-semibold text-right pr-20",
+                      "focus:outline-none focus:border-purple-500/50",
+                      "placeholder:text-white/30"
+                    )}
+                    placeholder="0"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">WBTC</span>
+                </div>
+                <p className="text-white/40 text-xs mt-1 text-right">
+                  ≈ {formatCurrency(parsedSandboxCollateral * btcPrice)}
+                </p>
+              </div>
 
-          <div className="relative">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={inputValue}
-              onChange={handleInputChange}
-              className={cn(
-                "w-full px-4 py-3 rounded-lg",
-                "bg-white/5 border border-white/10",
-                "text-white font-semibold text-right pr-16",
-                "focus:outline-none focus:border-amber-500/50",
-                "placeholder:text-white/30"
+              {/* Borrow Amount Slider */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <TokenIcon symbol="USDT" width={24} height={24} />
+                    <span className="text-white/70 text-sm">Borrow Amount (USDT)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setInputValue(String(maxBorrow))}
+                    className="text-amber-500 text-xs hover:text-amber-400 transition-colors"
+                  >
+                    Max: {formatCurrency(maxBorrow, 0, "$", false)}
+                  </button>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-center mb-3">
+                  <span className="text-white font-semibold text-2xl">
+                    {formatCurrency(parsedInput, 0, "$", false)}
+                  </span>
+                </div>
+                <div className="px-1">
+                  <input
+                    type="range"
+                    min="0"
+                    max={maxBorrow || 1}
+                    step={maxBorrow / 100 || 1}
+                    value={parsedInput}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    disabled={maxBorrow <= 0}
+                    className={cn(
+                      "w-full h-2 rounded-full appearance-none cursor-pointer bg-white/10",
+                      "[&::-webkit-slider-thumb]:appearance-none",
+                      "[&::-webkit-slider-thumb]:w-5",
+                      "[&::-webkit-slider-thumb]:h-5",
+                      "[&::-webkit-slider-thumb]:rounded-full",
+                      "[&::-webkit-slider-thumb]:bg-amber-500",
+                      "[&::-webkit-slider-thumb]:shadow-lg",
+                      "[&::-webkit-slider-thumb]:border-2",
+                      "[&::-webkit-slider-thumb]:border-white/20",
+                      "[&::-moz-range-thumb]:w-5",
+                      "[&::-moz-range-thumb]:h-5",
+                      "[&::-moz-range-thumb]:rounded-full",
+                      "[&::-moz-range-thumb]:bg-amber-500",
+                      "[&::-moz-range-thumb]:border-2",
+                      "[&::-moz-range-thumb]:border-white/20",
+                      "disabled:opacity-50"
+                    )}
+                    style={{
+                      background: maxBorrow > 0
+                        ? `linear-gradient(to right, rgb(245 158 11) 0%, rgb(245 158 11) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) 100%)`
+                        : "rgba(255,255,255,0.1)"
+                    }}
+                  />
+                  <div className="flex justify-between text-white/40 text-xs mt-2">
+                    <span>$0</span>
+                    <span>{formatCurrency(maxBorrow, 0, "$", false)}</span>
+                  </div>
+                </div>
+                {maxBorrow <= 0 && parsedSandboxCollateral === 0 && (
+                  <p className="text-white/40 text-xs mt-2 text-center">
+                    Enter collateral amount to enable borrowing
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex items-center gap-2">
+                  <TokenIcon symbol={modeConfig.tokenSymbol} width={24} height={24} />
+                  <span className="text-white/70 text-sm">{modeConfig.inputLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSetMax}
+                  className="text-amber-500 text-xs hover:text-amber-400 transition-colors"
+                >
+                  Max: {mode === "addCollateral" || mode === "withdrawCollateral"
+                    ? `${formatAmount(maxBorrow, 6)} WBTC`
+                    : formatCurrency(maxBorrow, 0, "$", false)
+                  }
+                </button>
+              </div>
+
+              {modeConfig.useSlider ? (
+            /* Slider-only Input for withdrawCollateral */
+            <div className="flex flex-col gap-4">
+              {/* Amount Display */}
+              <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-center">
+                <span className="text-white font-semibold text-2xl">
+                  {formatAmount(parsedInput, 6)}
+                </span>
+                <span className="text-white/50 text-lg ml-2">WBTC</span>
+                <p className="text-white/40 text-sm mt-1">
+                  ≈ {formatCurrency(parsedInput * btcPrice)}
+                </p>
+              </div>
+
+              {/* Slider */}
+              <div className="px-1">
+                <input
+                  type="range"
+                  min="0"
+                  max={maxBorrow}
+                  step={maxBorrow / 100}
+                  value={parsedInput}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer
+                    bg-white/10
+                    [&::-webkit-slider-thumb]:appearance-none
+                    [&::-webkit-slider-thumb]:w-5
+                    [&::-webkit-slider-thumb]:h-5
+                    [&::-webkit-slider-thumb]:rounded-full
+                    [&::-webkit-slider-thumb]:bg-amber-500
+                    [&::-webkit-slider-thumb]:shadow-lg
+                    [&::-webkit-slider-thumb]:border-2
+                    [&::-webkit-slider-thumb]:border-white/20
+                    [&::-moz-range-thumb]:w-5
+                    [&::-moz-range-thumb]:h-5
+                    [&::-moz-range-thumb]:rounded-full
+                    [&::-moz-range-thumb]:bg-amber-500
+                    [&::-moz-range-thumb]:border-2
+                    [&::-moz-range-thumb]:border-white/20"
+                  style={{
+                    background: `linear-gradient(to right, rgb(245 158 11) 0%, rgb(245 158 11) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) 100%)`
+                  }}
+                  data-testid="simulator-slider"
+                />
+                <div className="flex justify-between text-white/40 text-xs mt-2">
+                  <span>0 WBTC</span>
+                  <span>{formatAmount(maxBorrow, 4)} WBTC</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Text Input with optional Slider for borrow/repay */
+            <div className="flex flex-col gap-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  className={cn(
+                    "w-full px-4 py-3 rounded-lg",
+                    "bg-white/5 border border-white/10",
+                    "text-white font-semibold text-right pr-16",
+                    "focus:outline-none focus:border-amber-500/50",
+                    "placeholder:text-white/30"
+                  )}
+                  placeholder="0"
+                  data-testid="simulator-input"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">
+                  {mode === "addCollateral" ? "WBTC" : "USD"}
+                </span>
+              </div>
+
+              {/* Slider for borrow and repay modes */}
+              {(mode === "borrow" || mode === "repay") && maxBorrow > 0 && (
+                <div className="px-1">
+                  <input
+                    type="range"
+                    min={mode === "borrow" ? currentBorrowedAmount : 0}
+                    max={mode === "borrow" ? maxBorrow : maxBorrow}
+                    step={maxBorrow / 100}
+                    value={parsedInput}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    className={cn(
+                      "w-full h-2 rounded-full appearance-none cursor-pointer bg-white/10",
+                      "[&::-webkit-slider-thumb]:appearance-none",
+                      "[&::-webkit-slider-thumb]:w-5",
+                      "[&::-webkit-slider-thumb]:h-5",
+                      "[&::-webkit-slider-thumb]:rounded-full",
+                      "[&::-webkit-slider-thumb]:shadow-lg",
+                      "[&::-webkit-slider-thumb]:border-2",
+                      "[&::-webkit-slider-thumb]:border-white/20",
+                      mode === "borrow"
+                        ? "[&::-webkit-slider-thumb]:bg-amber-500"
+                        : "[&::-webkit-slider-thumb]:bg-blue-500",
+                      "[&::-moz-range-thumb]:w-5",
+                      "[&::-moz-range-thumb]:h-5",
+                      "[&::-moz-range-thumb]:rounded-full",
+                      "[&::-moz-range-thumb]:border-2",
+                      "[&::-moz-range-thumb]:border-white/20",
+                      mode === "borrow"
+                        ? "[&::-moz-range-thumb]:bg-amber-500"
+                        : "[&::-moz-range-thumb]:bg-blue-500"
+                    )}
+                    style={{
+                      background: mode === "borrow"
+                        ? `linear-gradient(to right, rgb(245 158 11) 0%, rgb(245 158 11) ${((parsedInput - currentBorrowedAmount) / (maxBorrow - currentBorrowedAmount)) * 100}%, rgba(255,255,255,0.1) ${((parsedInput - currentBorrowedAmount) / (maxBorrow - currentBorrowedAmount)) * 100}%, rgba(255,255,255,0.1) 100%)`
+                        : `linear-gradient(to right, rgb(59 130 246) 0%, rgb(59 130 246) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) 100%)`
+                    }}
+                    data-testid="simulator-slider"
+                  />
+                  <div className="flex justify-between text-white/40 text-xs mt-2">
+                    <span>{mode === "borrow" ? formatCurrency(currentBorrowedAmount, 0, "$", false) : "$0"}</span>
+                    <span>{formatCurrency(maxBorrow, 0, "$", false)}</span>
+                  </div>
+                </div>
               )}
-              placeholder="0"
-              data-testid="simulator-input"
-            />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">
-              {mode === "addCollateral" ? "WBTC" : "USD"}
-            </span>
-          </div>
+            </div>
+          )}
+            </>
+          )}
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 mt-6">
-          <button
-            onClick={handleReset}
-            disabled={!hasChanges}
-            className={cn(
-              "flex flex-col items-center justify-center gap-2 py-4",
-              "rounded-2xl border border-white/10 bg-white/5",
-              "hover:bg-white/10 transition-colors",
-              "disabled:opacity-40 disabled:hover:bg-white/5"
-            )}
-          >
-            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10">
-              <RotateCcw className="w-5 h-5 text-white/70" />
-            </div>
-            <span className="text-white/70 text-sm">Reset</span>
-          </button>
-          <button
-            onClick={handleApply}
-            disabled={!hasChanges || transactionAmount <= 0}
-            className={cn(
-              "flex flex-col items-center justify-center gap-2 py-4",
-              "rounded-2xl border border-white/10 bg-white/5",
-              "hover:bg-white/10 transition-colors",
-              "disabled:opacity-40 disabled:hover:bg-white/5"
-            )}
-            data-testid="apply-button"
-          >
+        {mode === "simulate" ? (
+          /* Simulate mode - only Reset button, centered */
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={handleReset}
+              disabled={!hasChanges}
+              className={cn(
+                "flex flex-col items-center justify-center gap-2 py-4 px-8",
+                "rounded-2xl border border-white/10 bg-white/5",
+                "hover:bg-white/10 transition-colors",
+                "disabled:opacity-40 disabled:hover:bg-white/5"
+              )}
+            >
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10">
+                <RotateCcw className="w-5 h-5 text-white/70" />
+              </div>
+              <span className="text-white/70 text-sm">Reset</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mt-6">
+            <button
+              onClick={handleReset}
+              disabled={!hasChanges}
+              className={cn(
+                "flex flex-col items-center justify-center gap-2 py-4",
+                "rounded-2xl border border-white/10 bg-white/5",
+                "hover:bg-white/10 transition-colors",
+                "disabled:opacity-40 disabled:hover:bg-white/5"
+              )}
+            >
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10">
+                <RotateCcw className="w-5 h-5 text-white/70" />
+              </div>
+              <span className="text-white/70 text-sm">Reset</span>
+            </button>
+            <button
+              onClick={handleApply}
+              disabled={!hasChanges || transactionAmount <= 0}
+              className={cn(
+                "flex flex-col items-center justify-center gap-2 py-4",
+                "rounded-2xl border border-white/10 bg-white/5",
+                "hover:bg-white/10 transition-colors",
+                "disabled:opacity-40 disabled:hover:bg-white/5"
+              )}
+              data-testid="apply-button"
+            >
             <div className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center border",
-              mode === "borrow"
+              mode === "borrow" || mode === "withdrawCollateral"
                 ? "bg-amber-500/20 border-amber-500/30"
                 : mode === "addCollateral"
                   ? "bg-purple-500/20 border-purple-500/30"
@@ -392,7 +669,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
               <svg
                 className={cn(
                   "w-5 h-5",
-                  mode === "borrow" ? "text-amber-500" : mode === "addCollateral" ? "text-purple-400" : "text-blue-400"
+                  mode === "borrow" || mode === "withdrawCollateral" ? "text-amber-500" : mode === "addCollateral" ? "text-purple-400" : "text-blue-400"
                 )}
                 viewBox="0 0 24 24"
                 fill="none"
@@ -407,44 +684,47 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
             </div>
             <span className={cn(
               "text-sm",
-              mode === "borrow" ? "text-amber-500" : mode === "addCollateral" ? "text-purple-400" : "text-blue-400"
+              mode === "borrow" || mode === "withdrawCollateral" ? "text-amber-500" : mode === "addCollateral" ? "text-purple-400" : "text-blue-400"
             )}>
               {modeConfig.actionButtonText}
             </span>
           </button>
-        </div>
+          </div>
+        )}
       </Card>
 
       {/* Collateral Section */}
-      <div>
-        <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
-          Collateral
-        </h2>
-        <Card appearance="glassDark" padding="default">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <TokenIcon symbol="WBTC" width={48} height={48} />
-              <div>
-                <p className="text-white font-semibold">Wrapped Bitcoin</p>
-                <p className="text-white/50 text-sm">WBTC</p>
+      {mode !== "simulate" && (
+        <div>
+          <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
+            Collateral
+          </h2>
+          <Card appearance="glassDark" padding="default">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <TokenIcon symbol="WBTC" width={48} height={48} />
+                <div>
+                  <p className="text-white font-semibold">Wrapped Bitcoin</p>
+                  <p className="text-white/50 text-sm">WBTC</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-white font-semibold">
+                  {formatAmount(mode === "addCollateral" ? simulatedCollateral : currentCollateralAmount, 4)} WBTC
+                </p>
+                <p className="text-white/50 text-sm">
+                  {formatCurrency((mode === "addCollateral" ? simulatedCollateral : currentCollateralAmount) * btcPrice)}
+                </p>
+                {mode === "addCollateral" && parsedInput > 0 && (
+                  <p className="text-green-400 text-xs mt-1">
+                    +{formatAmount(parsedInput, 6)} WBTC
+                  </p>
+                )}
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-white font-semibold">
-                {formatAmount(mode === "addCollateral" ? simulatedCollateral : currentCollateralAmount, 4)} WBTC
-              </p>
-              <p className="text-white/50 text-sm">
-                {formatCurrency((mode === "addCollateral" ? simulatedCollateral : currentCollateralAmount) * btcPrice)}
-              </p>
-              {mode === "addCollateral" && parsedInput > 0 && (
-                <p className="text-green-400 text-xs mt-1">
-                  +{formatAmount(parsedInput, 6)} WBTC
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
       {/* Loan Statistics */}
       <div>
@@ -531,6 +811,19 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-white/50">Remaining Debt</span>
                     <span className="text-blue-400 font-semibold">{formatCurrency(simulatedBorrow, 2)}</span>
+                  </div>
+                </>
+              )}
+
+              {mode === "withdrawCollateral" && (
+                <>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">Current Collateral</span>
+                    <span className="text-white">{formatAmount(currentCollateralAmount, 4)} WBTC</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/50">Remaining Collateral</span>
+                    <span className="text-amber-400 font-semibold">{formatAmount(simulatedCollateral, 4)} WBTC</span>
                   </div>
                 </>
               )}

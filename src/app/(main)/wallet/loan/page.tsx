@@ -13,7 +13,7 @@ import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, mas
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
-import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw } from "lucide-react";
+import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw, ArrowUpFromLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -81,6 +81,10 @@ export default function LoanDetailsPage() {
 
     const handleRepay = () => {
         setActiveModal("repay");
+    };
+
+    const handleWithdrawCollateral = () => {
+        setActiveModal("withdrawCollateral");
     };
 
     return (
@@ -155,43 +159,6 @@ export default function LoanDetailsPage() {
                 </Card>
             </div>
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-3 gap-3">
-                {/* Borrow Button */}
-                <button
-                    onClick={handleBorrow}
-                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-500/20 border border-amber-500/30">
-                        <ArrowDownToLine className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <span className="text-white/70 text-sm">Borrow</span>
-                </button>
-
-                {/* Add Collateral Button */}
-                <button
-                    onClick={handleAddCollateral}
-                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-500/20 border border-purple-500/30">
-                        <Plus className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <span className="text-white/70 text-sm text-center leading-tight">Add<br/>Collateral</span>
-                </button>
-
-                {/* Repay Loan Button */}
-                <button
-                    onClick={handleRepay}
-                    disabled={!hasBorrowed}
-                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:hover:bg-white/5"
-                >
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-500/20 border border-blue-500/30">
-                        <RotateCcw className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <span className="text-white/70 text-sm text-center leading-tight">Repay<br/>Loan</span>
-                </button>
-            </div>
-
             {/* Collateral Section */}
             <div>
                 <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
@@ -216,6 +183,55 @@ export default function LoanDetailsPage() {
                         </div>
                     </div>
                 </Card>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+                {/* Borrow Button */}
+                <button
+                    onClick={handleBorrow}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-500/20 border border-amber-500/30">
+                        <ArrowDownToLine className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <span className="text-white/70 text-sm">Borrow</span>
+                </button>
+
+                {/* Add Collateral Button */}
+                <button
+                    onClick={handleAddCollateral}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-500/20 border border-purple-500/30">
+                        <Plus className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <span className="text-white/70 text-sm text-center leading-tight">Add Collateral</span>
+                </button>
+
+                {/* Repay Loan Button */}
+                <button
+                    onClick={handleRepay}
+                    disabled={!hasBorrowed}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:hover:bg-white/5"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-500/20 border border-blue-500/30">
+                        <RotateCcw className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <span className="text-white/70 text-sm text-center leading-tight">Repay Loan</span>
+                </button>
+
+                {/* Withdraw Collateral Button */}
+                <button
+                    onClick={handleWithdrawCollateral}
+                    disabled={!collateral || collateral.amount <= 0}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:hover:bg-white/5"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-500/20 border border-amber-500/30">
+                        <ArrowUpFromLine className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <span className="text-white/70 text-sm text-center leading-tight">Withdraw Collateral</span>
+                </button>
             </div>
 
             {/* Loan Statistics */}
@@ -300,6 +316,7 @@ export default function LoanDetailsPage() {
                                 {activeModal === "borrow" && "Borrow USDT"}
                                 {activeModal === "addCollateral" && "Add Collateral"}
                                 {activeModal === "repay" && "Repay Loan"}
+                                {activeModal === "withdrawCollateral" && "Withdraw Collateral"}
                             </h2>
                             <button
                                 onClick={() => setActiveModal(null)}

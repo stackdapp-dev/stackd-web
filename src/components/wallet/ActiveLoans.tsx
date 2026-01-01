@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import LoanSimulator from "@/components/wallet/LoanSimulator";
 import { showInfoToast } from "@/components/ui/custom-toast";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import { formatCurrency, formatPercent, maskString, MASK_LONG, MASK_SHORT } from "@/lib/utils";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
+import { useVisibility } from "@/providers/visibility";
 import { useRouter } from "next/navigation";
 
 export default function ActiveLoans() {
     const router = useRouter();
+    const visibility = useVisibility();
     const { loanCalcs } = useLoanCalculationsContext();
     const [showSimulatorModal, setShowSimulatorModal] = useState(false);
     const { ltv, borrowApr, borrowedAssets, netLoanValue, maxLtv, suppliedAssets } = loanCalcs;
@@ -58,9 +60,9 @@ export default function ActiveLoans() {
                         </div>
                         <div className="text-right">
                             <p className="text-white font-semibold">
-                                Net PnL: <span className="text-green-400">{formatCurrency(netLoanValue)}</span>
+                                PnL: <span className="text-green-400">{maskString(formatCurrency(netLoanValue), visibility.visible, MASK_LONG)}</span>
                             </p>
-                            <p className="text-white/50 text-sm">{formatPercent(borrowApr)} APR</p>
+                            <p className="text-white/50 text-sm">{maskString(formatPercent(borrowApr), visibility.visible, MASK_SHORT)} APR</p>
                         </div>
                     </div>
 
@@ -72,7 +74,7 @@ export default function ActiveLoans() {
                                 style={{ width: `${ltvBarWidth}%` }}
                             />
                         </div>
-                        <p className="text-white/60 text-sm mt-1">{formatPercent(ltv)} LTV</p>
+                        <p className="text-white/60 text-sm mt-1">{maskString(formatPercent(ltv), visibility.visible, MASK_SHORT)} LTV</p>
                     </div>
                 </Card>
             ) : (

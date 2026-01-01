@@ -29,9 +29,13 @@ export default function WithdrawCollateralPage() {
     const available = breakdown.availableToWithdrawBtc;
     const withdrawCheck = canWithdraw(amount);
 
+    // Apply 1% safety buffer to max withdrawal to account for precision differences
+    // between JS floating-point calculations and Compound's on-chain uint256 math
+    const safeMaxWithdraw = available * 0.99;
+
     const handleMax = useCallback(() => {
-        setAmount(available);
-    }, [available]);
+        setAmount(safeMaxWithdraw);
+    }, [safeMaxWithdraw]);
 
     const handleAction = useCallback(async () => {
         if (isProcessing || amount <= 0) return;
