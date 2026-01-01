@@ -2,7 +2,7 @@
 
 import PageHeader from "@/components/common/PageHeader";
 import TokenIcon from "@/components/common/TokenIcon";
-import { Button } from "@/components/ui/button";
+import LoanSimulator, { type SimulatorMode } from "@/components/wallet/LoanSimulator";
 import Card from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import MaskedValue from "@/components/ui/maskedValue";
@@ -13,7 +13,7 @@ import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, mas
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
-import { AlertTriangle, DollarSign } from "lucide-react";
+import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw, ArrowUpFromLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -21,6 +21,7 @@ export default function LoanDetailsPage() {
     const visibility = useVisibility();
     const router = useRouter();
     const [showCollateralModal, setShowCollateralModal] = useState(false);
+    const [activeModal, setActiveModal] = useState<SimulatorMode | null>(null);
     const MIN_BORROWABLE_AMOUNT = 1;
 
     const { wbtcBalance, refetchBalances } = useWalletBalanceContext();
@@ -35,7 +36,12 @@ export default function LoanDetailsPage() {
         borrowedAssets,
         hasBorrowed,
         maxLtv,
+        liquidationRatio,
     } = loanCalcs;
+
+    // Calculate health factor and yearly interest
+    const healthFactor = ltv > 0 ? liquidationRatio / ltv : Infinity;
+    const healthStatus = healthFactor >= 1.5 ? "safe" : healthFactor >= 1.2 ? "warning" : "danger";
 
     const { lendProcessing, startLend } = useAutoLend({
         wbtcBalance,
@@ -57,16 +63,28 @@ export default function LoanDetailsPage() {
                 const hasLent = await startLend();
                 if (hasLent) {
                     await Promise.all([refetchBalances(), refetchLoanData()]);
-                    router.push("/wallet/tx/borrow");
+                    setActiveModal("borrow");
                 }
             } else if (borrowableAmount > MIN_BORROWABLE_AMOUNT) {
-                router.push("/wallet/tx/borrow");
+                setActiveModal("borrow");
             } else {
                 setShowCollateralModal(true);
             }
         } catch (error) {
             console.error("Error during borrow process:", error);
         }
+    };
+
+    const handleAddCollateral = () => {
+        setActiveModal("addCollateral");
+    };
+
+    const handleRepay = () => {
+        setActiveModal("repay");
+    };
+
+    const handleWithdrawCollateral = () => {
+        setActiveModal("withdrawCollateral");
     };
 
     return (
@@ -141,16 +159,6 @@ export default function LoanDetailsPage() {
                 </Card>
             </div>
 
-            {/* Borrow Button */}
-            <Button
-                onClick={handleBorrow}
-                variant="default"
-                size="lg"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
-            >
-                Borrow USDT
-            </Button>
-
             {/* Collateral Section */}
             <div>
                 <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
@@ -177,8 +185,57 @@ export default function LoanDetailsPage() {
                 </Card>
             </div>
 
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+                {/* Borrow Button */}
+                <button
+                    onClick={handleBorrow}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-500/20 border border-amber-500/30">
+                        <ArrowDownToLine className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <span className="text-white/70 text-sm">Borrow</span>
+                </button>
+
+                {/* Add Collateral Button */}
+                <button
+                    onClick={handleAddCollateral}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-purple-500/20 border border-purple-500/30">
+                        <Plus className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <span className="text-white/70 text-sm text-center leading-tight">Add Collateral</span>
+                </button>
+
+                {/* Repay Loan Button */}
+                <button
+                    onClick={handleRepay}
+                    disabled={!hasBorrowed}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:hover:bg-white/5"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-500/20 border border-blue-500/30">
+                        <RotateCcw className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <span className="text-white/70 text-sm text-center leading-tight">Repay Loan</span>
+                </button>
+
+                {/* Withdraw Collateral Button */}
+                <button
+                    onClick={handleWithdrawCollateral}
+                    disabled={!collateral || collateral.amount <= 0}
+                    className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:hover:bg-white/5"
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-amber-500/20 border border-amber-500/30">
+                        <ArrowUpFromLine className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <span className="text-white/70 text-sm text-center leading-tight">Withdraw Collateral</span>
+                </button>
+            </div>
+
             {/* Loan Statistics */}
-            <div>
+            <div className="pb-8">
                 <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
                     Loan Statistics
                 </h2>
@@ -186,7 +243,7 @@ export default function LoanDetailsPage() {
                     <Card appearance="glassDark" padding="default">
                         <div className="flex items-center gap-2 mb-2">
                             <DollarSign className="w-4 h-4 text-amber-500" />
-                            <p className="text-white/50 text-sm">Borrowable Amount</p>
+                            <p className="text-white/50 text-sm">Borrowable</p>
                         </div>
                         <p className="text-white font-bold text-xl">
                             {maskString(formatCurrency(borrowableAmount), visibility.visible, MASK_LONG)}
@@ -195,33 +252,86 @@ export default function LoanDetailsPage() {
                     <Card appearance="glassDark" padding="default">
                         <div className="flex items-center gap-2 mb-2">
                             <AlertTriangle className="w-4 h-4 text-amber-500" />
-                            <p className="text-white/50 text-sm">Collateral Liquidation Price</p>
+                            <p className="text-white/50 text-sm">Liquidation Price</p>
                         </div>
                         <p className="text-white font-bold text-xl">
-                            {maskString(formatCurrency(liquidationPrice), visibility.visible, MASK_LONG)}
+                            {liquidationPrice > 0
+                                ? maskString(formatCurrency(liquidationPrice, 0), visibility.visible, MASK_LONG)
+                                : "N/A"}
+                        </p>
+                    </Card>
+                    <Card appearance="glassDark" padding="default">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Activity className="w-4 h-4 text-amber-500" />
+                            <p className="text-white/50 text-sm">Health Factor</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <p className={`font-bold text-xl ${
+                                healthStatus === "safe" ? "text-green-400" :
+                                healthStatus === "warning" ? "text-orange-400" : "text-red-400"
+                            }`}>
+                                {isFinite(healthFactor) ? healthFactor.toFixed(2) : "N/A"}
+                            </p>
+                            <span className={`text-sm px-2 py-0.5 rounded-full ${
+                                healthStatus === "safe" ? "bg-green-500/20 text-green-400" :
+                                healthStatus === "warning" ? "bg-orange-500/20 text-orange-400" :
+                                "bg-red-500/20 text-red-400"
+                            }`}>
+                                {healthStatus === "safe" ? "Safe" : healthStatus === "warning" ? "Warning" : "At Risk"}
+                            </span>
+                        </div>
+                    </Card>
+                    <Card appearance="glassDark" padding="default">
+                        <div className="flex items-center gap-2 mb-2">
+                            <TrendingDown className="w-4 h-4 text-amber-500" />
+                            <p className="text-white/50 text-sm">Yearly Interest</p>
+                        </div>
+                        <p className="text-white font-bold text-xl">
+                            {borrowApr.toFixed(1)}% APR
+                        </p>
+                        <p className="text-white/40 text-xs mt-1">
+                            ~{formatCurrency((borrowed?.usdValue || 0) * (borrowApr / 100), 2)}/year
                         </p>
                     </Card>
                 </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 pb-8">
-                <Button
-                    onClick={() => router.push("/wallet/deposit/WBTC")}
-                    variant="ghost"
-                    className="bg-white/5 border border-white/10 hover:bg-white/10"
-                >
-                    Add Collateral
-                </Button>
-                <Button
-                    onClick={() => router.push("/wallet/tx/repay")}
-                    variant="ghost"
-                    className="bg-white/5 border border-white/10 hover:bg-white/10"
-                    disabled={!hasBorrowed}
-                >
-                    Repay Loan
-                </Button>
-            </div>
+            {/* Simulator Slide-up Modal */}
+            {activeModal && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 transition-opacity"
+                        onClick={() => setActiveModal(null)}
+                    />
+                    {/* Modal Content */}
+                    <div className="relative w-full max-w-xl bg-slate-900 rounded-t-3xl p-6 pb-safe animate-slide-up max-h-[90vh] overflow-y-auto">
+                        {/* Handle bar */}
+                        <div className="flex justify-center mb-4">
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+                        </div>
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-white text-xl font-semibold">
+                                {activeModal === "borrow" && "Borrow USDT"}
+                                {activeModal === "addCollateral" && "Add Collateral"}
+                                {activeModal === "repay" && "Repay Loan"}
+                                {activeModal === "withdrawCollateral" && "Withdraw Collateral"}
+                            </h2>
+                            <button
+                                onClick={() => setActiveModal(null)}
+                                className="text-white/50 hover:text-white transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        {/* Simulator Content */}
+                        <LoanSimulator mode={activeModal} onComplete={() => setActiveModal(null)} />
+                    </div>
+                </div>
+            )}
 
             {/* Insufficient Collateral Modal */}
             <Modal

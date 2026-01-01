@@ -1,7 +1,9 @@
 "use client";
 
-import { ArrowDownToLine, ArrowRightLeft, Send } from "lucide-react";
+import { ArrowDownToLine, ArrowRightLeft, Send, Calculator } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import LoanSimulator from "@/components/wallet/LoanSimulator";
 
 interface ActionButtonProps {
     icon: React.ReactNode;
@@ -33,10 +35,11 @@ function ActionButton({ icon, label, onClick, disabled }: ActionButtonProps) {
 
 export default function ActionButtons() {
     const router = useRouter();
+    const [showSimulator, setShowSimulator] = useState(false);
 
     return (
         <div className="px-4">
-            <div className="flex justify-center gap-8 py-4">
+            <div className="flex justify-center gap-6 py-4">
                 <ActionButton
                     icon={<ArrowDownToLine className="w-6 h-6 text-amber-500" />}
                     label="Cash In"
@@ -52,7 +55,44 @@ export default function ActionButtons() {
                     label="Convert"
                     onClick={() => router.push("/wallet/convert")}
                 />
+                <ActionButton
+                    icon={<Calculator className="w-6 h-6 text-emerald-400" />}
+                    label="Simulate"
+                    onClick={() => setShowSimulator(true)}
+                />
             </div>
+
+            {/* Simulator Slide-up Modal */}
+            {showSimulator && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 transition-opacity"
+                        onClick={() => setShowSimulator(false)}
+                    />
+                    {/* Modal Content */}
+                    <div className="relative w-full max-w-xl bg-slate-900 rounded-t-3xl p-6 pb-safe animate-slide-up max-h-[90vh] overflow-y-auto">
+                        {/* Handle bar */}
+                        <div className="flex justify-center mb-4">
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+                        </div>
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-white text-xl font-semibold">Loan Simulator</h2>
+                            <button
+                                onClick={() => setShowSimulator(false)}
+                                className="text-white/50 hover:text-white transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        {/* Simulator Content */}
+                        <LoanSimulator mode="simulate" onComplete={() => setShowSimulator(false)} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

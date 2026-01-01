@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useWeb3 } from "@/providers/Web3Provider";
+import { formatTokenAmount } from "@/lib/utils";
 
 interface Quote {
     liquidityAvailable: boolean;
@@ -75,7 +76,7 @@ function parseApiError(errorString: string): string {
 }
 
 export function useGaslessSwap() {
-    const { walletClient, activeWalletAddress } = useWeb3();
+    const { walletClient, activeWalletAddress, ensureCorrectNetwork } = useWeb3();
     const [isLoading, setIsLoading] = useState(false);
     const [quote, setQuote] = useState<Quote | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -165,6 +166,13 @@ export function useGaslessSwap() {
         setError(null);
 
         try {
+            // Ensure wallet is on the correct network before signing
+            // This fixes the "chainId should be same as current chainId" error
+            // when external wallets are connected to a different network (e.g., Ethereum)
+            console.log("[0x] Ensuring correct network...");
+            await ensureCorrectNetwork();
+            console.log("[0x] Network check passed");
+
             const submitPayload: Record<string, unknown> = {
                 chainId: 42161,
             };
@@ -246,21 +254,13 @@ export function useGaslessSwap() {
         } finally {
             setIsLoading(false);
         }
-    }, [quote, walletClient, activeWalletAddress]);
+    }, [quote, walletClient, activeWalletAddress, ensureCorrectNetwork]);
 
     // Get destination amount from quote
     const getDestAmount = useCallback(
         (destDecimals: number): string | null => {
             if (!quote) return null;
-
-            const amount = BigInt(quote.buyAmount);
-            const divisor = BigInt(10 ** destDecimals);
-            const wholePart = amount / divisor;
-            const fractionalPart = amount % divisor;
-
-            const formatted = `${wholePart}.${fractionalPart.toString().padStart(destDecimals, "0")}`;
-            // Remove trailing zeros but keep at least 2 decimal places
-            return formatted.replace(/(\.\d{2})\d*$/, "$1").replace(/\.?0+$/, "") || formatted;
+            return formatTokenAmount(quote.buyAmount, destDecimals);
         },
         [quote]
     );
