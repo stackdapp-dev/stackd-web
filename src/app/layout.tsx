@@ -23,6 +23,13 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/sf-pro-display" />
+
+        {/* Preconnect to external APIs for faster data fetching */}
+        <link rel="preconnect" href="https://api.coingecko.com" />
+        <link rel="preconnect" href="https://api.arbiscan.io" />
+        <link rel="dns-prefetch" href="https://api.coingecko.com" />
+        <link rel="dns-prefetch" href="https://api.arbiscan.io" />
+
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta

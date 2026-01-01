@@ -5,6 +5,7 @@ import { InstallBanner } from "@/components/common/InstallBanner";
 import { ServiceWorkerUpdater } from "@/components/common/ServiceWorkerUpdater";
 import { PWANavigationInterceptor } from "@/components/common/PWANavigationInterceptor";
 import { PrivyProvider } from "@privy-io/react-auth";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { arbitrum } from "viem/chains";
@@ -12,9 +13,22 @@ import { TokenPriceProvider } from "./TokenPriceProvider";
 import { UserProvider } from "./UserProvider";
 import { Web3Provider } from "./Web3Provider";
 
+// Create a stable QueryClient instance outside the component
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000, // 30 seconds before data is considered stale
+      gcTime: 5 * 60_000, // 5 minutes garbage collection time
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      retry: 1, // Only retry failed requests once
+    },
+  },
+});
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <PrivyProvider
+    <QueryClientProvider client={queryClient}>
+      <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
         embeddedWallets: {
@@ -65,6 +79,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           </Web3Provider>
         </TokenPriceProvider>
       </TooltipProvider>
-    </PrivyProvider>
+      </PrivyProvider>
+    </QueryClientProvider>
   );
 }

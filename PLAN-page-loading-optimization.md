@@ -1,5 +1,7 @@
 # Page Loading Optimization Plan
 
+> **Updated**: Revised priorities based on feedback. iOS PWA deprioritized, no server-side changes, focus on navbar routing and TanStack Query.
+
 ## Current State Analysis
 
 ### Architecture Overview
@@ -10,197 +12,85 @@
 
 ### Identified Performance Bottlenecks
 
-#### 1. iOS PWA Full Page Reloads (Critical)
-**Location**: `src/components/ui/bottomNav.tsx:54-56`
-```typescript
-// Current: Forces full page reload on iOS
-window.location.href = href;
-```
-- Every navigation in iOS PWA mode triggers a **full page reload**
-- All providers re-initialize, all data re-fetches
-- This is the #1 cause of slow navigation on iOS
-
-#### 2. No Route Prefetching
+#### 1. No Route Prefetching (Primary Issue)
+**Location**: `src/components/ui/bottomNav.tsx`
 - Navigation uses `router.push()` instead of `<Link>` components
 - Next.js `<Link>` auto-prefetches routes on hover/viewport entry
 - Currently: Routes only load **after** user clicks
+- **This is the main cause of slow navbar navigation**
 
-#### 3. Sequential Data Loading
+#### 2. Sequential Data Loading
 - Page mounts → Provider initializes → Data fetches → UI renders
 - No parallel data loading or prefetching
 - Each page waits for its data independently
 
-#### 4. Heavy Provider Re-initialization
+#### 3. No Shared Cache Between Pages
 **Provider hierarchy** (`src/providers/providers.tsx`):
 ```
 PrivyProvider → TokenPriceProvider → Web3Provider → UserProvider
   └→ WalletBalanceProvider → LoanCalculationsProvider
 ```
-- On navigation, providers may re-validate/re-fetch unnecessarily
-- No shared cache between page transitions
+- Manual caching per hook, no cross-page cache sharing
+- Navigate away and back = refetch everything
 
-#### 5. No Code Splitting
+#### 4. No Code Splitting
 - All components imported directly (no `dynamic()` imports)
 - Larger initial bundles than necessary
 
----
-
-## Proposed Solutions
-
-### Solution 1: Fix iOS PWA Navigation (High Impact, Low Effort)
-
-**Problem**: `window.location.href` causes full page reloads in PWA mode.
-
-**Solution**: Use Next.js router for all navigation, fix the underlying PWA issue differently.
-
-The current workaround was likely added because `router.push()` was opening Safari. The proper fix is to ensure the PWA manifest and navigation interceptor handle this correctly without forcing reloads.
-
-**Changes**:
-1. Remove `window.location.href` usage in `bottomNav.tsx`
-2. Enhance `PWANavigationInterceptor.tsx` to properly handle all internal navigation
-3. Use `router.push()` universally with proper PWA handling
-
-**Files to modify**:
-- `src/components/ui/bottomNav.tsx`
-- `src/components/common/PWANavigationInterceptor.tsx`
+#### 5. iOS PWA Full Page Reloads (Deprioritized)
+**Location**: `src/components/ui/bottomNav.tsx:54-56`
+- Uses `window.location.href` for iOS PWA navigation
+- Not a priority for now
 
 ---
 
-### Solution 2: Implement Route Prefetching (High Impact, Medium Effort)
+## Implementation Plan
 
-**Option A: Link-based Prefetching**
-Replace button navigation with `<Link>` components that auto-prefetch:
+### Phase 1: Navbar Route Prefetching (High Impact, Low Effort)
+
+**Goal**: Make navbar navigation feel instant by prefetching routes.
+
+#### 1A: Convert to Next.js Link Components
+Replace button navigation with `<Link>` for automatic prefetching:
 ```tsx
 <Link href="/wallet" prefetch={true}>
-  <button>Wallet</button>
+  <NavButton />
 </Link>
 ```
 
-**Option B: Manual Prefetching on Mount**
-Prefetch likely next routes when current page loads:
+#### 1B: Prefetch All Main Routes on Mount
+Prefetch navbar destinations when bottom nav mounts:
 ```tsx
-// In wallet page
 useEffect(() => {
-  router.prefetch('/wallet/loan');
+  router.prefetch('/wallet');
   router.prefetch('/history');
-  router.prefetch('/wallet/tx/borrow');
+  router.prefetch('/referrals');
+  router.prefetch('/menu');
 }, []);
 ```
 
-**Option C: Prefetch on Hover/Focus**
-Add prefetching to navigation buttons on hover:
+#### 1C: Prefetch on Hover/Touch
+Add prefetching on pointer interaction for extra responsiveness:
 ```tsx
-<button
-  onMouseEnter={() => router.prefetch(href)}
-  onClick={() => router.push(href)}
->
+onMouseEnter={() => router.prefetch(href)}
+onTouchStart={() => router.prefetch(href)}
 ```
-
-**Recommendation**: Combine A + B for maximum coverage.
 
 **Files to modify**:
 - `src/components/ui/bottomNav.tsx`
-- `src/components/common/PageHeader.tsx`
-- Individual page components for contextual prefetching
 
 ---
 
-### Solution 3: Data Prefetching Strategy (High Impact, High Effort)
+### Phase 2: Resource Hints (Low Effort, Quick Win)
 
-**Approach**: Prefetch data for likely next pages during idle time.
-
-#### 3A: Homepage Data Preloading
-On initial app load (homepage/wallet), prefetch data for common next pages:
+Add preconnect for external APIs to reduce connection latency:
 
 ```tsx
-// In wallet page or root layout
-useEffect(() => {
-  // Prefetch transaction history data
-  prefetchTransactionHistory(walletAddress);
-
-  // Prefetch referral data
-  prefetchReferralStats(userId);
-}, [walletAddress, userId]);
-```
-
-#### 3B: Implement React Query / TanStack Query
-Replace manual caching with TanStack Query for:
-- Automatic cache sharing across pages
-- Background refetching
-- Stale-while-revalidate pattern
-- Request deduplication
-
-**Benefits**:
-- Navigate to `/history` → shows cached data immediately → refetches in background
-- Shared cache between provider and page-level queries
-- Automatic garbage collection
-
-**Files to modify**:
-- `src/providers/providers.tsx` (add QueryClientProvider)
-- `src/hooks/useWalletBalance.ts`
-- `src/hooks/useTransactionHistory.ts`
-- `src/hooks/useCompound.ts`
-- All data-fetching hooks
-
----
-
-### Solution 4: Service Worker Route Caching (Medium Impact, Medium Effort)
-
-Enhance the existing Serwist service worker to cache page assets:
-
-```typescript
-// src/app/sw.ts
-registerRoute(
-  ({ request }) => request.destination === 'document',
-  new StaleWhileRevalidate({
-    cacheName: 'pages-cache',
-    plugins: [new ExpirationPlugin({ maxEntries: 20 })]
-  })
-);
-```
-
-**Benefits**:
-- Subsequent visits to same page load from cache
-- Background updates ensure fresh content
-- Works offline
-
-**Files to modify**:
-- `src/app/sw.ts`
-
----
-
-### Solution 5: Code Splitting with Dynamic Imports (Medium Impact, Low Effort)
-
-Split heavy components that aren't needed immediately:
-
-```tsx
-const LoanCalculator = dynamic(
-  () => import('@/components/LoanCalculator'),
-  { loading: () => <Skeleton /> }
-);
-```
-
-**Candidates for splitting**:
-- Modal components (only needed on interaction)
-- Chart/graph components
-- QR code generators
-- Complex form components
-
-**Files to analyze**:
-- Components in `src/components/` over 10KB
-- Components only used in specific routes
-
----
-
-### Solution 6: Resource Hints (Low Impact, Very Low Effort)
-
-Add preconnect/DNS prefetch for external APIs:
-
-```tsx
-// In layout.tsx <head>
+// In layout.tsx metadata or head
 <link rel="preconnect" href="https://api.coingecko.com" />
 <link rel="preconnect" href="https://api.arbiscan.io" />
 <link rel="dns-prefetch" href="https://api.coingecko.com" />
+<link rel="dns-prefetch" href="https://api.arbiscan.io" />
 ```
 
 **Files to modify**:
@@ -208,70 +98,152 @@ Add preconnect/DNS prefetch for external APIs:
 
 ---
 
-### Solution 7: Optimistic UI Updates (Medium Impact, Medium Effort)
+### Phase 3: Homepage Data Prefetching (Medium Effort)
 
-Show UI immediately with cached/predicted data, update when fresh data arrives:
+Prefetch data for likely next pages during idle time on wallet page.
 
 ```tsx
-// Example: Show cached balance immediately
-const { data: balance, isStale } = useWalletBalance();
+// In wallet page
+useEffect(() => {
+  // Use requestIdleCallback for non-blocking prefetch
+  requestIdleCallback(() => {
+    prefetchTransactionHistory(walletAddress);
+    prefetchReferralStats(userId);
+  });
+}, [walletAddress, userId]);
+```
 
-return (
-  <div className={isStale ? 'opacity-80' : ''}>
-    ${balance}
-    {isStale && <RefreshIndicator />}
-  </div>
+**Files to modify**:
+- `src/app/(main)/wallet/page.tsx`
+- Create prefetch utilities in `src/lib/prefetch.ts`
+
+---
+
+### Phase 4: TanStack Query Migration (High Impact, Medium-High Effort)
+
+Replace manual caching with TanStack Query for:
+- **Shared cache** — fetch once, use everywhere
+- **Stale-while-revalidate** — show cached data instantly, refresh in background
+- **Request deduplication** — multiple components = 1 request
+- **Background refetching** — keeps data fresh without blocking UI
+
+#### Expected Performance Improvement
+- **50-70% reduction in perceived load time** for repeat page visits
+- First visit: Same as now
+- Subsequent visits: Near-instant (cached data shown immediately)
+
+#### Migration Steps
+
+1. **Install TanStack Query**
+   ```bash
+   npm install @tanstack/react-query
+   ```
+
+2. **Add QueryClientProvider** to providers
+   ```tsx
+   // src/providers/providers.tsx
+   import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+   const queryClient = new QueryClient({
+     defaultOptions: {
+       queries: {
+         staleTime: 30_000,      // 30s before considered stale
+         gcTime: 5 * 60_000,     // 5min garbage collection
+         refetchOnWindowFocus: false,
+       },
+     },
+   });
+   ```
+
+3. **Migrate hooks** (in order of impact):
+   - `useWalletBalance.ts` → highest impact
+   - `useTransactionHistory.ts` → history page
+   - `useCompound.ts` → loan data
+   - `useTokenPrices` (via provider) → prices
+   - `useReferral.ts` → referral data
+
+4. **Example migration**:
+   ```tsx
+   // Before: Manual caching
+   const [data, setData] = useState(null);
+   useEffect(() => { fetch().then(setData); }, []);
+
+   // After: TanStack Query
+   const { data, isLoading, refetch } = useQuery({
+     queryKey: ['walletBalance', address],
+     queryFn: () => fetchWalletBalance(address),
+     staleTime: 30_000,
+   });
+   ```
+
+**Files to modify**:
+- `package.json` (add dependency)
+- `src/providers/providers.tsx`
+- `src/hooks/useWalletBalance.ts`
+- `src/hooks/useTransactionHistory.ts`
+- `src/hooks/useCompound.ts`
+- `src/providers/TokenPriceProvider.tsx`
+- `src/hooks/useReferral.ts`
+
+---
+
+### Phase 5: Code Splitting (Medium Impact, Low Effort)
+
+Split heavy components that aren't needed immediately:
+
+```tsx
+import dynamic from 'next/dynamic';
+
+const QRCodeModal = dynamic(
+  () => import('@/components/QRCodeModal'),
+  { loading: () => <Skeleton /> }
 );
 ```
 
----
+**Candidates for splitting**:
+- Modal components (only loaded on interaction)
+- QR code generators
+- Complex form components
+- Chart/graph components (if any)
 
-## Implementation Priority
-
-| Priority | Solution | Impact | Effort | Description |
-|----------|----------|--------|--------|-------------|
-| 1 | Fix iOS PWA Navigation | Very High | Low | Remove `window.location.href` |
-| 2 | Route Prefetching | High | Low | Add `<Link>` prefetch + manual prefetch |
-| 3 | Resource Hints | Low | Very Low | Add preconnect headers |
-| 4 | Data Prefetching | High | Medium | Prefetch likely next-page data on homepage |
-| 5 | TanStack Query Migration | Very High | High | Shared cache, SWR pattern |
-| 6 | Service Worker Caching | Medium | Medium | Cache page assets |
-| 7 | Code Splitting | Medium | Low | Dynamic imports for heavy components |
-| 8 | Optimistic UI | Medium | Medium | Show stale data immediately |
+**Files to analyze**:
+- Components in `src/components/` that are only used conditionally
 
 ---
 
-## Quick Wins (Can Implement Today)
+## Final Implementation Priority
 
-1. **Fix iOS navigation** - Remove `window.location.href` in bottomNav
-2. **Add resource hints** - Preconnect to external APIs
-3. **Add route prefetching** - Prefetch main routes on app load
-4. **Prefetch on hover** - Add `onMouseEnter` prefetch to nav buttons
-
----
-
-## Long-term Improvements
-
-1. **Migrate to TanStack Query** - Most impactful for data caching
-2. **Implement proper SSR** - Server-side data fetching where possible
-3. **Add bundle analyzer** - Identify optimization opportunities
-4. **Streaming SSR** - For pages with heavy data requirements
+| Priority | Solution | Impact | Effort | Status |
+|----------|----------|--------|--------|--------|
+| 1 | **Navbar Route Prefetching** | High | Low | 🔲 To Do |
+| 2 | **Resource Hints** | Low | Very Low | 🔲 To Do |
+| 3 | **Homepage Data Prefetching** | High | Medium | 🔲 To Do |
+| 4 | **TanStack Query Migration** | Very High | Medium-High | 🔲 To Do |
+| 5 | **Code Splitting** | Medium | Low | 🔲 To Do |
 
 ---
 
-## Metrics to Track
+## Out of Scope (Deprioritized)
 
+- ~~iOS PWA navigation fix~~ — Not a priority
+- ~~Server-side rendering (SSR)~~ — No server maintenance desired
+- ~~Streaming SSR~~ — Requires server infrastructure
+
+---
+
+## Success Metrics
+
+After implementation, measure:
+- Navigation timing between navbar pages
 - Time to Interactive (TTI) per page
-- First Contentful Paint (FCP)
-- Largest Contentful Paint (LCP)
-- Navigation timing between pages
-- Cache hit rates
+- Cache hit rates (via TanStack Query DevTools)
+- User-perceived load time improvements
 
 ---
 
-## Questions for Discussion
+## Notes
 
-1. Should we prioritize iOS PWA users or all platforms equally?
-2. Is the complexity of TanStack Query migration justified?
-3. Are there specific pages that feel slowest and should be prioritized?
-4. Should we consider Server Components for any pages?
+- All changes are client-side only (no server required)
+- TanStack Query adds ~13KB gzipped to bundle
+- Prefetching happens automatically with `<Link>` components
+- Background refetching keeps data fresh without blocking UI

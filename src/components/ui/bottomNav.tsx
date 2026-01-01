@@ -1,34 +1,62 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { History, Menu, Wallet, Sparkles } from "lucide-react";
+import { History, Menu, Wallet, Sparkles, LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useCallback } from "react";
+
+interface NavItem {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  subHrefs: string[];
+}
+
+// Defined outside component to avoid recreation on each render
+const navItems: NavItem[] = [
+  {
+    href: "/wallet",
+    icon: Wallet,
+    label: "Wallet",
+    subHrefs: ["/wallet/tx/borrow", "/wallet/tx/repay"],
+  },
+  { href: "/history", icon: History, label: "History", subHrefs: [] },
+  {
+    href: "/referrals",
+    icon: Sparkles,
+    label: "Rewards",
+    subHrefs: []
+  },
+  {
+    href: "/menu",
+    icon: Menu,
+    label: "Menu",
+    subHrefs: ["/withdraw", "/withdraw/otc", "/profile"],
+  },
+];
 
 const BottomNav = () => {
   const pathname = usePathname();
   const router = useRouter();
 
-  const navItems = [
-    {
-      href: "/wallet",
-      icon: Wallet,
-      label: "Wallet",
-      subHrefs: ["/wallet/tx/borrow", "/wallet/tx/repay"],
-    },
-    { href: "/history", icon: History, label: "History", subHrefs: [] },
-    {
-      href: "/referrals",
-      icon: Sparkles,
-      label: "Rewards",
-      subHrefs: []
-    },
-    {
-      href: "/menu",
-      icon: Menu,
-      label: "Menu",
-      subHrefs: ["/withdraw", "/withdraw/otc", "/profile"],
-    },
-  ];
+  // Prefetch all main routes on mount for faster navigation
+  useEffect(() => {
+    navItems.forEach(({ href, subHrefs }) => {
+      router.prefetch(href);
+      // Also prefetch common sub-routes
+      subHrefs.forEach((subHref) => router.prefetch(subHref));
+    });
+    // Prefetch other commonly accessed routes
+    router.prefetch('/wallet/loan');
+    router.prefetch('/wallet/deposit/WBTC');
+    router.prefetch('/referrals/tiers');
+  }, [router]);
+
+  // Prefetch on hover/touch for extra responsiveness
+  const handlePrefetch = useCallback((href: string, subHrefs: string[]) => {
+    router.prefetch(href);
+    subHrefs.forEach((subHref) => router.prefetch(subHref));
+  }, [router]);
 
   // Detect if running as iOS PWA (standalone mode)
   const isIOSPWA = typeof window !== 'undefined' &&
@@ -67,6 +95,8 @@ const BottomNav = () => {
             <button
               key={href}
               onClick={(e) => handleNavigation(e, href)}
+              onMouseEnter={() => handlePrefetch(href, subHrefs)}
+              onTouchStart={() => handlePrefetch(href, subHrefs)}
               aria-label={label}
               className={cn(
                 "relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200",
