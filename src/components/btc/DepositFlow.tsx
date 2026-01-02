@@ -167,11 +167,12 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
                 setError(null);
               }}
               className="bg-white/5 border-white/10 text-white"
+              data-testid="btc-amount-input"
             />
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-red-400 text-sm">
+            <div className="flex items-center gap-2 text-red-400 text-sm" data-testid="error-message">
               <AlertCircle className="w-4 h-4" />
               <span>{error}</span>
             </div>
@@ -181,6 +182,7 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
             onClick={handleGetQuote}
             disabled={isLoading || !btcAmount}
             className="w-full"
+            data-testid="get-quote-btn"
           >
             {isLoading ? (
               <>
@@ -214,7 +216,7 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-white/60">Expected WBTC</span>
-          <span className="text-[#ffa02d] font-medium">{quote.expectedOutput} WBTC</span>
+          <span className="text-[#ffa02d] font-medium" data-testid="quote-output">{quote.expectedOutput} WBTC</span>
         </div>
       </div>
 
@@ -271,7 +273,7 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
 
       {/* Expiration Timer */}
       {timeRemaining !== null && timeRemaining > 0 && (
-        <div className="flex items-center justify-center gap-2 text-sm text-white/60">
+        <div className="flex items-center justify-center gap-2 text-sm text-white/60" data-testid="expiration-timer">
           <Clock className="w-4 h-4" />
           <span>Quote expires in {formatTime(timeRemaining)}</span>
         </div>
