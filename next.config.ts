@@ -8,7 +8,20 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: [
+    '@swapkit/sdk',
+    '@swapkit/toolboxes',
+    '@swapkit/helpers',
+    '@swapkit/wallets',
+    '@swapkit/plugins',
+    '@swapkit/core',
+    '@meshsdk/core',
+    '@meshsdk/core-cst',
+    '@cardano-sdk/crypto',
+    'libsodium-wrappers-sumo',
+    '@near-wallet-selector/modal-ui-js',
+    '@near-wallet-selector/core',
+  ],
 };
 
 export default withSerwist(nextConfig);

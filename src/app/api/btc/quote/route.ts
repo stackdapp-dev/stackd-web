@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   const parseResult = quoteRequestSchema.safeParse(query);
   if (!parseResult.success) {
     const errorMessages = parseResult.error.issues
-      .map((e) => `${e.path.join('.') || e.path[0] || 'type'}: ${e.message}`)
+      .map((e) => `${e.path.join('.') || String(e.path[0]) || 'type'}: ${e.message}`)
       .join(', ');
     return NextResponse.json({ error: errorMessages }, { status: 400 });
   }

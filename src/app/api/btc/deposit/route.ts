@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const parseResult = depositRequestSchema.safeParse(body);
     if (!parseResult.success) {
       const errorMessages = parseResult.error.issues
-        .map((e) => `${e.path.join('.') || e.path[0] || 'btcAmount'}: ${e.message}`)
+        .map((e) => `${e.path.join('.') || String(e.path[0]) || 'btcAmount'}: ${e.message}`)
         .join(', ');
       return NextResponse.json({ error: errorMessages }, { status: 400 });
     }

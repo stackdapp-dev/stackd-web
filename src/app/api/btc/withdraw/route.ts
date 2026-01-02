@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const parseResult = withdrawRequestSchema.safeParse(body);
     if (!parseResult.success) {
       const errorMessages = parseResult.error.issues
-        .map((e) => `${e.path.join('.') || e.path[0] || 'wbtcAmount'}: ${e.message}`)
+        .map((e) => `${e.path.join('.') || String(e.path[0]) || 'wbtcAmount'}: ${e.message}`)
         .join(', ');
       return NextResponse.json({ error: errorMessages }, { status: 400 });
     }

@@ -73,6 +73,7 @@
     "eslint-config-next": "15.5.3",
     "jsdom": "^27.3.0",
     "msw": "^2.12.4",
+    "null-loader": "^4.0.1",
     "serwist": "^9.4.2",
     "tailwindcss": "^4",
     "typescript": "^5",

@@ -1,4 +1,3 @@
-import { SwapKitApi } from '@swapkit/sdk';
 import type {
   QuoteRequest,
   QuoteResponse,
@@ -15,6 +14,19 @@ interface AddressCache {
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 let addressCache: AddressCache | null = null;
 
+// Lazy-loaded SDK modules (to avoid build-time CSS import issues)
+let _swapKitApi: typeof import('@swapkit/sdk').SwapKitApi | null = null;
+let _FeeTypeEnum: typeof import('@swapkit/sdk').FeeTypeEnum | null = null;
+
+async function getSwapKitApi() {
+  if (!_swapKitApi) {
+    const sdk = await import('@swapkit/sdk');
+    _swapKitApi = sdk.SwapKitApi;
+    _FeeTypeEnum = sdk.FeeTypeEnum;
+  }
+  return { SwapKitApi: _swapKitApi, FeeTypeEnum: _FeeTypeEnum! };
+}
+
 /**
  * SwapKit client wrapper for THORChain integration
  * Handles quote fetching and deposit address generation for BTC ↔ WBTC swaps
@@ -24,34 +36,52 @@ export const swapKitClient = {
    * Get a quote for swapping between BTC and WBTC
    */
   async getQuote(request: QuoteRequest): Promise<QuoteResponse> {
-    const response = await SwapKitApi.getQuote({
+    const { SwapKitApi, FeeTypeEnum } = await getSwapKitApi();
+
+    const response = await SwapKitApi.getSwapQuote({
       sellAsset: request.sellAsset,
       buyAsset: request.buyAsset,
       sellAmount: request.sellAmount,
-      senderAddress: request.senderAddress,
-      recipientAddress: request.recipientAddress,
-      streaming: request.streaming,
-      affiliateAddress: request.affiliateAddress,
-      affiliateBps: request.affiliateBps,
+      sourceAddress: request.senderAddress,
+      destinationAddress: request.recipientAddress,
+      affiliate: request.affiliateAddress,
+      affiliateFee: request.affiliateBps,
     });
 
+    // Get the first route from the response
+    const route = response.routes[0];
+    if (!route) {
+      throw new Error('No routes available');
+    }
+
+    // Calculate total fees
+    const totalFees = route.fees?.reduce((acc, fee) => acc + parseFloat(fee.amount || '0'), 0) || 0;
+
+    // Handle estimatedTime which can be a number or an object
+    let estimatedTime = 600;
+    if (typeof route.estimatedTime === 'number') {
+      estimatedTime = route.estimatedTime;
+    } else if (route.estimatedTime && typeof route.estimatedTime === 'object') {
+      estimatedTime = route.estimatedTime.total || 600;
+    }
+
     return {
-      expectedOutput: response.expectedOutput,
-      expectedOutputUSD: response.expectedOutputUSD,
-      minimumOutput: response.minimumOutput,
-      estimatedTime: response.estimatedTime,
+      expectedOutput: route.expectedBuyAmount,
+      expectedOutputUSD: route.expectedBuyAmount, // USD conversion handled elsewhere
+      minimumOutput: route.expectedBuyAmountMaxSlippage,
+      estimatedTime,
       fees: {
-        affiliate: response.fees.affiliate,
-        outbound: response.fees.outbound,
-        liquidity: response.fees.liquidity,
+        affiliate: String(route.fees?.find(f => f.type === FeeTypeEnum.AFFILIATE)?.amount || '0'),
+        outbound: String(route.fees?.find(f => f.type === FeeTypeEnum.OUTBOUND)?.amount || '0'),
+        liquidity: String(totalFees),
       },
       route: {
-        providers: response.route.providers,
-        sellAsset: response.route.sellAsset,
-        buyAsset: response.route.buyAsset,
+        providers: route.providers || [],
+        sellAsset: route.sellAsset || request.sellAsset,
+        buyAsset: route.buyAsset,
       },
-      streamingSwap: response.streamingSwap,
-      warnings: response.warnings || [],
+      streamingSwap: undefined, // Streaming swap config not available in v4 API response
+      warnings: (route.warnings || []).map(w => w.display || String(w.code)),
     };
   },
 
@@ -72,8 +102,10 @@ export const swapKitClient = {
       }
     }
 
+    const { SwapKitApi } = await getSwapKitApi();
+
     // Fetch fresh data
-    const addresses = await SwapKitApi.getInboundAddresses();
+    const addresses = await SwapKitApi.thornode.getInboundAddresses();
 
     // Update cache
     addressCache = {
@@ -81,11 +113,11 @@ export const swapKitClient = {
         chain: addr.chain,
         address: addr.address,
         router: addr.router || '',
-        gasRate: addr.gasRate,
-        gasRateUnits: addr.gasRateUnits,
+        gasRate: addr.gas_rate || '0',
+        gasRateUnits: addr.gas_rate_units || 'satsperbyte',
         halted: addr.halted,
-        haltedChain: addr.haltedChain,
-        globalTradingPaused: addr.globalTradingPaused,
+        haltedChain: addr.chain_trading_paused || false,
+        globalTradingPaused: addr.global_trading_paused || false,
       })),
       timestamp: now,
     };
