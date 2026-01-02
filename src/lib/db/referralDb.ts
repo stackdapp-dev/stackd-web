@@ -10,7 +10,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { dbService as mockDbService } from './mock';
 import type { User } from './supabase.types';
 import type { ReferralStats } from './types';
-import { getTopDepositors, getDepositorByAddress } from '@/lib/compound/subgraph';
+import { getDepositorByAddress } from '@/lib/compound/subgraph';
 
 // Create Supabase client with service role key for server-side operations (bypasses RLS)
 // Only create if env vars are present (prevents CI/CD failures)
@@ -418,6 +418,12 @@ class ReferralDatabaseService {
                 isCurrentUser: normalizedWallet ? user.wallet_address.toLowerCase() === normalizedWallet : false,
             }));
 
+            // Build a Set of Stack'd user wallet addresses for fast lookup
+            const stackdUserAddresses = new Set(
+                usersWithReferrals.map(u => u.wallet_address.toLowerCase())
+            );
+            console.log('[ReferralDB] Stack\'d users count:', stackdUserAddresses.size);
+
             // Log referral counts for debugging
             const usersWithReferrals2 = entries.filter(e => e.referralCount > 0);
             console.log('[ReferralDB] Users with referrals:', usersWithReferrals2.length, usersWithReferrals2.slice(0, 3));
@@ -429,12 +435,28 @@ class ReferralDatabaseService {
                 .slice(0, 10)
                 .map((e, i) => ({ ...e, rank: i + 1 }));
 
-            // Fetch top depositors from Compound v3 subgraph
-            const subgraphDepositors = await getTopDepositors(10);
-            console.log('[ReferralDB] Subgraph depositors fetched:', subgraphDepositors.length);
+            // Fetch deposits for each Stack'd user individually
+            // This ensures we get ALL Stack'd users with deposits, not just those in global top 100
+            const stackdDepositPromises = usersWithReferrals.map(async (user) => {
+                const deposit = await getDepositorByAddress(user.wallet_address);
+                return {
+                    walletAddress: user.wallet_address.toLowerCase(),
+                    totalDepositsUsd: deposit?.totalDepositsUsd || 0,
+                };
+            });
 
-            // Transform subgraph data to leaderboard format
-            const sortedByDeposits = subgraphDepositors.map((depositor, index) => ({
+            const stackdDeposits = await Promise.all(stackdDepositPromises);
+
+            // Filter users with deposits > 0 and sort by deposit amount
+            const stackdDepositors = stackdDeposits
+                .filter(d => d.totalDepositsUsd > 0)
+                .sort((a, b) => b.totalDepositsUsd - a.totalDepositsUsd)
+                .slice(0, 10);
+
+            console.log('[ReferralDB] Stack\'d users with deposits:', stackdDepositors.length, stackdDepositors.slice(0, 3));
+
+            // Transform filtered data to leaderboard format with correct ranks
+            const sortedByDeposits = stackdDepositors.map((depositor, index) => ({
                 rank: index + 1,
                 walletAddress: depositor.walletAddress,
                 referralCount: 0, // Deposits tab doesn't need referral count
@@ -450,12 +472,12 @@ class ReferralDatabaseService {
                     // Count users with more referrals
                     const referralRank = entries.filter(e => e.referralCount > userEntry.referralCount).length + 1;
 
-                    // Get user's deposit amount from subgraph for deposit rank
+                    // Get user's deposit amount from subgraph for deposit rank (among Stack'd users only)
                     let depositsRank = 0;
                     const userDeposit = await getDepositorByAddress(normalizedWallet);
                     if (userDeposit && userDeposit.totalDepositsUsd > 0) {
-                        // Count depositors with more deposits than user
-                        depositsRank = subgraphDepositors.filter(d => d.totalDepositsUsd > userDeposit.totalDepositsUsd).length + 1;
+                        // Count Stack'd depositors with more deposits than user
+                        depositsRank = stackdDeposits.filter(d => d.totalDepositsUsd > userDeposit.totalDepositsUsd).length + 1;
                     }
 
                     userRank = {

@@ -135,7 +135,7 @@ export function LeaderboardModal({ open, onOpenChange }: LeaderboardModalProps) 
                     </div>
                 </DrawerHeader>
 
-                <div className="px-4 pb-6 overflow-y-auto">
+                <div className="px-4 pb-6 overflow-y-auto scrollbar-hide">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="w-full mb-4 bg-white/5 border border-white/10">
                             <TabsTrigger

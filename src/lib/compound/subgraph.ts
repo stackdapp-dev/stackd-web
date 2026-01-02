@@ -12,6 +12,24 @@
 const SUBGRAPH_URL = process.env.COMPOUND_SUBGRAPH_URL ||
     'https://gateway.thegraph.com/api/subgraphs/id/Ff7ha9ELmpmg81D6nYxy4t8aGP26dPztqD1LDJNPqjLS';
 
+// API key for The Graph's decentralized network (required for gateway access)
+const GRAPH_API_KEY = process.env.GRAPH_API_KEY || '';
+
+/**
+ * Build headers for Graph API requests
+ */
+function buildHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+
+    if (GRAPH_API_KEY) {
+        headers['Authorization'] = `Bearer ${GRAPH_API_KEY}`;
+    }
+
+    return headers;
+}
+
 export interface DepositorData {
     walletAddress: string;
     totalDepositsUsd: number;
@@ -68,9 +86,7 @@ export async function getTopDepositors(limit: number = 10): Promise<DepositorDat
 
         const response = await fetch(SUBGRAPH_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: buildHeaders(),
             body: JSON.stringify({ query }),
         });
 
@@ -134,9 +150,7 @@ export async function getDepositorByAddress(walletAddress: string): Promise<Depo
 
         const response = await fetch(SUBGRAPH_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: buildHeaders(),
             body: JSON.stringify({ query }),
         });
 
