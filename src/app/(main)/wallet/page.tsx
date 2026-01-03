@@ -5,17 +5,16 @@ import { Balance } from "@/components/wallet";
 import ActionButtons from "@/components/wallet/ActionButtons";
 import ActiveLoans from "@/components/wallet/ActiveLoans";
 import CollateralCard from "@/components/wallet/CollateralCard";
+import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { prefetchTransactionHistory } from "@/hooks/useTransactionHistory";
-import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
 const Wallet = () => {
-  const { assets, totalBalance, isLoading } = useWalletBalanceContext();
-  const { loanCalcs } = useLoanCalculationsContext();
-  const { netLoanValue } = loanCalcs;
+  const { assets, isLoading } = useWalletBalanceContext();
+  const { breakdown } = useCollateralBreakdown();
   const visibility = useVisibility();
   const { activeWalletAddress } = useWeb3();
   const queryClient = useQueryClient();
@@ -48,9 +47,9 @@ const Wallet = () => {
 
   return (
     <div className="flex flex-col gap-6 pb-8">
-      {/* Hero Balance */}
+      {/* Hero Balance - Total BTC deposited in lending positions */}
       <Balance
-        amount={totalBalance + netLoanValue}
+        amount={breakdown.totalCollateralUsd}
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
       />

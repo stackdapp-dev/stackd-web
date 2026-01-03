@@ -71,7 +71,7 @@ export default function ActionButtons() {
                         onClick={() => setShowSimulator(false)}
                     />
                     {/* Modal Content */}
-                    <div className="relative w-full max-w-xl bg-slate-900 rounded-t-3xl p-6 pb-safe animate-slide-up max-h-[90vh] overflow-y-auto">
+                    <div className="relative w-full max-w-xl bg-slate-900 rounded-t-3xl p-6 pb-safe animate-slide-up max-h-[90vh] overflow-y-auto scrollbar-hide">
                         {/* Handle bar */}
                         <div className="flex justify-center mb-4">
                             <div className="w-12 h-1.5 bg-white/20 rounded-full" />

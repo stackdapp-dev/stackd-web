@@ -81,13 +81,14 @@ export default function Assets({ items, isLoading = false }: AssetsProps) {
                   {/* Left: Icon + Name + Amount */}
                   <div className="flex items-center gap-3">
                     <TokenIcon symbol={it.symbol} width={48} height={48} />
-                    <div>
+                    <div className="flex flex-col">
                       <span className="text-white font-semibold">
                         {tokenNames[it.symbol] || it.name || it.symbol}
                       </span>
-                      <p className="text-white/50 text-sm">
-                        {maskString(formatAmount(it.amount || 0), visibility.visible, MASK_SHORT)} {it.symbol}
-                      </p>
+                      <span className="text-white/50 text-sm">{it.symbol}</span>
+                      <span className="text-white/50 text-sm">
+                        {maskString(formatAmount(it.amount || 0), visibility.visible, MASK_SHORT)}
+                      </span>
                     </div>
                   </div>
 

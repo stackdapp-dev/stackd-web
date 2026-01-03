@@ -28,13 +28,15 @@ test.describe("Rewards Page - Unauthenticated State", () => {
         // 2. "Start Earning Rewards" (if no user data)
         // 3. Loading skeleton (if still loading)
 
+        // Wait for React hydration to complete - look for any of the expected states
         const dashboardContent = page.getByText('Total Earnings');
-        const startEarningContent = page.getByText('Start Earning Rewards');
-        const generateButton = page.getByText('Generate Referral Link');
+        const startEarningContent = page.getByRole('heading', { name: 'Start Earning Rewards' });
+        const generateButton = page.getByRole('button', { name: 'Generate Referral Link' });
 
-        const hasDashboard = await dashboardContent.isVisible({ timeout: 2000 }).catch(() => false);
-        const hasStartEarning = await startEarningContent.isVisible({ timeout: 2000 }).catch(() => false);
-        const hasGenerateButton = await generateButton.isVisible({ timeout: 2000 }).catch(() => false);
+        // Wait up to 5 seconds for one of these elements to appear
+        const hasDashboard = await dashboardContent.isVisible({ timeout: 5000 }).catch(() => false);
+        const hasStartEarning = await startEarningContent.isVisible({ timeout: 5000 }).catch(() => false);
+        const hasGenerateButton = await generateButton.isVisible({ timeout: 5000 }).catch(() => false);
 
         console.log('[TEST] Dashboard visible:', hasDashboard);
         console.log('[TEST] Start earning visible:', hasStartEarning);

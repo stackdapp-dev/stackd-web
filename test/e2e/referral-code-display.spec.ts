@@ -51,9 +51,9 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
         // 1. A referral code (if user/mock data exists)
         // 2. "Start Earning Rewards" (if no data)
         const referralCodeElement = page.getByTestId('referral-code');
-        const startEarningButton = page.getByText('Generate Referral Link');
+        const startEarningButton = page.getByRole('button', { name: 'Generate Referral Link' });
 
-        // Check what state the page is in
+        // Wait for React hydration - use longer timeout
         const hasReferralCode = await referralCodeElement.isVisible({ timeout: 10000 }).catch(() => false);
         const hasStartEarning = await startEarningButton.isVisible({ timeout: 10000 }).catch(() => false);
 
