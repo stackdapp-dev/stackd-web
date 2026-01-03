@@ -2,14 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { swapKitClient } from '@/lib/btc/swapKitClient';
 import { mockSwapKitQuoteResponse, mockDepositAddress } from '../../mocks/swapkit';
 
-// Mock the SwapKit SDK with the v4 API structure
-vi.mock('@swapkit/sdk', () => ({
-  SwapKitApi: {
-    getSwapQuote: vi.fn(),
-    thornode: {
-      getInboundAddresses: vi.fn(),
-    },
-  },
+// Mock the SwapKit helpers packages
+vi.mock('@swapkit/helpers', () => ({
   FeeTypeEnum: {
     AFFILIATE: 'affiliate',
     OUTBOUND: 'outbound',
@@ -19,7 +13,16 @@ vi.mock('@swapkit/sdk', () => ({
   },
 }));
 
-import { SwapKitApi } from '@swapkit/sdk';
+vi.mock('@swapkit/helpers/api', () => ({
+  SwapKitApi: {
+    getSwapQuote: vi.fn(),
+    thornode: {
+      getInboundAddresses: vi.fn(),
+    },
+  },
+}));
+
+import { SwapKitApi } from '@swapkit/helpers/api';
 
 describe('SwapKitClient', () => {
   beforeEach(() => {

@@ -4,6 +4,9 @@ import type {
   DepositAddress,
   SwapMemoParams,
 } from './types';
+// Import directly from @swapkit/helpers to avoid React/wallet dependencies in the full SDK
+import { FeeTypeEnum } from '@swapkit/helpers';
+import { SwapKitApi } from '@swapkit/helpers/api';
 
 // Cache for inbound addresses
 interface AddressCache {
@@ -14,19 +17,6 @@ interface AddressCache {
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 let addressCache: AddressCache | null = null;
 
-// Lazy-loaded SDK modules (to avoid build-time CSS import issues)
-let _swapKitApi: typeof import('@swapkit/sdk').SwapKitApi | null = null;
-let _FeeTypeEnum: typeof import('@swapkit/sdk').FeeTypeEnum | null = null;
-
-async function getSwapKitApi() {
-  if (!_swapKitApi) {
-    const sdk = await import('@swapkit/sdk');
-    _swapKitApi = sdk.SwapKitApi;
-    _FeeTypeEnum = sdk.FeeTypeEnum;
-  }
-  return { SwapKitApi: _swapKitApi, FeeTypeEnum: _FeeTypeEnum! };
-}
-
 /**
  * SwapKit client wrapper for THORChain integration
  * Handles quote fetching and deposit address generation for BTC ↔ WBTC swaps
@@ -36,8 +26,6 @@ export const swapKitClient = {
    * Get a quote for swapping between BTC and WBTC
    */
   async getQuote(request: QuoteRequest): Promise<QuoteResponse> {
-    const { SwapKitApi, FeeTypeEnum } = await getSwapKitApi();
-
     const response = await SwapKitApi.getSwapQuote({
       sellAsset: request.sellAsset,
       buyAsset: request.buyAsset,
@@ -101,8 +89,6 @@ export const swapKitClient = {
         return cached;
       }
     }
-
-    const { SwapKitApi } = await getSwapKitApi();
 
     // Fetch fresh data
     const addresses = await SwapKitApi.thornode.getInboundAddresses();

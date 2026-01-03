@@ -8,19 +8,12 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  // Keep packages that need native Node.js modules as server externals
   serverExternalPackages: [
-    '@swapkit/sdk',
-    '@swapkit/toolboxes',
-    '@swapkit/helpers',
-    '@swapkit/wallets',
-    '@swapkit/plugins',
-    '@swapkit/core',
     '@meshsdk/core',
     '@meshsdk/core-cst',
     '@cardano-sdk/crypto',
     'libsodium-wrappers-sumo',
-    '@near-wallet-selector/modal-ui-js',
-    '@near-wallet-selector/core',
   ],
 };
 
