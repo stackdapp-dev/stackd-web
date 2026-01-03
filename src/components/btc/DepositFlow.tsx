@@ -247,13 +247,15 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
           </div>
           <Button
             variant="ghost"
-            size="icon"
             onClick={handleCopyAddress}
             data-testid="copy-address-btn"
-            className="shrink-0"
+            className="shrink-0 flex items-center gap-1"
           >
             {copied ? (
-              <Check className="w-4 h-4 text-green-400" />
+              <>
+                <Check className="w-4 h-4 text-green-400" />
+                <span className="text-green-400 text-sm">Copied</span>
+              </>
             ) : (
               <Copy className="w-4 h-4" />
             )}
