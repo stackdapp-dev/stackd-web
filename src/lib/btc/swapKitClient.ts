@@ -5,8 +5,13 @@ import type {
   SwapMemoParams,
 } from './types';
 // Import directly from @swapkit/helpers to avoid React/wallet dependencies in the full SDK
-import { FeeTypeEnum } from '@swapkit/helpers';
+import { FeeTypeEnum, SKConfig } from '@swapkit/helpers';
 import { SwapKitApi } from '@swapkit/helpers/api';
+
+// Configure SwapKit API key if available
+if (process.env.SWAPKIT_API_KEY) {
+  SKConfig.set({ apiKeys: { swapKit: process.env.SWAPKIT_API_KEY } });
+}
 
 // Cache for inbound addresses
 interface AddressCache {
