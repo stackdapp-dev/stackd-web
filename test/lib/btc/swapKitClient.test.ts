@@ -11,6 +11,9 @@ vi.mock('@swapkit/helpers', () => ({
     NETWORK: 'network',
     INBOUND: 'inbound',
   },
+  SKConfig: {
+    set: vi.fn(),
+  },
 }));
 
 vi.mock('@swapkit/helpers/api', () => ({
