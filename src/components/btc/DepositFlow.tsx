@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Card from '@/components/ui/card';
-import { Copy, Check, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { Copy, Check, Clock, AlertCircle, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// THORChain tracker URL
+const THORCHAIN_TRACKER_URL = 'https://track.ninerealms.com';
 
 // Minimum BTC deposit amount
 const MIN_BTC_AMOUNT = 0.001;
@@ -150,6 +153,21 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
           </p>
         </div>
 
+        {/* Self-custody warning */}
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-amber-400">Important: Use a Self-Custody Wallet</p>
+              <ul className="text-xs text-white/70 space-y-1 list-disc list-inside">
+                <li>Send BTC from a wallet <strong className="text-white">you control</strong> (not an exchange like Coinbase or Binance)</li>
+                <li>If the swap fails, your BTC will be <strong className="text-white">refunded to the sending address</strong></li>
+                <li>Refunds are automatic but incur network fees</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="btc-amount" className="text-sm text-white/80">
@@ -289,6 +307,16 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
         </div>
       )}
 
+      {/* Refund reminder */}
+      <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-white/40 shrink-0 mt-0.5" />
+          <p className="text-xs text-white/50">
+            Remember: Send only from a self-custody wallet. If the swap fails, your BTC will be automatically refunded to the sending address (minus network fees).
+          </p>
+        </div>
+      </div>
+
       {/* Actions */}
       <div className="flex gap-3">
         <Button
@@ -306,6 +334,19 @@ export function DepositFlow({ className, evmAddress }: DepositFlowProps) {
             Get New Quote
           </Button>
         )}
+      </div>
+
+      {/* Transaction tracking link */}
+      <div className="text-center pt-2 border-t border-white/10">
+        <a
+          href={THORCHAIN_TRACKER_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-white/50 hover:text-white/80 transition-colors"
+        >
+          <span>Track your transaction on THORChain</span>
+          <ExternalLink className="w-3 h-3" />
+        </a>
       </div>
     </Card>
   );
