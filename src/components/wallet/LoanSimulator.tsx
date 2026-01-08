@@ -120,8 +120,8 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
   // Simulator state - store input as string
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "0");
 
-  // Sandbox mode - custom collateral input
-  const [sandboxCollateral, setSandboxCollateral] = useState("0");
+  // Sandbox mode - custom collateral input (empty string allows placeholder to show)
+  const [sandboxCollateral, setSandboxCollateral] = useState("");
 
   // Parse input value for calculations
   const parsedInput = parseFloat(inputValue) || 0;
@@ -268,7 +268,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
   const handleReset = useCallback(() => {
     setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "0");
     if (mode === "simulate") {
-      setSandboxCollateral("0");
+      setSandboxCollateral("");
     }
   }, [mode, currentBorrowedAmount]);
 
