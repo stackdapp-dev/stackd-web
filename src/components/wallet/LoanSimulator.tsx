@@ -10,7 +10,7 @@ import SimulatorGauge from "@/components/wallet/SimulatorGauge";
 import SimulatorResults from "@/components/wallet/SimulatorResults";
 import { simulateLoan, type SimulationResult } from "@/lib/loans/loanSimulator";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useCompound } from "@/hooks/useCompound";

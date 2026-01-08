@@ -1,6 +1,6 @@
 "use client";
 
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";

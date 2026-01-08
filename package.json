@@ -36,6 +36,7 @@
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.89.0",
+    "@swapkit/helpers": "^4.5.9",
     "@swapkit/sdk": "^4.2.11",
     "@tanstack/react-form": "^1.23.8",
     "@tanstack/react-query": "^5.90.16",
