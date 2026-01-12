@@ -219,25 +219,52 @@ export function useGaslessSwap() {
             await ensureCorrectNetwork();
             console.log("[0x] Network check passed");
 
+            // CRITICAL: Fetch a fresh quote right before signing
+            // 0x gasless quotes expire in ~30 seconds, so we need to ensure we're using a fresh one
+            console.log("[0x] Fetching fresh quote before signing...");
+            const params = new URLSearchParams({
+                sellToken: quote.sellToken,
+                buyToken: quote.buyToken,
+                sellAmount: quote.sellAmount,
+                taker: activeWalletAddress,
+            });
+
+            const freshQuoteResponse = await fetch(`/api/0x?${params}`);
+            if (!freshQuoteResponse.ok) {
+                const errorData = await freshQuoteResponse.json();
+                throw new Error(errorData.error || "Failed to fetch fresh quote");
+            }
+
+            const freshQuote: Quote = await freshQuoteResponse.json();
+            console.log("[0x] Fresh quote received");
+
+            if (!freshQuote.liquidityAvailable) {
+                throw new Error("No liquidity available for this swap");
+            }
+
+            if (!freshQuote.trade) {
+                throw new Error("No trade data in fresh quote");
+            }
+
             const submitPayload: Record<string, unknown> = {
                 chainId: 42161,
             };
 
-            // Sign approval if needed
-            if (quote.approval) {
+            // Sign approval if needed (using fresh quote data)
+            if (freshQuote.approval) {
                 console.log("[0x] Signing approval...");
                 const approvalSignature = await walletClient.signTypedData({
                     account: activeWalletAddress as `0x${string}`,
-                    domain: quote.approval.eip712.domain as any,
-                    types: quote.approval.eip712.types as any,
-                    primaryType: quote.approval.eip712.primaryType,
-                    message: quote.approval.eip712.message as any,
+                    domain: freshQuote.approval.eip712.domain as any,
+                    types: freshQuote.approval.eip712.types as any,
+                    primaryType: freshQuote.approval.eip712.primaryType,
+                    message: freshQuote.approval.eip712.message as any,
                 });
 
                 const { r: approvalR, s: approvalS, v: approvalV } = splitSignature(approvalSignature);
                 submitPayload.approval = {
-                    type: quote.approval.type,
-                    eip712: quote.approval.eip712,
+                    type: freshQuote.approval.type,
+                    eip712: freshQuote.approval.eip712,
                     signature: {
                         r: approvalR,
                         s: approvalS,
@@ -252,16 +279,16 @@ export function useGaslessSwap() {
             console.log("[0x] Signing trade...");
             const tradeSignature = await walletClient.signTypedData({
                 account: activeWalletAddress as `0x${string}`,
-                domain: quote.trade.eip712.domain as any,
-                types: quote.trade.eip712.types as any,
-                primaryType: quote.trade.eip712.primaryType,
-                message: quote.trade.eip712.message as any,
+                domain: freshQuote.trade.eip712.domain as any,
+                types: freshQuote.trade.eip712.types as any,
+                primaryType: freshQuote.trade.eip712.primaryType,
+                message: freshQuote.trade.eip712.message as any,
             });
 
             const { r: tradeR, s: tradeS, v: tradeV } = splitSignature(tradeSignature);
             submitPayload.trade = {
-                type: quote.trade.type,
-                eip712: quote.trade.eip712,
+                type: freshQuote.trade.type,
+                eip712: freshQuote.trade.eip712,
                 signature: {
                     r: tradeR,
                     s: tradeS,
