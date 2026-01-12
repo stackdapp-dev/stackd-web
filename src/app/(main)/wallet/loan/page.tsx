@@ -12,7 +12,7 @@ import { useAutoLend } from "@/hooks/useAutoLend";
 import { formatAmount, formatCurrency, formatPercent, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw, ArrowUpFromLine, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

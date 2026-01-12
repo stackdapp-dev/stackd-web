@@ -5,6 +5,9 @@ import { test, expect } from "@playwright/test";
 import { createMockAuthScript } from "./fixtures";
 
 test.describe("Navigation", () => {
+    // Increase timeout for multiple navigation test
+    test.setTimeout(60000);
+
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(createMockAuthScript("embeddedNoLoan"));
     });

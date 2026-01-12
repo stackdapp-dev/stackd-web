@@ -7,7 +7,7 @@ import Card from "@/components/ui/card";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useCompound } from "@/hooks/useCompound";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { formatAmount, formatCurrency } from "@/lib/utils";
 import { AlertTriangle, Lock, CheckCircle2 } from "lucide-react";

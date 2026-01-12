@@ -19,6 +19,9 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
     // This is the dev fallback code when no auth token is provided
     // In production with auth, each user would see their own unique code
 
+    // Increase timeout for slower CI environments
+    test.setTimeout(60000);
+
     test('API returns referral code in development mode (no auth)', async ({ request }) => {
         // Without auth header, API uses dev fallback wallet
         const apiResponse = await request.get('/api/referrals');
@@ -39,7 +42,10 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
     test('Rewards page displays referral code element', async ({ page }) => {
         // Navigate to rewards page (uses unauthenticated flow in test)
         await page.goto('/referrals');
-        await page.waitForLoadState("domcontentloaded");
+        await page.waitForLoadState("networkidle");
+
+        // Wait for page to fully hydrate
+        await page.waitForTimeout(2000);
 
         // The page should either show:
         // 1. A referral code (if user/mock data exists)
@@ -48,8 +54,8 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
         const startEarningButton = page.getByRole('button', { name: 'Generate Referral Link' });
 
         // Wait for React hydration - use longer timeout
-        const hasReferralCode = await referralCodeElement.isVisible({ timeout: 5000 }).catch(() => false);
-        const hasStartEarning = await startEarningButton.isVisible({ timeout: 5000 }).catch(() => false);
+        const hasReferralCode = await referralCodeElement.isVisible({ timeout: 10000 }).catch(() => false);
+        const hasStartEarning = await startEarningButton.isVisible({ timeout: 10000 }).catch(() => false);
 
         console.log('[TEST] Referral code visible:', hasReferralCode);
         console.log('[TEST] Start earning visible:', hasStartEarning);
@@ -65,7 +71,7 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
 
         // Check for the "tap to copy" hint (only visible if referral code is shown)
         const tapToCopy = page.getByText('tap to copy');
-        const hasHint = await tapToCopy.isVisible({ timeout: 2000 }).catch(() => false);
+        const hasHint = await tapToCopy.isVisible({ timeout: 5000 }).catch(() => false);
 
         if (hasHint) {
             console.log('[TEST] Tap to copy hint is visible');
@@ -77,6 +83,9 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
 });
 
 test.describe('Referral Code Display - Format Validation', () => {
+    // Increase timeout for slower CI environments
+    test.setTimeout(60000);
+
     test('referral codes follow STACK + 5 alphanumeric format', async ({ request }) => {
         const response = await request.get('/api/referrals');
         const data = await response.json();

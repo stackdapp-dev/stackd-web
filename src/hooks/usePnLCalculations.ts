@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useTokenPrices } from "@/providers/TokenPriceProvider";
 import { useReferral } from "@/hooks/useReferral";
