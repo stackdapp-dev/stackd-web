@@ -67,8 +67,54 @@ function parseApiError(errorString: string): string {
         return "No liquidity available for this token pair.";
     }
 
-    // Default: return a cleaned up version
+    // Rate limiting
+    if (errorString.includes("429") || errorString.includes("rate limit")) {
+        return "Too many requests. Please wait a moment and try again.";
+    }
+
+    // Token not supported
+    if (errorString.includes("TOKEN_NOT_SUPPORTED") || errorString.includes("not supported")) {
+        return "This token pair is not supported for gasless swaps.";
+    }
+
+    // Gasless not available
+    if (errorString.includes("GASLESS_NOT_AVAILABLE") || errorString.includes("gasless")) {
+        return "Gasless swaps are temporarily unavailable. Please try again later.";
+    }
+
+    // Network issues
+    if (errorString.includes("503") || errorString.includes("502") || errorString.includes("504")) {
+        return "Swap service is temporarily unavailable. Please try again.";
+    }
+
+    // Try to extract error details from 0x API response
     if (errorString.includes("0x API error:")) {
+        // Try to parse JSON error from the response
+        const jsonMatch = errorString.match(/\{.*\}/);
+        if (jsonMatch) {
+            try {
+                const errorData = JSON.parse(jsonMatch[0]);
+                if (errorData.reason) {
+                    return errorData.reason;
+                }
+                if (errorData.description) {
+                    return errorData.description;
+                }
+            } catch {
+                // Not JSON, continue
+            }
+        }
+        // Extract status code
+        const statusMatch = errorString.match(/0x API error: (\d+)/);
+        if (statusMatch) {
+            const status = parseInt(statusMatch[1]);
+            if (status === 400) {
+                return "Invalid swap request. Please check your input.";
+            }
+            if (status === 403) {
+                return "Swap service access denied. Please try again later.";
+            }
+        }
         return "Swap service temporarily unavailable. Please try again.";
     }
 

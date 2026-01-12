@@ -64,8 +64,22 @@ export async function GET(request: NextRequest) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error("[0x] Quote error:", response.status, errorText);
+
+            // Try to parse the error for better messaging
+            let parsedError = errorText;
+            try {
+                const errorJson = JSON.parse(errorText);
+                parsedError = errorJson.reason || errorJson.description || errorJson.message || errorText;
+            } catch {
+                // Keep original text
+            }
+
             return NextResponse.json(
-                { error: `0x API error: ${response.status} - ${errorText}` },
+                {
+                    error: `0x API error: ${response.status} - ${parsedError}`,
+                    status: response.status,
+                    details: errorText
+                },
                 { status: response.status }
             );
         }
