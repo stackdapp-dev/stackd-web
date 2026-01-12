@@ -110,16 +110,14 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        
-        // Enhanced logging for debugging signature issues
-        console.log("[0x] Submitting gasless swap...");
-        console.log("[0x] chainId:", body.chainId);
-        if (body.trade?.signature) {
-            console.log("[0x] Trade signature v:", body.trade.signature.v, "signatureType:", body.trade.signature.signatureType);
-        }
-        if (body.approval?.signature) {
-            console.log("[0x] Approval signature v:", body.approval.signature.v, "signatureType:", body.approval.signature.signatureType);
-        }
+
+        // Enhanced logging for debugging signature issues - JSON stringify to avoid truncation
+        console.log("[0x] Submit request:", JSON.stringify({
+            chainId: body.chainId,
+            tradeType: body.trade?.type,
+            tradeSig: body.trade?.signature ? { v: body.trade.signature.v, r: body.trade.signature.r?.slice(0, 10), s: body.trade.signature.s?.slice(0, 10), signatureType: body.trade.signature.signatureType } : null,
+            approvalSig: body.approval?.signature ? { v: body.approval.signature.v, signatureType: body.approval.signature.signatureType } : null,
+        }));
 
         const response = await fetch(`${OX_API_URL}/gasless/submit`, {
             method: "POST",
