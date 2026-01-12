@@ -131,7 +131,8 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("[0x] Submit error:", response.status, errorText);
+            // Use console.log for better Vercel log visibility
+            console.log("[0x] Submit FAILED:", JSON.stringify({ status: response.status, error: errorText }));
             return NextResponse.json(
                 { error: `0x API error: ${response.status} - ${errorText}` },
                 { status: response.status }
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
         }
 
         const data = await response.json();
-        console.log("[0x] Submit response:", data);
+        console.log("[0x] Submit SUCCESS:", JSON.stringify(data));
         return NextResponse.json(data);
     } catch (error) {
         console.error("[0x] Submit error:", error);
