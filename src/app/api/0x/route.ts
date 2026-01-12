@@ -129,18 +129,21 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(body),
         });
 
+        // Log response status immediately
+        console.log("[0x] Submit response status:", response.status);
+
+        const responseText = await response.text();
+        console.log("[0x] Submit response body:", responseText.slice(0, 500));
+
         if (!response.ok) {
-            const errorText = await response.text();
-            // Use console.log for better Vercel log visibility
-            console.log("[0x] Submit FAILED:", JSON.stringify({ status: response.status, error: errorText }));
             return NextResponse.json(
-                { error: `0x API error: ${response.status} - ${errorText}` },
+                { error: `0x API error: ${response.status} - ${responseText}` },
                 { status: response.status }
             );
         }
 
-        const data = await response.json();
-        console.log("[0x] Submit SUCCESS:", JSON.stringify(data));
+        // Parse the response text as JSON for success case
+        const data = JSON.parse(responseText);
         return NextResponse.json(data);
     } catch (error) {
         console.error("[0x] Submit error:", error);
