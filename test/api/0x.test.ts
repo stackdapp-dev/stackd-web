@@ -343,7 +343,8 @@ describe("/api/0x", () => {
 
                 global.fetch = vi.fn().mockResolvedValueOnce({
                     ok: true,
-                    json: async () => mockSubmitResponse,
+                    status: 200,
+                    text: async () => JSON.stringify(mockSubmitResponse),
                 });
 
                 const submitPayload = {
@@ -381,7 +382,8 @@ describe("/api/0x", () => {
 
                 global.fetch = vi.fn().mockResolvedValueOnce({
                     ok: true,
-                    json: async () => mockSubmitResponse,
+                    status: 200,
+                    text: async () => JSON.stringify(mockSubmitResponse),
                 });
 
                 const submitPayload = {
