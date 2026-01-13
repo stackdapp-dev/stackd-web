@@ -106,7 +106,7 @@ export const ERC20_ABI = [
 
 // Fluid VaultResolver ABI - for reading position data
 export const FLUID_VAULT_RESOLVER_ADDR =
-  "0x0000000000000000000000000000000000000000" as const; // TODO: Get actual address from Fluid deployments
+  "0x93CAB6529aD849b2583EBAe32D13817A2F38cEb4" as const; // Fluid VaultResolver on Ethereum mainnet
 
 export const FLUID_VAULT_RESOLVER_ABI = [
   {
