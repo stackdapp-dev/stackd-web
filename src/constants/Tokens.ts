@@ -1,4 +1,4 @@
-import { TOKEN_ADDRESSES } from "./addresses";
+import { TOKEN_ADDRESSES, ETHEREUM_TOKEN_ADDRESSES } from "./addresses";
 
 /**
  * Token metadata for display purposes
@@ -27,6 +27,22 @@ export const TOKEN_METADATA = {
     address: null, // Native token, no contract address
     coingeckoSymbol: "eth",
     icon: "/assets/tokens/eth.png",
+  },
+  XAUT: {
+    symbol: "XAUT",
+    name: "Tether Gold",
+    decimals: 6,
+    address: ETHEREUM_TOKEN_ADDRESSES.XAUT,
+    coingeckoSymbol: "tether-gold",
+    icon: "/assets/tokens/xaut.png",
+  },
+  USDC: {
+    symbol: "USDC",
+    name: "USD Coin",
+    decimals: 6,
+    address: ETHEREUM_TOKEN_ADDRESSES.USDC,
+    coingeckoSymbol: "usd-coin",
+    icon: "/assets/tokens/usdc.png",
   },
 } as const;
 

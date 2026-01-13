@@ -3,6 +3,7 @@
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { WalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { LoanCalculationsProvider } from "@/providers/LoanCalculationsProvider";
+import { MultiLoanProvider } from "@/providers/MultiLoanProvider";
 import { useTokenPrices } from "@/providers/TokenPriceProvider";
 import VisibilityProvider from "@/providers/visibility";
 import { useMemo } from "react";
@@ -40,7 +41,9 @@ export default function WalletLayout({
   return (
     <VisibilityProvider>
       <WalletBalanceProvider>
-        <LoanCalculationsProvider>{children}</LoanCalculationsProvider>
+        <LoanCalculationsProvider>
+          <MultiLoanProvider>{children}</MultiLoanProvider>
+        </LoanCalculationsProvider>
       </WalletBalanceProvider>
     </VisibilityProvider>
   );

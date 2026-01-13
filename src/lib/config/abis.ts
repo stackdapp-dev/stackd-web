@@ -103,3 +103,70 @@ export const ERC20_ABI = [
     type: "function",
   },
 ] as const;
+
+// Fluid VaultResolver ABI - for reading position data
+export const FLUID_VAULT_RESOLVER_ADDR =
+  "0x0000000000000000000000000000000000000000" as const; // TODO: Get actual address from Fluid deployments
+
+export const FLUID_VAULT_RESOLVER_ABI = [
+  {
+    inputs: [{ name: "user_", type: "address" }],
+    name: "positionsByUser",
+    outputs: [
+      {
+        name: "userPositions_",
+        type: "tuple[]",
+        components: [
+          { name: "nftId", type: "uint256" },
+          { name: "supply", type: "uint256" },
+          { name: "borrow", type: "uint256" },
+        ],
+      },
+      {
+        name: "vaultsData_",
+        type: "tuple[]",
+        components: [
+          { name: "vault", type: "address" },
+          { name: "supplyToken", type: "address" },
+          { name: "borrowToken", type: "address" },
+          { name: "collateralFactor", type: "uint256" },
+          { name: "liquidationThreshold", type: "uint256" },
+          { name: "supplyRate", type: "uint256" },
+          { name: "borrowRate", type: "uint256" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "nftId_", type: "uint256" }],
+    name: "positionByNftId",
+    outputs: [
+      {
+        name: "userPosition_",
+        type: "tuple",
+        components: [
+          { name: "nftId", type: "uint256" },
+          { name: "supply", type: "uint256" },
+          { name: "borrow", type: "uint256" },
+        ],
+      },
+      {
+        name: "vaultData_",
+        type: "tuple",
+        components: [
+          { name: "vault", type: "address" },
+          { name: "supplyToken", type: "address" },
+          { name: "borrowToken", type: "address" },
+          { name: "collateralFactor", type: "uint256" },
+          { name: "liquidationThreshold", type: "uint256" },
+          { name: "supplyRate", type: "uint256" },
+          { name: "borrowRate", type: "uint256" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;

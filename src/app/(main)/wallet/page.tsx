@@ -52,6 +52,7 @@ const Wallet = () => {
         amount={breakdown.totalCollateralUsd}
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
+        walletAddress={activeWalletAddress || ""}
       />
 
       {/* Action Buttons */}

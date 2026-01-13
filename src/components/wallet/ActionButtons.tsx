@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowDownToLine, ArrowRightLeft, Send, Calculator } from "lucide-react";
+import { ArrowRightLeft, Send, Calculator, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import LoanSimulator from "@/components/wallet/LoanSimulator";
+import NewLoanModal from "@/components/wallet/NewLoanModal";
 
 interface ActionButtonProps {
     icon: React.ReactNode;
@@ -36,15 +37,11 @@ function ActionButton({ icon, label, onClick, disabled }: ActionButtonProps) {
 export default function ActionButtons() {
     const router = useRouter();
     const [showSimulator, setShowSimulator] = useState(false);
+    const [showNewLoanModal, setShowNewLoanModal] = useState(false);
 
     return (
         <div className="px-4">
             <div className="flex justify-center gap-6 py-4">
-                <ActionButton
-                    icon={<ArrowDownToLine className="w-6 h-6 text-amber-500" />}
-                    label="Cash In"
-                    onClick={() => router.push("/wallet/cash-in")}
-                />
                 <ActionButton
                     icon={<Send className="w-6 h-6 text-purple-400" />}
                     label="Send"
@@ -59,6 +56,11 @@ export default function ActionButtons() {
                     icon={<Calculator className="w-6 h-6 text-emerald-400" />}
                     label="Simulate"
                     onClick={() => setShowSimulator(true)}
+                />
+                <ActionButton
+                    icon={<Plus className="w-6 h-6 text-emerald-400" />}
+                    label="New Loan"
+                    onClick={() => setShowNewLoanModal(true)}
                 />
             </div>
 
@@ -93,6 +95,12 @@ export default function ActionButtons() {
                     </div>
                 </div>
             )}
+
+            {/* New Loan Modal */}
+            <NewLoanModal
+                isOpen={showNewLoanModal}
+                onClose={() => setShowNewLoanModal(false)}
+            />
         </div>
     );
 }
