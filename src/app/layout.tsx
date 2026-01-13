@@ -79,9 +79,10 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="antialiased w-full min-h-[100dvh] md:max-w-sm md:mx-auto"
+        className="antialiased w-full min-h-[100dvh]"
       >
-        <div className="w-full pb-[calc(56px+env(safe-area-inset-bottom))]">
+        {/* Mobile: bottom padding for bottom nav, Desktop: top padding for top nav */}
+        <div className="w-full pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0 md:pt-20">
           <Providers>{children}</Providers>
         </div>
         <noscript>
