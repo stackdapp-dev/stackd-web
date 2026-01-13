@@ -118,11 +118,12 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         >
                             <div className="flex items-center gap-3">
                                 <TokenIcon symbol="WBTC" width={36} height={36} />
-                                <div className="text-left">
+                                <div className="flex flex-col text-left">
                                     <span className="text-white font-semibold">Bitcoin (Wrapped)</span>
                                     <span className="text-white/50 text-xs">
-                                        {maskString(formatAmount(breakdown.totalCollateralBtc, 4), visibility.visible, MASK_SHORT)} WBTC
+                                        {maskString(formatAmount(breakdown.totalCollateralBtc, 4), visibility.visible, MASK_SHORT)}
                                     </span>
+                                    <span className="text-white/50 text-xs">WBTC</span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">

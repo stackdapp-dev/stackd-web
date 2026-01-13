@@ -10,7 +10,7 @@ import SimulatorGauge from "@/components/wallet/SimulatorGauge";
 import SimulatorResults from "@/components/wallet/SimulatorResults";
 import { simulateLoan, type SimulationResult } from "@/lib/loans/loanSimulator";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useCompound } from "@/hooks/useCompound";
@@ -120,8 +120,8 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
   // Simulator state - store input as string
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "0");
 
-  // Sandbox mode - custom collateral input
-  const [sandboxCollateral, setSandboxCollateral] = useState("0");
+  // Sandbox mode - custom collateral input (empty string allows placeholder to show)
+  const [sandboxCollateral, setSandboxCollateral] = useState("");
 
   // Parse input value for calculations
   const parsedInput = parseFloat(inputValue) || 0;
@@ -268,7 +268,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
   const handleReset = useCallback(() => {
     setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "0");
     if (mode === "simulate") {
-      setSandboxCollateral("0");
+      setSandboxCollateral("");
     }
   }, [mode, currentBorrowedAmount]);
 

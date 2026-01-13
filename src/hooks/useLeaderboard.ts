@@ -3,7 +3,6 @@ import { usePrivy } from "@privy-io/react-auth";
 import {
     LeaderboardEntry,
     UserRank,
-    mockLeaderboardData,
 } from "@/lib/referrals/leaderboard";
 
 interface UseLeaderboardResult {
@@ -16,7 +15,7 @@ interface UseLeaderboardResult {
 }
 
 export function useLeaderboard(): UseLeaderboardResult {
-    const { user } = usePrivy();
+    const { user, getAccessToken } = usePrivy();
     const [topReferrers, setTopReferrers] = useState<LeaderboardEntry[]>([]);
     const [topByDeposits, setTopByDeposits] = useState<LeaderboardEntry[]>([]);
     const [userRank, setUserRank] = useState<UserRank | null>(null);
@@ -28,19 +27,18 @@ export function useLeaderboard(): UseLeaderboardResult {
             setLoading(true);
             setError(null);
 
-            // Get user's wallet address if available
-            const walletAddress = user?.wallet?.address;
+            // Get auth token if user is logged in
+            const token = user ? await getAccessToken() : null;
 
-            // TODO: Replace with real API call when endpoint is available
-            // const res = await fetch("/api/referrals/leaderboard", {
-            //     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-            // });
-            // if (!res.ok) throw new Error("Failed to fetch leaderboard");
-            // const data = await res.json();
+            const res = await fetch("/api/referrals/leaderboard", {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            });
 
-            // For now, use mock data with simulated delay
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            const data = mockLeaderboardData(walletAddress);
+            if (!res.ok) {
+                throw new Error("Failed to fetch leaderboard");
+            }
+
+            const data = await res.json();
 
             setTopReferrers(data.topReferrers);
             setTopByDeposits(data.topByDeposits);
@@ -50,7 +48,7 @@ export function useLeaderboard(): UseLeaderboardResult {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, getAccessToken]);
 
     useEffect(() => {
         fetchLeaderboard();

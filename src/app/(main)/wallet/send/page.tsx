@@ -5,10 +5,11 @@ import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWeb3 } from "@/providers/Web3Provider";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { formatAmount } from "@/lib/utils";
 import { TOKEN_METADATA } from "@/constants/Tokens";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ScanLine } from "lucide-react";
+import { QRScannerModal } from "@/components/wallet";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
 import { parseUnits, isAddress, encodeFunctionData } from "viem";
@@ -35,6 +36,7 @@ export default function SendPage() {
     const [amount, setAmount] = useState("");
     const [showTokenDropdown, setShowTokenDropdown] = useState(false);
     const [hasInitialized, setHasInitialized] = useState(false);
+    const [showQRScanner, setShowQRScanner] = useState(false);
 
     // Auto-select token with balance (prefer USDT if both have balance)
     useEffect(() => {
@@ -188,13 +190,23 @@ export default function SendPage() {
             <div>
                 <p className="text-white/60 text-sm mb-2">Recipient Address</p>
                 <Card appearance="glassDark" padding="default">
-                    <input
-                        type="text"
-                        value={recipientAddress}
-                        onChange={(e) => setRecipientAddress(e.target.value)}
-                        placeholder="0x..."
-                        className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
-                    />
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={recipientAddress}
+                            onChange={(e) => setRecipientAddress(e.target.value)}
+                            placeholder="0x..."
+                            className="flex-1 bg-transparent text-white outline-none placeholder:text-white/30"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowQRScanner(true)}
+                            className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                            aria-label="Scan QR code"
+                        >
+                            <ScanLine className="w-5 h-5" />
+                        </button>
+                    </div>
                 </Card>
                 {recipientAddress && !isValidAddress && (
                     <p className="text-red-400 text-sm mt-1">Invalid address</p>
@@ -254,6 +266,13 @@ export default function SendPage() {
             >
                 {isSendingTransaction ? "Sending..." : `Send ${selectedToken}`}
             </Button>
+
+            {/* QR Scanner Modal */}
+            <QRScannerModal
+                open={showQRScanner}
+                onOpenChange={setShowQRScanner}
+                onScan={(address) => setRecipientAddress(address)}
+            />
         </div>
     );
 }

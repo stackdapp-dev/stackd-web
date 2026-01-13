@@ -38,7 +38,7 @@ export default function Balance({
           <div className="relative p-5">
             {/* Label */}
             <p className="text-amber-500 text-xs font-medium uppercase tracking-wider mb-2">
-              Portfolio Balance
+              Total Collateral Balance
             </p>
 
             {/* Hero Balance with toggle icon */}

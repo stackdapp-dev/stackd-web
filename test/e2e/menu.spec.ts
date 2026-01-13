@@ -25,28 +25,52 @@ test.describe('Menu Page', () => {
         await expect(page.getByText('Privacy Policy')).toBeVisible();
     });
 
-    test('Terms of Service opens external link in new tab', async ({ page, context }) => {
-        // Listen for new page (tab) to open
-        const [newPage] = await Promise.all([
-            context.waitForEvent('page'),
-            page.getByText('Terms of Service').click(),
-        ]);
+    test('Terms of Service opens external link in new tab', async ({ page }) => {
+        // Intercept window.open calls
+        const openedUrls: string[] = [];
+        await page.exposeFunction('captureWindowOpen', (url: string) => {
+            openedUrls.push(url);
+        });
+        await page.addInitScript(() => {
+            window.open = (url?: string | URL) => {
+                if (url) (window as any).captureWindowOpen(url.toString());
+                return null;
+            };
+        });
 
-        // Verify the new tab URL
-        await newPage.waitForLoadState();
-        expect(newPage.url()).toContain('stackdapp.co/terms');
+        // Reload to apply the init script
+        await page.goto('/menu');
+        await page.waitForSelector('h1:has-text("Menu")');
+
+        // Click Terms of Service
+        await page.getByText('Terms of Service').click();
+
+        // Verify the correct URL was passed to window.open
+        expect(openedUrls).toContain('https://www.stackdapp.co/terms');
     });
 
-    test('Privacy Policy opens external link in new tab', async ({ page, context }) => {
-        // Listen for new page (tab) to open
-        const [newPage] = await Promise.all([
-            context.waitForEvent('page'),
-            page.getByText('Privacy Policy').click(),
-        ]);
+    test('Privacy Policy opens external link in new tab', async ({ page }) => {
+        // Intercept window.open calls
+        const openedUrls: string[] = [];
+        await page.exposeFunction('captureWindowOpen', (url: string) => {
+            openedUrls.push(url);
+        });
+        await page.addInitScript(() => {
+            window.open = (url?: string | URL) => {
+                if (url) (window as any).captureWindowOpen(url.toString());
+                return null;
+            };
+        });
 
-        // Verify the new tab URL
-        await newPage.waitForLoadState();
-        expect(newPage.url()).toContain('stackdapp.co/privacy');
+        // Reload to apply the init script
+        await page.goto('/menu');
+        await page.waitForSelector('h1:has-text("Menu")');
+
+        // Click Privacy Policy
+        await page.getByText('Privacy Policy').click();
+
+        // Verify the correct URL was passed to window.open
+        expect(openedUrls).toContain('https://www.stackdapp.co/privacy');
     });
 
     test('menu items have correct icons', async ({ page }) => {

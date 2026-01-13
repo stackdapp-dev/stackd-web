@@ -5,12 +5,14 @@ import { useWeb3 } from "@/providers/Web3Provider";
 import { formatTokenAmount } from "@/lib/utils";
 
 interface Quote {
+    provider?: string; // Which swap provider returned this quote
     liquidityAvailable: boolean;
     buyAmount: string;
     buyToken: string;
     sellAmount: string;
     sellToken: string;
     totalNetworkFee?: string;
+    configuredProviders?: string[]; // Available providers for failover
     trade?: {
         type: string;
         hash: string;
@@ -37,6 +39,7 @@ interface SwapResult {
     success: boolean;
     tradeHash?: string;
     error?: string;
+    provider?: string; // Which provider executed the swap
 }
 
 // Parse 0x API errors into user-friendly messages
@@ -67,8 +70,54 @@ function parseApiError(errorString: string): string {
         return "No liquidity available for this token pair.";
     }
 
-    // Default: return a cleaned up version
+    // Rate limiting
+    if (errorString.includes("429") || errorString.includes("rate limit")) {
+        return "Too many requests. Please wait a moment and try again.";
+    }
+
+    // Token not supported
+    if (errorString.includes("TOKEN_NOT_SUPPORTED") || errorString.includes("not supported")) {
+        return "This token pair is not supported for gasless swaps.";
+    }
+
+    // Gasless not available
+    if (errorString.includes("GASLESS_NOT_AVAILABLE") || errorString.includes("gasless")) {
+        return "Gasless swaps are temporarily unavailable. Please try again later.";
+    }
+
+    // Network issues
+    if (errorString.includes("503") || errorString.includes("502") || errorString.includes("504")) {
+        return "Swap service is temporarily unavailable. Please try again.";
+    }
+
+    // Try to extract error details from 0x API response
     if (errorString.includes("0x API error:")) {
+        // Try to parse JSON error from the response
+        const jsonMatch = errorString.match(/\{.*\}/);
+        if (jsonMatch) {
+            try {
+                const errorData = JSON.parse(jsonMatch[0]);
+                if (errorData.reason) {
+                    return errorData.reason;
+                }
+                if (errorData.description) {
+                    return errorData.description;
+                }
+            } catch {
+                // Not JSON, continue
+            }
+        }
+        // Extract status code
+        const statusMatch = errorString.match(/0x API error: (\d+)/);
+        if (statusMatch) {
+            const status = parseInt(statusMatch[1]);
+            if (status === 400) {
+                return "Invalid swap request. Please check your input.";
+            }
+            if (status === 403) {
+                return "Swap service access denied. Please try again later.";
+            }
+        }
         return "Swap service temporarily unavailable. Please try again.";
     }
 
@@ -104,8 +153,8 @@ export function useGaslessSwap() {
                     taker: activeWalletAddress,
                 });
 
-                console.log("[0x] Fetching quote:", params.toString());
-                const response = await fetch(`/api/0x?${params}`);
+                console.log("[Swap] Fetching quote:", params.toString());
+                const response = await fetch(`/api/swap?${params}`);
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -113,7 +162,7 @@ export function useGaslessSwap() {
                 }
 
                 const data: Quote = await response.json();
-                console.log("[0x] Quote received:", data);
+                console.log("[Swap] Quote received from", data.provider, ":", data);
 
                 if (!data.liquidityAvailable) {
                     throw new Error("No liquidity available for this swap");
@@ -124,7 +173,7 @@ export function useGaslessSwap() {
             } catch (err) {
                 const rawError = err instanceof Error ? err.message : "Quote failed";
                 const errorMessage = parseApiError(rawError);
-                console.error("[0x] Quote error:", err);
+                console.error("[Swap] Quote error:", err);
                 setError(errorMessage);
                 setQuote(null);
                 return null;
@@ -173,25 +222,52 @@ export function useGaslessSwap() {
             await ensureCorrectNetwork();
             console.log("[0x] Network check passed");
 
+            // CRITICAL: Fetch a fresh quote right before signing
+            // 0x gasless quotes expire in ~30 seconds, so we need to ensure we're using a fresh one
+            console.log("[0x] Fetching fresh quote before signing...");
+            const params = new URLSearchParams({
+                sellToken: quote.sellToken,
+                buyToken: quote.buyToken,
+                sellAmount: quote.sellAmount,
+                taker: activeWalletAddress,
+            });
+
+            const freshQuoteResponse = await fetch(`/api/0x?${params}`);
+            if (!freshQuoteResponse.ok) {
+                const errorData = await freshQuoteResponse.json();
+                throw new Error(errorData.error || "Failed to fetch fresh quote");
+            }
+
+            const freshQuote: Quote = await freshQuoteResponse.json();
+            console.log("[0x] Fresh quote received");
+
+            if (!freshQuote.liquidityAvailable) {
+                throw new Error("No liquidity available for this swap");
+            }
+
+            if (!freshQuote.trade) {
+                throw new Error("No trade data in fresh quote");
+            }
+
             const submitPayload: Record<string, unknown> = {
                 chainId: 42161,
             };
 
-            // Sign approval if needed
-            if (quote.approval) {
+            // Sign approval if needed (using fresh quote data)
+            if (freshQuote.approval) {
                 console.log("[0x] Signing approval...");
                 const approvalSignature = await walletClient.signTypedData({
                     account: activeWalletAddress as `0x${string}`,
-                    domain: quote.approval.eip712.domain as any,
-                    types: quote.approval.eip712.types as any,
-                    primaryType: quote.approval.eip712.primaryType,
-                    message: quote.approval.eip712.message as any,
+                    domain: freshQuote.approval.eip712.domain as any,
+                    types: freshQuote.approval.eip712.types as any,
+                    primaryType: freshQuote.approval.eip712.primaryType,
+                    message: freshQuote.approval.eip712.message as any,
                 });
 
                 const { r: approvalR, s: approvalS, v: approvalV } = splitSignature(approvalSignature);
                 submitPayload.approval = {
-                    type: quote.approval.type,
-                    eip712: quote.approval.eip712,
+                    type: freshQuote.approval.type,
+                    eip712: freshQuote.approval.eip712,
                     signature: {
                         r: approvalR,
                         s: approvalS,
@@ -206,16 +282,16 @@ export function useGaslessSwap() {
             console.log("[0x] Signing trade...");
             const tradeSignature = await walletClient.signTypedData({
                 account: activeWalletAddress as `0x${string}`,
-                domain: quote.trade.eip712.domain as any,
-                types: quote.trade.eip712.types as any,
-                primaryType: quote.trade.eip712.primaryType,
-                message: quote.trade.eip712.message as any,
+                domain: freshQuote.trade.eip712.domain as any,
+                types: freshQuote.trade.eip712.types as any,
+                primaryType: freshQuote.trade.eip712.primaryType,
+                message: freshQuote.trade.eip712.message as any,
             });
 
             const { r: tradeR, s: tradeS, v: tradeV } = splitSignature(tradeSignature);
             submitPayload.trade = {
-                type: quote.trade.type,
-                eip712: quote.trade.eip712,
+                type: freshQuote.trade.type,
+                eip712: freshQuote.trade.eip712,
                 signature: {
                     r: tradeR,
                     s: tradeS,
@@ -225,12 +301,15 @@ export function useGaslessSwap() {
             };
             console.log("[0x] Trade signed");
 
-            // Submit to 0x
-            console.log("[0x] Submitting swap...");
-            const submitResponse = await fetch("/api/0x", {
+            // Submit to swap aggregator
+            console.log("[Swap] Submitting swap via", freshQuote.provider || "0x", "...");
+            const submitResponse = await fetch("/api/swap", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(submitPayload),
+                body: JSON.stringify({
+                    ...submitPayload,
+                    provider: freshQuote.provider || "0x",
+                }),
             });
 
             if (!submitResponse.ok) {
@@ -239,16 +318,17 @@ export function useGaslessSwap() {
             }
 
             const submitResult = await submitResponse.json();
-            console.log("[0x] Swap submitted:", submitResult);
+            console.log("[Swap] Swap submitted via", submitResult.provider || freshQuote.provider, ":", submitResult);
 
             return {
                 success: true,
                 tradeHash: submitResult.tradeHash,
+                provider: submitResult.provider || freshQuote.provider,
             };
         } catch (err) {
             const rawError = err instanceof Error ? err.message : "Swap failed";
             const errorMessage = parseApiError(rawError);
-            console.error("[0x] Swap error:", err);
+            console.error("[Swap] Swap error:", err);
             setError(errorMessage);
             return { success: false, error: errorMessage };
         } finally {
@@ -272,5 +352,6 @@ export function useGaslessSwap() {
         getQuote,
         executeSwap,
         getDestAmount,
+        configuredProviders: quote?.configuredProviders || [],
     };
 }

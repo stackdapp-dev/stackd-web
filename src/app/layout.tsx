@@ -24,6 +24,13 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/sf-pro-display" />
+
+        {/* Preconnect to external APIs for faster data fetching */}
+        <link rel="preconnect" href="https://api.coingecko.com" />
+        <link rel="preconnect" href="https://api.arbiscan.io" />
+        <link rel="dns-prefetch" href="https://api.coingecko.com" />
+        <link rel="dns-prefetch" href="https://api.arbiscan.io" />
+
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
@@ -72,9 +79,10 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="antialiased w-full min-h-[100dvh] md:max-w-sm md:mx-auto"
+        className="antialiased w-full min-h-[100dvh]"
       >
-        <div className="w-full pb-[calc(56px+env(safe-area-inset-bottom))]">
+        {/* Mobile: bottom padding for bottom nav, Desktop: top padding for top nav */}
+        <div className="w-full pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0 md:pt-20">
           <Providers>{children}</Providers>
         </div>
         <noscript>

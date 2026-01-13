@@ -19,7 +19,7 @@ const Menu = () => {
   };
 
   return (
-    <div className="p-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
+    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
       {/* Header */}
       <h1 className="text-white text-xl font-semibold text-center">Menu</h1>
 

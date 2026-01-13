@@ -30,16 +30,21 @@ export async function GET() {
         // Get all CoinGecko IDs
         const coinIds = Object.values(COINGECKO_IDS).join(",");
 
-        // Fetch from CoinGecko
+        // Fetch from CoinGecko with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
         const response = await fetch(
             `${COINGECKO_API_URL}?ids=${coinIds}&vs_currencies=usd`,
             {
                 headers: {
                     Accept: "application/json",
                 },
+                signal: controller.signal,
                 next: { revalidate: 60 }, // Next.js cache for 60s
             }
         );
+        clearTimeout(timeoutId);
 
         // Handle rate limiting (429) gracefully
         if (response.status === 429) {
@@ -66,7 +71,13 @@ export async function GET() {
 
         return NextResponse.json(prices);
     } catch (error) {
-        console.error("[API] Token prices error:", error);
+        // Handle timeout/abort gracefully without verbose error logging
+        const isTimeout = error instanceof Error && error.name === "AbortError";
+        if (isTimeout) {
+            console.warn("[API] CoinGecko request timed out, using fallback prices");
+        } else {
+            console.error("[API] Token prices error:", error);
+        }
 
         // Return cached data if available, even if expired
         if (cache) {

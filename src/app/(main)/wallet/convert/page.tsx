@@ -4,7 +4,7 @@ import PageHeader from "@/components/common/PageHeader";
 import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { formatAmount } from "@/lib/utils";
 import { useGaslessSwap } from "@/hooks/useGaslessSwap";
 import { ArrowDownUp } from "lucide-react";
