@@ -110,7 +110,14 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        console.log("[0x] Submitting gasless swap...");
+
+        // Enhanced logging for debugging signature issues - JSON stringify to avoid truncation
+        console.log("[0x] Submit request:", JSON.stringify({
+            chainId: body.chainId,
+            tradeType: body.trade?.type,
+            tradeSig: body.trade?.signature ? { v: body.trade.signature.v, r: body.trade.signature.r?.slice(0, 10), s: body.trade.signature.s?.slice(0, 10), signatureType: body.trade.signature.signatureType } : null,
+            approvalSig: body.approval?.signature ? { v: body.approval.signature.v, signatureType: body.approval.signature.signatureType } : null,
+        }));
 
         const response = await fetch(`${OX_API_URL}/gasless/submit`, {
             method: "POST",
@@ -122,17 +129,21 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(body),
         });
 
+        // Log response status immediately
+        console.log("[0x] Submit response status:", response.status);
+
+        const responseText = await response.text();
+        console.log("[0x] Submit response body:", responseText.slice(0, 500));
+
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error("[0x] Submit error:", response.status, errorText);
             return NextResponse.json(
-                { error: `0x API error: ${response.status} - ${errorText}` },
+                { error: `0x API error: ${response.status} - ${responseText}` },
                 { status: response.status }
             );
         }
 
-        const data = await response.json();
-        console.log("[0x] Submit response:", data);
+        // Parse the response text as JSON for success case
+        const data = JSON.parse(responseText);
         return NextResponse.json(data);
     } catch (error) {
         console.error("[0x] Submit error:", error);

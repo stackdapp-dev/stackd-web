@@ -4,7 +4,9 @@ import Card from "@/components/ui/card";
 import { SkeletonRow } from "@/components/ui/skeleton";
 import Text from "@/components/ui/text";
 import { formatAmount } from "@/lib/utils";
+import { calculateTransactionUsdValue } from "@/lib/transactionUtils";
 import { useTransactionHistory } from "@/hooks/useTransactionHistory";
+import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { ArrowDownLeft, ArrowUpRight, RefreshCw } from "lucide-react";
 import { useMemo } from "react";
 import { formatUnits } from "viem";
@@ -45,16 +47,13 @@ const History = () => {
     loadMore,
     refresh,
   } = useTransactionHistory();
+  const getPrice = useGetTokenPrice();
 
   // Format transaction for display
   const formattedTransactions = useMemo(() => {
     return transactions.map((tx) => {
       const amount = parseFloat(formatUnits(BigInt(tx.value || "0"), tx.decimals));
-      const usdValue = tx.symbol === "USDT" || tx.symbol === "USDC"
-        ? amount
-        : tx.symbol === "WBTC"
-          ? amount * 95000 // Approximate BTC price
-          : amount * 3500; // Approximate ETH price
+      const usdValue = calculateTransactionUsdValue(amount, tx.symbol, getPrice);
 
       return {
         ...tx,
@@ -64,7 +63,7 @@ const History = () => {
         title: tx.type === "receive" ? `Receive ${tx.symbol}` : `Send ${tx.symbol}`,
       };
     });
-  }, [transactions]);
+  }, [transactions, getPrice]);
 
   // Open transaction in Arbiscan
   const openInArbiscan = (hash: string) => {
