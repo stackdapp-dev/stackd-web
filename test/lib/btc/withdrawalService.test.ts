@@ -35,9 +35,10 @@ describe('WithdrawalService', () => {
       outputAmount: '0.495',
       outputAsset: 'BTC',
       estimatedTime: 600,
-      fees: { network: '0.0001', affiliate: '0.0015' },
+      fees: { affiliate: '0.0015', outbound: '0.0001', liquidity: '0.0001' },
       approvalRequired: true,
       quoteId: 'quote-456',
+      expiresAt: Date.now() + 600000,
     });
   });
 
@@ -66,9 +67,10 @@ describe('WithdrawalService', () => {
         outputAmount: '0.495',
         outputAsset: 'BTC',
         estimatedTime: 600,
-        fees: { network: '0.0001', affiliate: '0.0015' },
+        fees: { affiliate: '0.0015', outbound: '0.0001', liquidity: '0.0001' },
         approvalRequired: false, // Already has allowance
         quoteId: 'quote-456',
+        expiresAt: Date.now() + 600000,
       });
 
       const withdrawal = await withdrawalService.initiateWithdrawal({
