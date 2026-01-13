@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import LoanSimulator from "@/components/wallet/LoanSimulator";
 import { showInfoToast } from "@/components/ui/custom-toast";
-import { formatCurrency, formatPercent, maskString, MASK_LONG, MASK_SHORT } from "@/lib/utils";
+import { formatPercent, maskString, MASK_SHORT } from "@/lib/utils";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,7 @@ export default function ActiveLoans() {
     const visibility = useVisibility();
     const { loanCalcs } = useLoanCalculationsContext();
     const [showSimulatorModal, setShowSimulatorModal] = useState(false);
-    const { ltv, borrowApr, borrowedAssets, netLoanValue, maxLtv, suppliedAssets } = loanCalcs;
+    const { ltv, borrowApr, borrowedAssets, maxLtv, suppliedAssets } = loanCalcs;
 
     // Check if user has WBTC collateral
     const wbtcCollateral = suppliedAssets.find((a) => a.symbol === "WBTC");
@@ -59,9 +59,7 @@ export default function ActiveLoans() {
                             <p className="text-white/50 text-sm">Using WBTC as collateral</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-white font-semibold">
-                                PnL: <span className="text-green-400">{maskString(formatCurrency(netLoanValue), visibility.visible, MASK_LONG)}</span>
-                            </p>
+                            <p className="text-white font-semibold">Arbitrum</p>
                             <p className="text-white/50 text-sm">{maskString(formatPercent(borrowApr), visibility.visible, MASK_SHORT)} APR</p>
                         </div>
                     </div>

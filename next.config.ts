@@ -8,7 +8,13 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Keep packages that need native Node.js modules as server externals
+  serverExternalPackages: [
+    '@meshsdk/core',
+    '@meshsdk/core-cst',
+    '@cardano-sdk/crypto',
+    'libsodium-wrappers-sumo',
+  ],
 };
 
 export default withSerwist(nextConfig);

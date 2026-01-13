@@ -5,7 +5,7 @@ import TokenIcon from "@/components/common/TokenIcon";
 import Card from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWeb3 } from "@/providers/Web3Provider";
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { formatAmount } from "@/lib/utils";
 import { TOKEN_METADATA } from "@/constants/Tokens";
 import { ChevronDown } from "lucide-react";

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "rimraf .next && next dev --turbopack",
+    "dev:fast": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -35,7 +36,10 @@
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.89.0",
+    "@swapkit/helpers": "^4.5.9",
+    "@swapkit/sdk": "^4.2.11",
     "@tanstack/react-form": "^1.23.8",
+    "@tanstack/react-query": "^5.90.16",
     "@tanstack/zod-form-adapter": "^0.42.1",
     "bs58": "^6.0.0",
     "class-variance-authority": "^0.7.1",
@@ -67,15 +71,24 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.16",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "jsdom": "^27.3.0",
     "msw": "^2.12.4",
+    "null-loader": "^4.0.1",
+    "rimraf": "^6.1.2",
     "serwist": "^9.4.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "6",
     "vitest": "^4.0.16"
   },
-  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
+  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0",
+  "pnpm": {
+    "neverBuiltDependencies": [
+      "chacha-native",
+      "near-sdk-js"
+    ]
+  }
 }

@@ -1,19 +1,44 @@
 "use client";
 
-import { useWalletBalanceContext } from "@/app/(main)/wallet/layout";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { Balance } from "@/components/wallet";
 import ActionButtons from "@/components/wallet/ActionButtons";
 import ActiveLoans from "@/components/wallet/ActiveLoans";
 import CollateralCard from "@/components/wallet/CollateralCard";
-import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
+import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
+import { prefetchTransactionHistory } from "@/hooks/useTransactionHistory";
 import { useVisibility } from "@/providers/visibility";
-import { useMemo } from "react";
+import { useWeb3 } from "@/providers/Web3Provider";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
 
 const Wallet = () => {
-  const { assets, totalBalance, isLoading } = useWalletBalanceContext();
-  const { loanCalcs } = useLoanCalculationsContext();
-  const { netLoanValue } = loanCalcs;
+  const { assets, isLoading } = useWalletBalanceContext();
+  const { breakdown } = useCollateralBreakdown();
   const visibility = useVisibility();
+  const { activeWalletAddress } = useWeb3();
+  const queryClient = useQueryClient();
+
+  // Prefetch transaction history data for the history page
+  // This runs during idle time so navigation to /history feels instant
+  useEffect(() => {
+    if (!activeWalletAddress) return;
+
+    // Use requestIdleCallback for non-blocking prefetch
+    const idleCallback = window.requestIdleCallback?.(() => {
+      prefetchTransactionHistory(queryClient, activeWalletAddress);
+    }) ?? setTimeout(() => {
+      prefetchTransactionHistory(queryClient, activeWalletAddress);
+    }, 1000);
+
+    return () => {
+      if (window.cancelIdleCallback) {
+        window.cancelIdleCallback(idleCallback as number);
+      } else {
+        clearTimeout(idleCallback as number);
+      }
+    };
+  }, [activeWalletAddress, queryClient]);
 
   // Filter out WBTC from assets list - it's shown separately in CollateralCard with breakdown
   const nonCollateralAssets = useMemo(() => {
@@ -22,9 +47,9 @@ const Wallet = () => {
 
   return (
     <div className="flex flex-col gap-6 pb-8">
-      {/* Hero Balance */}
+      {/* Hero Balance - Total BTC deposited in lending positions */}
       <Balance
-        amount={totalBalance + netLoanValue}
+        amount={breakdown.totalCollateralUsd}
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
       />
@@ -42,4 +67,3 @@ const Wallet = () => {
 };
 
 export default Wallet;
-
