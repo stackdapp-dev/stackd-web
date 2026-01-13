@@ -31,9 +31,10 @@ const PROVIDERS: Record<SwapProviderName, SwapProvider> = {
 
 /**
  * Default aggregator configuration
+ * Order: CoW (no API key needed) -> 1inch -> 0x
  */
 const DEFAULT_CONFIG: AggregatorConfig = {
-    providerOrder: ["0x", "1inch", "cow"],
+    providerOrder: ["cow", "1inch", "0x"],
     parallelQuotes: false,
     quoteTimeout: 10000, // 10 seconds
 };
