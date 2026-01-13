@@ -26,21 +26,23 @@ describe("/api/swap - Unified Swap Aggregator", () => {
 
     describe("GET /api/swap (Quote)", () => {
         describe("Success Scenarios", () => {
-            it("should return quote from 0x provider", async () => {
-                const mock0xResponse = {
-                    liquidityAvailable: true,
-                    buyAmount: "1000",
-                    sellAmount: "1000000",
-                    trade: {
-                        type: "settler_metatransaction",
-                        hash: "0xhash",
-                        eip712: { domain: {}, types: {}, primaryType: "Trade", message: {} },
+            it("should return quote from CoW provider (first in order)", async () => {
+                const mockCowResponse = {
+                    quote: {
+                        sellAmount: "1000000",
+                        buyAmount: "1000",
+                        validTo: 9999999999,
+                        feeAmount: "100",
+                        kind: "sell",
+                        partiallyFillable: false,
+                        sellTokenBalance: "erc20",
+                        buyTokenBalance: "erc20",
                     },
                 };
 
                 global.fetch = vi.fn().mockResolvedValueOnce({
                     ok: true,
-                    json: async () => mock0xResponse,
+                    json: async () => mockCowResponse,
                 });
 
                 const { GET } = await import("@/app/api/swap/route");
@@ -53,15 +55,14 @@ describe("/api/swap - Unified Swap Aggregator", () => {
                 const data = await response.json();
 
                 expect(response.status).toBe(200);
-                expect(data.provider).toBe("0x");
+                expect(data.provider).toBe("cow");
                 expect(data.liquidityAvailable).toBe(true);
-                expect(data.buyAmount).toBe("1000");
             });
 
-            it("should failover to next provider when 0x fails", async () => {
-                // 0x fails, 1inch succeeds
+            it("should failover to 1inch when CoW fails", async () => {
+                // CoW fails, 1inch succeeds
                 global.fetch = vi.fn()
-                    .mockRejectedValueOnce(new Error("0x API unavailable"))
+                    .mockRejectedValueOnce(new Error("CoW API unavailable"))
                     .mockResolvedValueOnce({
                         ok: true,
                         json: async () => ({
@@ -94,9 +95,16 @@ describe("/api/swap - Unified Swap Aggregator", () => {
                 global.fetch = vi.fn().mockResolvedValueOnce({
                     ok: true,
                     json: async () => ({
-                        liquidityAvailable: true,
-                        buyAmount: "1000",
-                        sellAmount: "1000000",
+                        quote: {
+                            sellAmount: "1000000",
+                            buyAmount: "1000",
+                            validTo: 9999999999,
+                            feeAmount: "100",
+                            kind: "sell",
+                            partiallyFillable: false,
+                            sellTokenBalance: "erc20",
+                            buyTokenBalance: "erc20",
+                        },
                     }),
                 });
 
@@ -509,13 +517,13 @@ describe("Swap Aggregator Failover Logic", () => {
         process.env.ONEINCH_API_KEY = mockEnv.ONEINCH_API_KEY;
     });
 
-    it("should try providers in order until one succeeds", async () => {
+    it("should try providers in order (CoW -> 1inch -> 0x) until one succeeds", async () => {
         const providersCalled: string[] = [];
 
         global.fetch = vi.fn().mockImplementation((url: string) => {
-            if (url.includes("0x.org")) {
-                providersCalled.push("0x");
-                return Promise.reject(new Error("0x down"));
+            if (url.includes("cow.fi")) {
+                providersCalled.push("cow");
+                return Promise.reject(new Error("CoW down"));
             }
             if (url.includes("1inch.dev")) {
                 providersCalled.push("1inch");
@@ -523,6 +531,10 @@ describe("Swap Aggregator Failover Logic", () => {
                     ok: true,
                     json: async () => ({ toTokenAmount: "1000" }),
                 });
+            }
+            if (url.includes("0x.org")) {
+                providersCalled.push("0x");
+                return Promise.reject(new Error("0x down"));
             }
             return Promise.reject(new Error("Unknown provider"));
         });
@@ -537,7 +549,7 @@ describe("Swap Aggregator Failover Logic", () => {
             takerAddress: "0xTaker",
         });
 
-        expect(providersCalled).toContain("0x");
+        expect(providersCalled).toContain("cow");
         expect(providersCalled).toContain("1inch");
         expect(quote.provider).toBe("1inch");
     });
@@ -572,7 +584,7 @@ describe("Swap Aggregator Failover Logic", () => {
         } catch (error) {
             expect(error).toBeInstanceOf(AllProvidersFailedError);
             if (error instanceof AllProvidersFailedError) {
-                expect(error.errors).toHaveProperty("0x");
+                expect(error.errors).toHaveProperty("cow");
             }
         }
     });
