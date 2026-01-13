@@ -89,12 +89,12 @@ describe("ResponsiveNav", () => {
             expect(screen.getByText("Rewards")).toBeInTheDocument();
         });
 
-        it("should NOT display Menu item on desktop", async () => {
+        it("should display Menu item on desktop", async () => {
             const { ResponsiveNav } = await import("@/components/ui/ResponsiveNav");
             render(<ResponsiveNav />);
 
-            // Menu should not be visible on desktop
-            expect(screen.queryByText("Menu")).not.toBeInTheDocument();
+            // Menu should be visible on desktop
+            expect(screen.getByText("Menu")).toBeInTheDocument();
         });
 
         it("should highlight active navigation item", async () => {
