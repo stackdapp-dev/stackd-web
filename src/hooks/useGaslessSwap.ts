@@ -5,12 +5,14 @@ import { useWeb3 } from "@/providers/Web3Provider";
 import { formatTokenAmount } from "@/lib/utils";
 
 interface Quote {
+    provider?: string; // Which swap provider returned this quote
     liquidityAvailable: boolean;
     buyAmount: string;
     buyToken: string;
     sellAmount: string;
     sellToken: string;
     totalNetworkFee?: string;
+    configuredProviders?: string[]; // Available providers for failover
     trade?: {
         type: string;
         hash: string;
@@ -37,6 +39,7 @@ interface SwapResult {
     success: boolean;
     tradeHash?: string;
     error?: string;
+    provider?: string; // Which provider executed the swap
 }
 
 // Parse 0x API errors into user-friendly messages
@@ -150,8 +153,8 @@ export function useGaslessSwap() {
                     taker: activeWalletAddress,
                 });
 
-                console.log("[0x] Fetching quote:", params.toString());
-                const response = await fetch(`/api/0x?${params}`);
+                console.log("[Swap] Fetching quote:", params.toString());
+                const response = await fetch(`/api/swap?${params}`);
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -159,7 +162,7 @@ export function useGaslessSwap() {
                 }
 
                 const data: Quote = await response.json();
-                console.log("[0x] Quote received:", data);
+                console.log("[Swap] Quote received from", data.provider, ":", data);
 
                 if (!data.liquidityAvailable) {
                     throw new Error("No liquidity available for this swap");
@@ -170,7 +173,7 @@ export function useGaslessSwap() {
             } catch (err) {
                 const rawError = err instanceof Error ? err.message : "Quote failed";
                 const errorMessage = parseApiError(rawError);
-                console.error("[0x] Quote error:", err);
+                console.error("[Swap] Quote error:", err);
                 setError(errorMessage);
                 setQuote(null);
                 return null;
@@ -298,12 +301,15 @@ export function useGaslessSwap() {
             };
             console.log("[0x] Trade signed");
 
-            // Submit to 0x
-            console.log("[0x] Submitting swap...");
-            const submitResponse = await fetch("/api/0x", {
+            // Submit to swap aggregator
+            console.log("[Swap] Submitting swap via", freshQuote.provider || "0x", "...");
+            const submitResponse = await fetch("/api/swap", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(submitPayload),
+                body: JSON.stringify({
+                    ...submitPayload,
+                    provider: freshQuote.provider || "0x",
+                }),
             });
 
             if (!submitResponse.ok) {
@@ -312,16 +318,17 @@ export function useGaslessSwap() {
             }
 
             const submitResult = await submitResponse.json();
-            console.log("[0x] Swap submitted:", submitResult);
+            console.log("[Swap] Swap submitted via", submitResult.provider || freshQuote.provider, ":", submitResult);
 
             return {
                 success: true,
                 tradeHash: submitResult.tradeHash,
+                provider: submitResult.provider || freshQuote.provider,
             };
         } catch (err) {
             const rawError = err instanceof Error ? err.message : "Swap failed";
             const errorMessage = parseApiError(rawError);
-            console.error("[0x] Swap error:", err);
+            console.error("[Swap] Swap error:", err);
             setError(errorMessage);
             return { success: false, error: errorMessage };
         } finally {
@@ -345,5 +352,6 @@ export function useGaslessSwap() {
         getQuote,
         executeSwap,
         getDestAmount,
+        configuredProviders: quote?.configuredProviders || [],
     };
 }
