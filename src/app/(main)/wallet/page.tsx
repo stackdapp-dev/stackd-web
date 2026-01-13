@@ -46,7 +46,7 @@ const Wallet = () => {
   }, [assets]);
 
   return (
-    <div className="flex flex-col gap-6 pb-8">
+    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
       {/* Hero Balance - Total BTC deposited in lending positions */}
       <Balance
         amount={breakdown.totalCollateralUsd}
