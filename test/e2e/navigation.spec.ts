@@ -80,13 +80,13 @@ test.describe("Desktop Navigation", () => {
         await expect(page.getByRole("button", { name: /rewards/i })).toBeVisible();
     });
 
-    test("should NOT display Menu item on desktop", async ({ page }) => {
+    test("should display Menu item on desktop", async ({ page }) => {
         await page.goto("/wallet");
         await page.waitForLoadState("domcontentloaded");
 
-        // Menu should not be visible on desktop
+        // Menu should be visible on desktop
         const menuButton = page.getByRole("button", { name: /^menu$/i });
-        await expect(menuButton).not.toBeVisible();
+        await expect(menuButton).toBeVisible();
     });
 
     test("should highlight active nav item on desktop", async ({ page }) => {

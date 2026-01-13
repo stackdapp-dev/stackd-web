@@ -16,7 +16,7 @@ interface NavItem {
     mobileOnly?: boolean;
 }
 
-// Navigation items - Menu only shows on mobile
+// Navigation items
 const navItems: NavItem[] = [
     {
         href: "/wallet",
@@ -41,7 +41,6 @@ const navItems: NavItem[] = [
         icon: Menu,
         label: "Menu",
         subHrefs: ["/withdraw", "/withdraw/otc", "/profile"],
-        mobileOnly: true,
     },
 ];
 
