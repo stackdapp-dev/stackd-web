@@ -50,7 +50,7 @@ describe("useGaslessSwap - Network Switching Tests", () => {
                 await mockEnsureCorrectNetwork();
 
                 // Step 2: Sign the trade
-                await mockSignTypedData({});
+                await mockSignTypedData();
 
                 return { success: true };
             };
@@ -78,7 +78,7 @@ describe("useGaslessSwap - Network Switching Tests", () => {
             const executeSwapWithNetworkCheck = async () => {
                 try {
                     await mockEnsureCorrectNetwork();
-                    await mockSignTypedData({});
+                    await mockSignTypedData();
                     return { success: true };
                 } catch (error) {
                     return {
@@ -118,7 +118,7 @@ describe("useGaslessSwap - Network Switching Tests", () => {
 
             const executeSwapWithNetworkCheck = async () => {
                 await mockEnsureCorrectNetwork();
-                await mockSignTypedData({});
+                await mockSignTypedData();
                 const result = await mockSubmitSwap();
                 return { success: true, tradeHash: result.tradeHash };
             };
@@ -156,7 +156,7 @@ describe("useGaslessSwap - Network Switching Tests", () => {
 
             const executeSwapWithNetworkCheck = async () => {
                 await mockEnsureCorrectNetwork();
-                const signature = await mockSignTypedData({});
+                const signature = await mockSignTypedData();
                 return { success: true, signature };
             };
 
@@ -194,11 +194,11 @@ describe("useGaslessSwap - Network Switching Tests", () => {
 
                 // Then sign approval if needed
                 if (needsApproval) {
-                    await mockSignApproval({});
+                    await mockSignApproval();
                 }
 
                 // Then sign trade
-                await mockSignTrade({});
+                await mockSignTrade();
 
                 return { success: true };
             };
@@ -496,7 +496,7 @@ describe("useGaslessSwap - Network Switching Tests", () => {
             const executeSwapWithFreshQuote = async () => {
                 await mockEnsureCorrectNetwork();
                 await mockFetchFreshQuote();
-                await mockSignTypedData({});
+                await mockSignTypedData();
                 return { success: true };
             };
 

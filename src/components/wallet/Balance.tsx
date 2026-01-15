@@ -1,27 +1,29 @@
 "use client";
 
 import MaskedValue from "@/components/ui/maskedValue";
-import { formatCurrency } from "@/lib/utils";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowDownToLine, Copy } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { showSuccessToast } from "@/components/ui/custom-toast";
 
 interface BalanceProps {
   amount: number;
   visible?: boolean;
   onToggleVisibility?: () => void;
-  change24h?: number;
-  changePercent24h?: number;
+  walletAddress: string;
 }
 
 export default function Balance({
   amount,
   visible = true,
   onToggleVisibility,
-  change24h = 0,
-  changePercent24h = 0,
+  walletAddress,
 }: BalanceProps) {
-  const isPositive = change24h >= 0;
-  const changeColor = isPositive ? "text-green-400" : "text-red-400";
-  const sign = isPositive ? "+" : "";
+  const router = useRouter();
+
+  const handleCopyAddress = () => {
+    navigator.clipboard.writeText(walletAddress);
+    showSuccessToast("Address copied");
+  };
 
   return (
     <div className="px-4 pt-6">
@@ -34,6 +36,14 @@ export default function Balance({
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-slate-950">
           {/* Subtle left-side glow effect */}
           <div className="absolute top-0 left-0 w-2/3 h-full bg-gradient-to-r from-indigo-900/40 via-indigo-950/20 to-transparent pointer-events-none" />
+
+          {/* Cash In Button - positioned absolute in top right */}
+          <button
+            onClick={() => router.push("/wallet/cash-in")}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center hover:bg-amber-400 transition-colors z-10"
+          >
+            <ArrowDownToLine className="w-5 h-5 text-white" />
+          </button>
 
           <div className="relative p-5">
             {/* Label */}
@@ -62,12 +72,17 @@ export default function Balance({
               </button>
             </div>
 
-            {/* 24h Change - always display */}
-            <div className="mt-3 flex items-center gap-2">
-              <span className={`text-sm font-medium ${changeColor}`}>
-                {sign}{formatCurrency(Math.abs(change24h))} ({sign}{changePercent24h.toFixed(2)}%)
-              </span>
-              <span className="text-white/40 text-sm">24h</span>
+            {/* Wallet Address Pill */}
+            <div className="mt-3">
+              <button
+                onClick={handleCopyAddress}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              >
+                <span className="text-white/60 text-sm font-mono">
+                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                </span>
+                <Copy className="w-4 h-4 text-white/40" />
+              </button>
             </div>
           </div>
         </div>

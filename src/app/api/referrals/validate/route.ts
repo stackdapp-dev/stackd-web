@@ -19,8 +19,9 @@ export async function POST(req: Request) {
             );
         }
 
-        // Look up the referrer by code
-        const referrer = await referralDb.getUserByReferralCode(code);
+        // Look up the referrer by code (normalize: trim and uppercase)
+        const normalizedCode = code.trim().toUpperCase();
+        const referrer = await referralDb.getUserByReferralCode(normalizedCode);
 
         if (!referrer) {
             return NextResponse.json({

@@ -36,7 +36,7 @@ describe('SwapKitClient', () => {
 
   describe('getQuote', () => {
     it('should get quote for BTC to WBTC swap', async () => {
-      vi.mocked(SwapKitApi.getSwapQuote).mockResolvedValue(mockSwapKitQuoteResponse);
+      vi.mocked(SwapKitApi.getSwapQuote).mockResolvedValue(mockSwapKitQuoteResponse as any);
 
       const quote = await swapKitClient.getQuote({
         sellAsset: 'BTC.BTC',
@@ -56,7 +56,7 @@ describe('SwapKitClient', () => {
     });
 
     it('should get quote for WBTC to BTC swap', async () => {
-      vi.mocked(SwapKitApi.getSwapQuote).mockResolvedValue(mockSwapKitQuoteResponse);
+      vi.mocked(SwapKitApi.getSwapQuote).mockResolvedValue(mockSwapKitQuoteResponse as any);
 
       const quote = await swapKitClient.getQuote({
         sellAsset: 'ARB.WBTC-0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f',
@@ -94,7 +94,7 @@ describe('SwapKitClient', () => {
     });
 
     it('should handle streaming swap option for large amounts', async () => {
-      vi.mocked(SwapKitApi.getSwapQuote).mockResolvedValue(mockSwapKitQuoteResponse);
+      vi.mocked(SwapKitApi.getSwapQuote).mockResolvedValue(mockSwapKitQuoteResponse as any);
 
       const quote = await swapKitClient.getQuote({
         sellAsset: 'BTC.BTC',
@@ -112,7 +112,7 @@ describe('SwapKitClient', () => {
 
   describe('getDepositAddress', () => {
     it('should return THORChain inbound address for BTC', async () => {
-      vi.mocked(SwapKitApi.thornode.getInboundAddresses).mockResolvedValue([mockDepositAddress]);
+      vi.mocked(SwapKitApi.thornode.getInboundAddresses).mockResolvedValue([mockDepositAddress] as any);
 
       const address = await swapKitClient.getDepositAddress('BTC');
 
@@ -127,13 +127,13 @@ describe('SwapKitClient', () => {
     it('should throw if chain is halted', async () => {
       vi.mocked(SwapKitApi.thornode.getInboundAddresses).mockResolvedValue([
         { ...mockDepositAddress, halted: true },
-      ]);
+      ] as any);
 
       await expect(swapKitClient.getDepositAddress('BTC')).rejects.toThrow('Chain is halted');
     });
 
     it('should throw if chain not found', async () => {
-      vi.mocked(SwapKitApi.thornode.getInboundAddresses).mockResolvedValue([]);
+      vi.mocked(SwapKitApi.thornode.getInboundAddresses).mockResolvedValue([] as any);
 
       await expect(swapKitClient.getDepositAddress('INVALID')).rejects.toThrow('Chain not found');
     });
