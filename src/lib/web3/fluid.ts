@@ -97,7 +97,7 @@ const KNOWN_VAULTS: Record<string, {
     collateralFactor: BigInt(7500), // 75% - typical value
     liquidationThreshold: BigInt(8000), // 80% - typical value
     supplyRate: BigInt(0),
-    borrowRate: BigInt("63419583966"), // ~2% APR (per-second rate)
+    borrowRate: BigInt("634195840"), // ~2% APR (per-second rate scaled by 1e18)
   },
 };
 

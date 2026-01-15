@@ -6,6 +6,7 @@ import ActionButtons from "@/components/wallet/ActionButtons";
 import ActiveLoans from "@/components/wallet/ActiveLoans";
 import CollateralCard from "@/components/wallet/CollateralCard";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
+import { useFluid } from "@/hooks/useFluid";
 import { prefetchTransactionHistory } from "@/hooks/useTransactionHistory";
 import { useVisibility } from "@/providers/visibility";
 import { useWeb3 } from "@/providers/Web3Provider";
@@ -15,6 +16,7 @@ import { useEffect, useMemo } from "react";
 const Wallet = () => {
   const { assets, isLoading } = useWalletBalanceContext();
   const { breakdown } = useCollateralBreakdown();
+  const fluid = useFluid();
   const visibility = useVisibility();
   const { activeWalletAddress } = useWeb3();
   const queryClient = useQueryClient();
@@ -45,11 +47,18 @@ const Wallet = () => {
     return assets.filter(asset => asset.symbol !== "WBTC");
   }, [assets]);
 
+  // Calculate total collateral USD from all sources (WBTC from Compound + XAUT from Fluid)
+  const totalCollateralUsd = useMemo(() => {
+    const wbtcCollateralUsd = breakdown.totalCollateralUsd || 0;
+    const xautCollateralUsd = fluid.suppliedAssets.find(a => a.symbol === "XAUT")?.usdValue || 0;
+    return wbtcCollateralUsd + xautCollateralUsd;
+  }, [breakdown.totalCollateralUsd, fluid.suppliedAssets]);
+
   return (
     <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
-      {/* Hero Balance - Total BTC deposited in lending positions */}
+      {/* Hero Balance - Total collateral deposited in lending positions (WBTC + XAUT) */}
       <Balance
-        amount={breakdown.totalCollateralUsd}
+        amount={totalCollateralUsd}
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
         walletAddress={activeWalletAddress || ""}

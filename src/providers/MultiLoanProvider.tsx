@@ -47,6 +47,11 @@ export function MultiLoanProvider({ children }: { children: React.ReactNode }) {
     const xautBorrowed = fluid.borrowedAssets[0]; // First asset is the borrow token
     if (xautBorrowed && xautBorrowed.amount > 0) {
       const xautCollateral = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
+      const collateralUsdValue = xautCollateral?.usdValue || 0;
+      // Only calculate LTV if we have valid collateral value to avoid division issues
+      const calculatedLtv = collateralUsdValue > 0
+        ? (xautBorrowed.usdValue / collateralUsdValue) * 100
+        : 0;
       positions.push({
         id: "fluid-xaut",
         protocol: "fluid",
@@ -54,13 +59,14 @@ export function MultiLoanProvider({ children }: { children: React.ReactNode }) {
         collateralToken: "XAUT",
         borrowToken: xautBorrowed.symbol, // Dynamic: USDT
         collateralAmount: xautCollateral?.amount || 0,
-        collateralUsd: xautCollateral?.usdValue || 0,
+        collateralUsd: collateralUsdValue,
         borrowAmount: xautBorrowed.amount,
         borrowUsd: xautBorrowed.usdValue,
-        ltv: fluid.maxLtv > 0 ? ((xautBorrowed.usdValue / (xautCollateral?.usdValue || 1)) * 100) : 0,
+        ltv: calculatedLtv,
         apr: fluid.borrowApr,
         maxLtv: fluid.maxLtv,
         liquidationRatio: fluid.liquidationRatio,
+        nftId: fluid.nftId, // Include NFT ID for Fluid position URL
       });
     }
 

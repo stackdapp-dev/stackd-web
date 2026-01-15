@@ -16,6 +16,7 @@ export interface LoanPosition {
   apr: number;
   maxLtv: number;
   liquidationRatio: number;
+  nftId?: bigint; // For Fluid positions - used for direct link to position
 }
 
 export interface CollateralOption {

@@ -103,6 +103,22 @@ export default function LoanDetailsPage({
         refetch: refetchLoanData,
     } = loanData;
 
+    // Get NFT ID for Fluid positions to construct direct link
+    const fluidNftId = !isWbtc ? fluidData.nftId : undefined;
+
+    // Construct dynamic external URL for Fluid positions
+    const externalUrl = useMemo(() => {
+        if (isWbtc) {
+            return config.externalUrl;
+        }
+        // For Fluid positions, construct direct link using NFT ID
+        if (fluidNftId) {
+            return `https://fluid.io/nfts/1/${fluidNftId.toString()}`;
+        }
+        // Fallback to generic Fluid page if no NFT ID
+        return config.externalUrl;
+    }, [isWbtc, fluidNftId, config.externalUrl]);
+
     // Calculate loan metrics
     const totalSuppliedUsd = suppliedAssets.reduce((sum, asset) => sum + asset.usdValue, 0);
     const totalBorrowedUsd = borrowedAssets.reduce((sum, asset) => sum + asset.usdValue, 0);
@@ -394,7 +410,7 @@ export default function LoanDetailsPage({
             {/* View on External Protocol Button */}
             <div className="pb-8">
                 <button
-                    onClick={() => window.open(config.externalUrl, "_blank")}
+                    onClick={() => window.open(externalUrl, "_blank")}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
                 >
                     <span className="text-white/70">{config.externalLabel}</span>

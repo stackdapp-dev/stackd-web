@@ -5,6 +5,7 @@ const COINGECKO_IDS: Record<string, string> = {
     WBTC: "bitcoin", // WBTC tracks BTC price
     USDT: "tether",
     ETH: "ethereum",
+    XAUT: "tether-gold", // Tether Gold
 };
 
 const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
@@ -18,6 +19,7 @@ const FALLBACK_PRICES: Record<string, { usd: number }> = {
     WBTC: { usd: 87000 },
     USDT: { usd: 1 },
     ETH: { usd: 2900 },
+    XAUT: { usd: 2700 }, // ~1 oz gold
 };
 
 export async function GET() {
