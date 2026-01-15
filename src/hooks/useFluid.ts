@@ -12,9 +12,14 @@ import { useCallback, useMemo } from "react";
 import type { Address, PublicClient } from "viem";
 import { formatUnits } from "viem";
 
-// Token symbols used for collateral and borrowing in Fluid
+// Token symbols used for collateral in Fluid
 const COLLATERAL_TOKEN = "XAUT";
-const BORROW_TOKEN = "USDC";
+
+// Supported borrow tokens for XAUT collateral vaults
+const SUPPORTED_BORROW_TOKENS = {
+  [ETHEREUM_TOKEN_ADDRESSES.USDC.toLowerCase()]: "USDC",
+  [ETHEREUM_TOKEN_ADDRESSES.USDT.toLowerCase()]: "USDT",
+} as const;
 
 // Helper to convert Fluid's factor format to percentage
 // Fluid uses 1e4 for percentages (10000 = 100%)
@@ -34,6 +39,7 @@ interface FluidData {
   liquidationRatio: number;
   borrowApr: number;
   nftId?: bigint;
+  borrowToken: string; // Dynamic borrow token (USDC or USDT)
 }
 
 type Asset = {
@@ -79,29 +85,33 @@ async function fetchFluidData(
     );
 
     // Find XAUT collateral position
-    // Match by checking if the supply token is XAUT
+    // Match by checking if the supply token is XAUT and borrow token is USDC or USDT
     const xautAddress = ETHEREUM_TOKEN_ADDRESSES.XAUT.toLowerCase();
-    const usdcAddress = ETHEREUM_TOKEN_ADDRESSES.USDC.toLowerCase();
 
     let matchingPosition: FluidUserPosition | undefined;
     let matchingVaultData: FluidVaultData | undefined;
+    let matchedBorrowToken: string | undefined;
 
     for (let i = 0; i < positions.length; i++) {
       const vaultData = vaultsData[i];
-      // Check if this vault uses XAUT as collateral and USDC as borrow token
+      const borrowTokenAddress = vaultData.borrowToken.toLowerCase();
+      const borrowTokenSymbol = SUPPORTED_BORROW_TOKENS[borrowTokenAddress];
+
+      // Check if this vault uses XAUT as collateral and a supported borrow token (USDC or USDT)
       if (
         vaultData.supplyToken.toLowerCase() === xautAddress &&
-        vaultData.borrowToken.toLowerCase() === usdcAddress
+        borrowTokenSymbol
       ) {
         matchingPosition = positions[i];
         matchingVaultData = vaultData;
+        matchedBorrowToken = borrowTokenSymbol;
         break;
       }
     }
 
-    // If no XAUT/USDC position found, return zeros
-    if (!matchingPosition || !matchingVaultData) {
-      console.log("[FLUID] No XAUT/USDC position found for account:", account);
+    // If no XAUT position with supported borrow token found, return zeros
+    if (!matchingPosition || !matchingVaultData || !matchedBorrowToken) {
+      console.log("[FLUID] No XAUT position with USDC/USDT found for account:", account);
       return {
         collateralRaw: BigInt(0),
         borrowRaw: BigInt(0),
@@ -109,6 +119,7 @@ async function fetchFluidData(
         liquidationRatio: 0,
         borrowApr: 0,
         nftId: undefined,
+        borrowToken: "USDT", // Default, won't be used since no position
       };
     }
 
@@ -119,6 +130,7 @@ async function fetchFluidData(
       liquidationRatio: toPercentage(matchingVaultData.liquidationThreshold),
       borrowApr: rateToApr(matchingVaultData.borrowRate),
       nftId: matchingPosition.nftId,
+      borrowToken: matchedBorrowToken,
     };
 
     // Debug logging
@@ -141,6 +153,7 @@ async function fetchFluidData(
       liquidationRatio: 0,
       borrowApr: 0,
       nftId: undefined,
+      borrowToken: "USDT", // Default, won't be used since error
     };
   }
 }
@@ -165,19 +178,20 @@ export function useFluid(): UseFluidResult {
   const liquidationRatio = data?.liquidationRatio ?? 0;
   const borrowApr = data?.borrowApr ?? 0;
   const nftId = data?.nftId;
+  const borrowToken = data?.borrowToken ?? "USDT";
 
   const collateralAmount = Number(
     formatUnits(collateralRaw, getTokenMetadata(COLLATERAL_TOKEN).decimals)
   );
 
   const borrowAmount = Number(
-    formatUnits(borrowRaw, getTokenMetadata(BORROW_TOKEN).decimals)
+    formatUnits(borrowRaw, getTokenMetadata(borrowToken).decimals)
   );
 
   const xautPrice = getTokenPrice(COLLATERAL_TOKEN);
-  const usdcPrice = getTokenPrice(BORROW_TOKEN);
+  const borrowTokenPrice = getTokenPrice(borrowToken);
   const collateralUsd = collateralAmount * xautPrice;
-  const borrowUsd = borrowAmount * usdcPrice;
+  const borrowUsd = borrowAmount * borrowTokenPrice;
   const netLoanValue = collateralUsd - borrowUsd;
 
   // Determine if user has an active position
@@ -185,10 +199,10 @@ export function useFluid(): UseFluidResult {
 
   // Debug logging for USD calculations
   console.log("[FLUID] XAUT Price:", xautPrice);
-  console.log("[FLUID] USDC Price:", usdcPrice);
+  console.log(`[FLUID] ${borrowToken} Price:`, borrowTokenPrice);
   console.log("[FLUID] Collateral Amount:", collateralAmount, "XAUT");
   console.log("[FLUID] Collateral USD:", collateralUsd);
-  console.log("[FLUID] Borrow Amount:", borrowAmount, "USDC");
+  console.log(`[FLUID] Borrow Amount:`, borrowAmount, borrowToken);
   console.log("[FLUID] Borrow USD:", borrowUsd);
   console.log("[FLUID] Net Loan Value:", netLoanValue);
 
@@ -207,13 +221,13 @@ export function useFluid(): UseFluidResult {
   const borrowedAssets: Asset[] = useMemo(
     () => [
       {
-        symbol: BORROW_TOKEN,
+        symbol: borrowToken,
         amount: borrowAmount,
         usdValue: borrowUsd,
-        decimals: getTokenMetadata(BORROW_TOKEN)?.decimals,
+        decimals: getTokenMetadata(borrowToken)?.decimals,
       },
     ],
-    [borrowAmount, borrowUsd]
+    [borrowToken, borrowAmount, borrowUsd]
   );
 
   const handleRefetch = useCallback(async () => {
