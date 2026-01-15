@@ -27,7 +27,6 @@ const tokenNames: Record<string, string> = {
     WBTC: "Bitcoin (Wrapped)",
     BTC: "Bitcoin",
     USDT: "USDT",
-    USDC: "USD Coin",
     ETH: "Ethereum",
     XAUT: "Tether Gold",
 };

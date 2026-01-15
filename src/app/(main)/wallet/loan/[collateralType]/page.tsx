@@ -50,7 +50,7 @@ const LOAN_CONFIGS: Record<CollateralType, LoanConfig> = {
     xaut: {
         collateralSymbol: "XAUT",
         collateralName: "Tether Gold",
-        borrowSymbol: "USDC",
+        borrowSymbol: "USDT",
         pairDisplay: "XAU:USD",
         network: "Ethereum",
         externalUrl: "https://fluid.instadapp.io/",

@@ -1,5 +1,6 @@
 import { TOKEN_METADATA, getTokenMetadata } from "@/constants/Tokens";
 import { C_COMPOUND_ADDR } from "@/lib/config/abis";
+import { STACKD_ADDITIONAL_APR } from "@/lib/loans/stackdFee";
 import { formatAddress } from "@/lib/utils";
 import {
   borrowBalanceOf,
@@ -68,6 +69,8 @@ type UseCompoundResult = {
   maxLtv: number;
   liquidationRatio: number;
   borrowApr: number;
+  totalBorrowApr: number; // Market APR + Stack'd fee
+  stackdFeeApr: number; // Stack'd additional fee
   netLoanValue: number;
 };
 
@@ -318,6 +321,8 @@ export function useCompound(): UseCompoundResult {
     maxLtv,
     liquidationRatio,
     borrowApr,
+    totalBorrowApr: borrowApr + STACKD_ADDITIONAL_APR,
+    stackdFeeApr: STACKD_ADDITIONAL_APR,
     netLoanValue,
   };
 }

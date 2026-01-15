@@ -1,5 +1,6 @@
 import { getTokenMetadata } from "@/constants/Tokens";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
+import { STACKD_ADDITIONAL_APR } from "@/lib/loans/stackdFee";
 import {
   getUserPositions,
   type FluidUserPosition,
@@ -17,7 +18,6 @@ const COLLATERAL_TOKEN = "XAUT";
 
 // Supported borrow tokens for XAUT collateral vaults
 const SUPPORTED_BORROW_TOKENS = {
-  [ETHEREUM_TOKEN_ADDRESSES.USDC.toLowerCase()]: "USDC",
   [ETHEREUM_TOKEN_ADDRESSES.USDT.toLowerCase()]: "USDT",
 } as const;
 
@@ -39,7 +39,7 @@ interface FluidData {
   liquidationRatio: number;
   borrowApr: number;
   nftId?: bigint;
-  borrowToken: string; // Dynamic borrow token (USDC or USDT)
+  borrowToken: string; // Dynamic borrow token (USDT)
 }
 
 type Asset = {
@@ -60,6 +60,8 @@ type UseFluidResult = {
   maxLtv: number;
   liquidationRatio: number;
   borrowApr: number;
+  totalBorrowApr: number; // Market APR + Stack'd fee
+  stackdFeeApr: number; // Stack'd additional fee
   netLoanValue: number;
   hasPosition: boolean;
   nftId?: bigint;
@@ -77,27 +79,41 @@ async function fetchFluidData(
   account: string
 ): Promise<FluidData> {
   const userAddress = account as Address;
+  console.log("[FLUID FETCH] Starting fetch for account:", account);
 
   try {
+    console.log("[FLUID FETCH] Calling getUserPositions...");
     const { positions, vaultsData } = await getUserPositions(
       publicClient,
       userAddress
     );
+    console.log("[FLUID FETCH] Got response:", { positionsCount: positions.length, vaultsCount: vaultsData.length });
 
     // Find XAUT collateral position
-    // Match by checking if the supply token is XAUT and borrow token is USDC or USDT
+    // Match by checking if the supply token is XAUT and borrow token is USDT
     const xautAddress = ETHEREUM_TOKEN_ADDRESSES.XAUT.toLowerCase();
 
     let matchingPosition: FluidUserPosition | undefined;
     let matchingVaultData: FluidVaultData | undefined;
     let matchedBorrowToken: string | undefined;
 
+    // Debug: Log all positions found
+    console.log("[FLUID] Total positions found:", positions.length);
+
     for (let i = 0; i < positions.length; i++) {
       const vaultData = vaultsData[i];
       const borrowTokenAddress = vaultData.borrowToken.toLowerCase();
       const borrowTokenSymbol = SUPPORTED_BORROW_TOKENS[borrowTokenAddress];
 
-      // Check if this vault uses XAUT as collateral and a supported borrow token (USDC or USDT)
+      // Debug: Log each vault's tokens
+      console.log(`[FLUID] Position ${i}:`, {
+        supplyToken: vaultData.supplyToken,
+        borrowToken: vaultData.borrowToken,
+        borrowTokenSymbol: borrowTokenSymbol || "NOT_SUPPORTED",
+        isXaut: vaultData.supplyToken.toLowerCase() === xautAddress,
+      });
+
+      // Check if this vault uses XAUT as collateral and a supported borrow token (USDT)
       if (
         vaultData.supplyToken.toLowerCase() === xautAddress &&
         borrowTokenSymbol
@@ -111,7 +127,7 @@ async function fetchFluidData(
 
     // If no XAUT position with supported borrow token found, return zeros
     if (!matchingPosition || !matchingVaultData || !matchedBorrowToken) {
-      console.log("[FLUID] No XAUT position with USDC/USDT found for account:", account);
+      console.log("[FLUID] No XAUT position with USDT found for account:", account);
       return {
         collateralRaw: BigInt(0),
         borrowRaw: BigInt(0),
@@ -162,6 +178,13 @@ export function useFluid(): UseFluidResult {
   const { ethereumPublicClient, walletClient, activeWalletAddress } = useWeb3();
   const getTokenPrice = useGetTokenPrice();
   const acct = walletClient?.account?.address || activeWalletAddress;
+
+  // Debug: Log query prerequisites
+  console.log("[FLUID HOOK] ethereumPublicClient:", !!ethereumPublicClient);
+  console.log("[FLUID HOOK] walletClient?.account?.address:", walletClient?.account?.address);
+  console.log("[FLUID HOOK] activeWalletAddress:", activeWalletAddress);
+  console.log("[FLUID HOOK] acct:", acct);
+  console.log("[FLUID HOOK] query enabled:", !!ethereumPublicClient && !!acct);
 
   // Use TanStack Query for data fetching with caching
   const { data, isLoading, error, refetch } = useQuery({
@@ -249,6 +272,8 @@ export function useFluid(): UseFluidResult {
     maxLtv,
     liquidationRatio,
     borrowApr,
+    totalBorrowApr: borrowApr + STACKD_ADDITIONAL_APR,
+    stackdFeeApr: STACKD_ADDITIONAL_APR,
     netLoanValue,
     hasPosition,
     nftId,
