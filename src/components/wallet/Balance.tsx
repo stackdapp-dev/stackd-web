@@ -37,10 +37,10 @@ export default function Balance({
           {/* Subtle left-side glow effect */}
           <div className="absolute top-0 left-0 w-2/3 h-full bg-gradient-to-r from-indigo-900/40 via-indigo-950/20 to-transparent pointer-events-none" />
 
-          {/* Cash In Button - positioned absolute in top right */}
+          {/* Cash In Button - vertically centered in right side */}
           <button
             onClick={() => router.push("/wallet/cash-in")}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center hover:bg-amber-400 transition-colors z-10"
+            className="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center hover:bg-amber-400 transition-colors z-10"
           >
             <ArrowDownToLine className="w-5 h-5 text-white" />
           </button>
