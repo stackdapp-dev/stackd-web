@@ -1,9 +1,10 @@
 "use client";
 
 import MaskedValue from "@/components/ui/maskedValue";
-import { Eye, EyeOff, ArrowDownToLine, Copy } from "lucide-react";
+import { Eye, EyeOff, ArrowDownToLine, Copy, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { showSuccessToast } from "@/components/ui/custom-toast";
+import { useState, useCallback } from "react";
 
 interface BalanceProps {
   amount: number;
@@ -19,11 +20,37 @@ export default function Balance({
   walletAddress,
 }: BalanceProps) {
   const router = useRouter();
+  const [copied, setCopied] = useState(false);
 
-  const handleCopyAddress = () => {
-    navigator.clipboard.writeText(walletAddress);
-    showSuccessToast("Address copied");
-  };
+  const handleCopyAddress = useCallback(async () => {
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(walletAddress);
+      } else {
+        // Fallback for older browsers / iOS Safari
+        const textArea = document.createElement("textarea");
+        textArea.value = walletAddress;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
+      // Show visual feedback
+      setCopied(true);
+      showSuccessToast("Address copied");
+
+      // Reset after animation
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy address:", err);
+    }
+  }, [walletAddress]);
 
   return (
     <div className="px-4 pt-6">
@@ -37,10 +64,10 @@ export default function Balance({
           {/* Subtle left-side glow effect */}
           <div className="absolute top-0 left-0 w-2/3 h-full bg-gradient-to-r from-indigo-900/40 via-indigo-950/20 to-transparent pointer-events-none" />
 
-          {/* Cash In Button - positioned absolute in top right */}
+          {/* Cash In Button - vertically centered in right side */}
           <button
             onClick={() => router.push("/wallet/cash-in")}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center hover:bg-amber-400 transition-colors z-10"
+            className="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center hover:bg-amber-400 transition-colors z-10"
           >
             <ArrowDownToLine className="w-5 h-5 text-white" />
           </button>
@@ -81,7 +108,11 @@ export default function Balance({
                 <span className="text-white/60 text-sm font-mono">
                   {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
                 </span>
-                <Copy className="w-4 h-4 text-white/40" />
+                {copied ? (
+                  <Check className="w-4 h-4 text-green-400" />
+                ) : (
+                  <Copy className="w-4 h-4 text-white/40" />
+                )}
               </button>
             </div>
           </div>

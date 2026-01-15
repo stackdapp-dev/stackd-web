@@ -43,8 +43,8 @@ export function MultiLoanProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    // Add Fluid/XAUT position if has borrowed
-    const xautBorrowed = fluid.borrowedAssets.find(a => a.symbol === "USDC");
+    // Add Fluid/XAUT position if has borrowed (supports both USDC and USDT)
+    const xautBorrowed = fluid.borrowedAssets[0]; // First asset is the borrow token
     if (xautBorrowed && xautBorrowed.amount > 0) {
       const xautCollateral = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
       positions.push({
@@ -52,7 +52,7 @@ export function MultiLoanProvider({ children }: { children: React.ReactNode }) {
         protocol: "fluid",
         chain: "ethereum",
         collateralToken: "XAUT",
-        borrowToken: "USDC",
+        borrowToken: xautBorrowed.symbol, // Dynamic: USDC or USDT
         collateralAmount: xautCollateral?.amount || 0,
         collateralUsd: xautCollateral?.usdValue || 0,
         borrowAmount: xautBorrowed.amount,
