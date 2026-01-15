@@ -26,9 +26,10 @@ interface CollateralCardProps {
 const tokenNames: Record<string, string> = {
     WBTC: "Bitcoin (Wrapped)",
     BTC: "Bitcoin",
-    USDT: "USD Tether",
+    USDT: "USDT",
     USDC: "USD Coin",
     ETH: "Ethereum",
+    XAUT: "Tether Gold",
 };
 
 /**
@@ -143,9 +144,8 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         {/* Collapsible Locked/Available Breakdown */}
                         {hasLockedCollateral && (
                             <div
-                                className={`overflow-hidden transition-all duration-200 ease-in-out ${
-                                    isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
-                                }`}
+                                className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                                    }`}
                             >
                                 <div className="mt-3 ml-5 pl-5 border-l border-white/10 space-y-2 pb-1">
                                     {/* Locked Collateral */}
