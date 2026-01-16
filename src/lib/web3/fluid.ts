@@ -15,121 +15,7 @@ const SIMPLE_RESOLVER_ABI = parseAbi([
   "function vaultByNftId(uint256 nftId_) view returns (address)",
 ]);
 
-// Alias for the positions by user ABI from config
-const POSITIONS_BY_USER_ABI = FLUID_VAULT_RESOLVER_ABI;
-
-
-// ABI for getVaultEntireData - returns comprehensive vault data including live borrow rate
-// The borrowRateVault field is in "ray" format (1e27 = 100%)
-const VAULT_ENTIRE_DATA_ABI = [
-  {
-    inputs: [{ name: "vault_", type: "address" }],
-    name: "getVaultEntireData",
-    outputs: [
-      {
-        name: "vaultData_",
-        type: "tuple",
-        components: [
-          { name: "vault", type: "address" },
-          { name: "vaultType", type: "uint256" },
-          { name: "isSmartDebt", type: "bool" },
-          { name: "isSmartCollateral", type: "bool" },
-          {
-            name: "supplyToken", type: "tuple", components: [
-              { name: "token0", type: "address" },
-              { name: "token1", type: "address" },
-            ]
-          },
-          {
-            name: "borrowToken", type: "tuple", components: [
-              { name: "token0", type: "address" },
-              { name: "token1", type: "address" },
-            ]
-          },
-          {
-            name: "constantVariables", type: "tuple", components: [
-              { name: "supplyToken", type: "address" },
-              { name: "borrowToken", type: "address" },
-              { name: "factory", type: "address" },
-              { name: "liquidityPool", type: "address" },
-              { name: "operatorAuth", type: "address" },
-              { name: "deployer", type: "address" },
-              { name: "supply", type: "address" },
-              { name: "borrow", type: "address" },
-              { name: "supply2", type: "address" },
-              { name: "borrow2", type: "address" },
-              { name: "vaultId", type: "uint256" },
-              { name: "supplyDecimals", type: "uint8" },
-              { name: "borrowDecimals", type: "uint8" },
-              { name: "vaultType", type: "uint256" },
-            ]
-          },
-          {
-            name: "configs", type: "tuple", components: [
-              { name: "supplyRateVault", type: "uint16" },
-              { name: "borrowRateVault", type: "uint16" },
-              { name: "supplyExchangePriceSlot", type: "uint256" },
-              { name: "borrowExchangePriceSlot", type: "uint256" },
-              { name: "supplyRawSlot", type: "uint256" },
-              { name: "borrowRawSlot", type: "uint256" },
-              { name: "absorbedSupplySlot", type: "uint256" },
-              { name: "absorbedBorrowSlot", type: "uint256" },
-            ]
-          },
-          {
-            name: "exchangePriceAndRates", type: "tuple", components: [
-              { name: "lastStoredLiquiditySupplyExchangePrice", type: "uint256" },
-              { name: "lastStoredLiquidityBorrowExchangePrice", type: "uint256" },
-              { name: "lastStoredVaultSupplyExchangePrice", type: "uint256" },
-              { name: "lastStoredVaultBorrowExchangePrice", type: "uint256" },
-              { name: "liquiditySupplyExchangePrice", type: "uint256" },
-              { name: "liquidityBorrowExchangePrice", type: "uint256" },
-              { name: "vaultSupplyExchangePrice", type: "uint256" },
-              { name: "vaultBorrowExchangePrice", type: "uint256" },
-              { name: "supplyRateLiquidity", type: "uint256" },
-              { name: "borrowRateLiquidity", type: "uint256" },
-              { name: "supplyRateVault", type: "uint256" },
-              { name: "borrowRateVault", type: "uint256" },
-              { name: "rewardsOrFeeRateSupply", type: "int256" },
-              { name: "rewardsOrFeeRateBorrow", type: "int256" },
-            ]
-          },
-          {
-            name: "totalSupplyAndBorrow", type: "tuple", components: [
-              { name: "totalSupplyVault", type: "uint256" },
-              { name: "totalBorrowVault", type: "uint256" },
-              { name: "totalSupplyLiquidity", type: "uint256" },
-              { name: "totalBorrowLiquidity", type: "uint256" },
-              { name: "absorbedSupply", type: "uint256" },
-              { name: "absorbedBorrow", type: "uint256" },
-            ]
-          },
-          {
-            name: "limitsAndAvailability", type: "tuple", components: [
-              { name: "withdrawLimit", type: "int256" },
-              { name: "withdrawableUntilLimit", type: "int256" },
-              { name: "withdrawable", type: "int256" },
-              { name: "borrowLimit", type: "int256" },
-              { name: "borrowableUntilLimit", type: "int256" },
-              { name: "borrowable", type: "int256" },
-              { name: "borrowLimitUtilization", type: "uint256" },
-              { name: "maxBorrowLimit", type: "int256" },
-              { name: "maxBorrowLimitUtilization", type: "uint256" },
-              { name: "baseBorrowLimit", type: "int256" },
-            ]
-          },
-          { name: "vaultBranchSlot", type: "uint256" },
-          { name: "oracleMapping", type: "uint256" },
-          { name: "liquidationConfig", type: "uint256" },
-          { name: "secondaryBranchData", type: "uint256" },
-          { name: "absorbedDustDebt", type: "uint256" },
-        ],
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
+// FLUID_VAULT_RESOLVER_ABI is for getVaultEntireData - see abis.ts
 
 // ABI for positionByNftId - we use bytes for vaultData_ since it's a complex nested struct
 // We only need the UserPosition data for supply/borrow values
@@ -219,88 +105,31 @@ const KNOWN_VAULTS: Record<string, {
 };
 
 /**
- * Fetch live borrow rate from VaultResolver using positionsByUser
- * The rate returned is already in the correct per-second format scaled by 1e18
- * @param publicClient - The viem PublicClient instance
- * @param user - The user's wallet address
- * @param vaultAddress - The vault address to get the rate for
- * @returns The borrow rate as bigint, or null if fetch fails
- */
-export async function fetchLiveBorrowRateFromPositions(
-  publicClient: PublicClient,
-  user: Address,
-  vaultAddress: Address
-): Promise<{ borrowRate: bigint; supplyRate: bigint } | null> {
-  console.log(`[FLUID] fetchLiveBorrowRateFromPositions called for vault: ${vaultAddress}`);
-
-  try {
-    // Use the positionsByUser function which returns vault data including borrowRate
-    const result = await publicClient.readContract({
-      address: VAULT_RESOLVER_ADDRESS,
-      abi: POSITIONS_BY_USER_ABI,
-      functionName: "positionsByUser",
-      args: [user],
-    });
-
-    // result is [userPositions_[], vaultsData_[]]
-    const [, vaultsData] = result;
-
-    // Find the matching vault
-    const matchingVault = vaultsData.find(
-      (vault: any) => vault.vault.toLowerCase() === vaultAddress.toLowerCase()
-    );
-
-    if (matchingVault) {
-      console.log(`[FLUID] Live borrow rate from positionsByUser: ${matchingVault.borrowRate.toString()}`);
-      console.log(`[FLUID] Live supply rate from positionsByUser: ${matchingVault.supplyRate.toString()}`);
-
-      // Calculate APR from the rate (per-second rate * seconds per year * 100)
-      const SECONDS_PER_YEAR = 60 * 60 * 24 * 365;
-      const aprPercent = (Number(matchingVault.borrowRate) / 1e18) * SECONDS_PER_YEAR * 100;
-      console.log(`[FLUID] Calculated APR: ${aprPercent.toFixed(2)}%`);
-
-      return {
-        borrowRate: matchingVault.borrowRate,
-        supplyRate: matchingVault.supplyRate
-      };
-    }
-
-    console.log(`[FLUID] No matching vault found in positionsByUser response`);
-    return null;
-  } catch (error) {
-    console.error(`[FLUID] Error fetching live borrow rate from positionsByUser:`);
-    console.error(`[FLUID] Error details:`, error instanceof Error ? error.message : error);
-    return null;
-  }
-}
-
-
-/**
- * Convert Fluid ray rate (1e27 = 100%) to per-second rate scaled by 1e18
+ * Convert Fluid basis points rate to per-second rate scaled by 1e18
  * This matches the format used in the hardcoded fallback values
- * @param rayRate - Rate in ray format (1e27 = 100%)
+ * @param bpsRate - Rate in basis points (10000 = 100%, so 515 = 5.15%)
  * @returns Rate in per-second format scaled by 1e18
  */
-export function rayRateToPerSecondRate(rayRate: bigint): bigint {
-  // Ray is already an annual rate scaled by 1e27
+export function bpsRateToPerSecondRate(bpsRate: bigint): bigint {
+  // BPS is annual rate where 10000 = 100%
   // The hook's rateToApr function expects per-second rate scaled by 1e18
-  // Annual rate in ray = rayRate / 1e27
+  // Annual rate = bpsRate / 10000 (as decimal)
   // Per-second = annual / (365 * 24 * 60 * 60)
-  // Scaled by 1e18 = (rayRate / 1e27) / seconds_per_year * 1e18
+  // Scaled by 1e18 = (bpsRate / 10000) / seconds_per_year * 1e18
   const SECONDS_PER_YEAR = BigInt(365 * 24 * 60 * 60);
-  // Simplified: (rayRate * 1e18) / (1e27 * SECONDS_PER_YEAR)
-  return (rayRate * BigInt(10 ** 18)) / (BigInt(10 ** 27) * SECONDS_PER_YEAR);
+  // Simplified: (bpsRate * 1e18) / (10000 * SECONDS_PER_YEAR)
+  return (bpsRate * BigInt(10 ** 18)) / (BigInt(10000) * SECONDS_PER_YEAR);
 }
 
 /**
- * Convert Fluid ray rate to APR percentage directly
- * @param rayRate - Rate in ray format (1e27 = 100%)
- * @returns APR as a percentage number (e.g., 5.25 for 5.25%)
+ * Convert Fluid basis points rate to APR percentage directly
+ * @param bpsRate - Rate in basis points (10000 = 100%, so 515 = 5.15%)
+ * @returns APR as a percentage number (e.g., 5.15 for 5.15%)
  */
-export function rayRateToAprPercentage(rayRate: bigint): number {
-  // Ray format: 1e27 = 100%
-  // So APR% = (rayRate / 1e27) * 100
-  return (Number(rayRate) / 1e27) * 100;
+export function bpsRateToAprPercentage(bpsRate: bigint): number {
+  // BPS format: 10000 = 100%
+  // So APR% = bpsRate / 100
+  return Number(bpsRate) / 100;
 }
 
 /**
@@ -364,23 +193,27 @@ export async function getUserPositions(
               borrow: userPosition.borrow.toString(),
             });
 
-            // Call 2: Use FLUID_VAULT_RESOLVER_ABI to get live borrow rate from vaultData
-            const resolverResult = await publicClient.readContract({
+            // Call 2: Use getVaultEntireData to get live borrow rate
+            // FLUID_VAULT_RESOLVER_ABI is configured for getVaultEntireData function
+            const vaultEntireData = await publicClient.readContract({
               address: VAULT_RESOLVER_ADDRESS,
               abi: FLUID_VAULT_RESOLVER_ABI,
-              functionName: "positionByNftId",
-              args: [nftId],
+              functionName: "getVaultEntireData",
+              args: [vaultAddress],
             });
 
-            // resolverResult is [userPosition_, vaultData_] - we only need vaultData for rates
-            const [, resolverVaultData] = resolverResult;
-            const liveBorrowRate = resolverVaultData.borrowRate;
-            const liveSupplyRate = resolverVaultData.supplyRate;
+            // Extract borrowRateVault from exchangePricesAndRates nested struct
+            // borrowRateVault is in basis points (10000 = 100%, so 515 = 5.15%)
+            const liveBorrowRateBps = vaultEntireData.exchangePricesAndRates.borrowRateVault;
+            const liveSupplyRateBps = vaultEntireData.exchangePricesAndRates.supplyRateVault;
 
-            // Calculate APR for logging
-            const SECONDS_PER_YEAR = 60 * 60 * 24 * 365;
-            const aprPercent = (Number(liveBorrowRate) / 1e18) * SECONDS_PER_YEAR * 100;
-            console.log(`[FLUID] Live borrow rate from resolver: ${liveBorrowRate.toString()} (${aprPercent.toFixed(2)}% APR)`);
+            // Convert basis points to per-second rate scaled by 1e18 (to match our rateToApr function)
+            const liveBorrowRate = bpsRateToPerSecondRate(liveBorrowRateBps);
+            const liveSupplyRate = bpsRateToPerSecondRate(liveSupplyRateBps);
+
+            // Calculate APR for logging (directly from basis points)
+            const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
+            console.log(`[FLUID] Live borrow rate from resolver (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
             positions.push({
               nftId,
@@ -470,21 +303,27 @@ export async function getPositionByNftId(
       args: [nftId],
     });
 
-    // Call 3: Use FLUID_VAULT_RESOLVER_ABI to get live borrow rate
-    const resolverResult = await publicClient.readContract({
+    // Call 3: Use getVaultEntireData to get live borrow rate
+    // FLUID_VAULT_RESOLVER_ABI is configured for getVaultEntireData function
+    const vaultData = await publicClient.readContract({
       address: VAULT_RESOLVER_ADDRESS,
       abi: FLUID_VAULT_RESOLVER_ABI,
-      functionName: "positionByNftId",
-      args: [nftId],
+      functionName: "getVaultEntireData",
+      args: [vaultAddress],
     });
 
-    // resolverResult is [userPosition_, vaultData_] - we only need vaultData for rates
-    const [, resolverVaultData] = resolverResult;
+    // Extract borrowRateVault from exchangePricesAndRates nested struct
+    // borrowRateVault is in basis points (10000 = 100%, so 515 = 5.15%)
+    const liveBorrowRateBps = vaultData.exchangePricesAndRates.borrowRateVault;
+    const liveSupplyRateBps = vaultData.exchangePricesAndRates.supplyRateVault;
 
-    // Calculate APR for logging
-    const SECONDS_PER_YEAR = 60 * 60 * 24 * 365;
-    const aprPercent = (Number(resolverVaultData.borrowRate) / 1e18) * SECONDS_PER_YEAR * 100;
-    console.log(`[FLUID] getPositionByNftId live borrow rate: ${resolverVaultData.borrowRate.toString()} (${aprPercent.toFixed(2)}% APR)`);
+    // Convert basis points to per-second rate scaled by 1e18 (to match our rateToApr function)
+    const liveBorrowRate = bpsRateToPerSecondRate(liveBorrowRateBps);
+    const liveSupplyRate = bpsRateToPerSecondRate(liveSupplyRateBps);
+
+    // Calculate APR for logging (directly from basis points)
+    const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
+    console.log(`[FLUID] getPositionByNftId live borrow rate (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
     const position: FluidUserPosition = {
       nftId,
@@ -499,8 +338,8 @@ export async function getPositionByNftId(
       borrowToken: knownVault.borrowToken,
       collateralFactor: knownVault.collateralFactor,
       liquidationThreshold: knownVault.liquidationThreshold,
-      supplyRate: resolverVaultData.supplyRate,
-      borrowRate: resolverVaultData.borrowRate,
+      supplyRate: liveSupplyRate,
+      borrowRate: liveBorrowRate,
     };
 
     return { position, vaultData: positionVaultData };
