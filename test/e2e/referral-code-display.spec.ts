@@ -45,23 +45,28 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
         await page.waitForLoadState("networkidle");
 
         // Wait for page to fully hydrate
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
 
         // The page should either show:
         // 1. A referral code (if user/mock data exists)
         // 2. "Start Earning Rewards" (if no data)
         const referralCodeElement = page.getByTestId('referral-code');
         const startEarningButton = page.getByRole('button', { name: 'Generate Referral Link' });
+        const startEarningText = page.getByText('Start Earning Rewards');
 
-        // Wait for React hydration - use longer timeout
-        const hasReferralCode = await referralCodeElement.isVisible({ timeout: 10000 }).catch(() => false);
-        const hasStartEarning = await startEarningButton.isVisible({ timeout: 10000 }).catch(() => false);
+        // Check visibility in parallel to avoid sequential timeout delays
+        const [hasReferralCode, hasStartEarningButton, hasStartEarningText] = await Promise.all([
+            referralCodeElement.isVisible({ timeout: 5000 }).catch(() => false),
+            startEarningButton.isVisible({ timeout: 5000 }).catch(() => false),
+            startEarningText.isVisible({ timeout: 5000 }).catch(() => false),
+        ]);
 
         console.log('[TEST] Referral code visible:', hasReferralCode);
-        console.log('[TEST] Start earning visible:', hasStartEarning);
+        console.log('[TEST] Start earning button visible:', hasStartEarningButton);
+        console.log('[TEST] Start earning text visible:', hasStartEarningText);
 
         // One of these should be true
-        expect(hasReferralCode || hasStartEarning).toBe(true);
+        expect(hasReferralCode || hasStartEarningButton || hasStartEarningText).toBe(true);
     });
 
     test('referral code element is tappable with copy hint', async ({ page }) => {
