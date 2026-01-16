@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 export default function ActiveLoans() {
     const router = useRouter();
     const visibility = useVisibility();
-    const { loanCalcs } = useLoanCalculationsContext();
+    const { loanCalcs, isLoading } = useLoanCalculationsContext();
     const [showSimulatorModal, setShowSimulatorModal] = useState(false);
     const { ltv, borrowApr, borrowedAssets, maxLtv, suppliedAssets } = loanCalcs;
 
@@ -38,6 +38,37 @@ export default function ActiveLoans() {
     // Calculate LTV bar width (capped at 100%)
     const ltvPercent = Math.min(ltv, maxLtv);
     const ltvBarWidth = maxLtv > 0 ? (ltvPercent / maxLtv) * 100 : 0;
+
+    // Show skeleton loading state
+    if (isLoading) {
+        return (
+            <div className="px-4">
+                {/* Section Header */}
+                <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
+                    Active Loans
+                </h2>
+
+                <Card appearance="glassDark" data-testid="active-loans-loading-skeleton">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="space-y-2">
+                            <div className="h-5 w-28 bg-white/10 rounded skeleton-shimmer" />
+                            <div className="h-4 w-40 bg-white/10 rounded skeleton-shimmer" />
+                        </div>
+                        <div className="text-right space-y-2">
+                            <div className="h-5 w-20 bg-white/10 rounded skeleton-shimmer" />
+                            <div className="h-4 w-24 bg-white/10 rounded skeleton-shimmer" />
+                        </div>
+                    </div>
+
+                    {/* LTV Progress Bar Skeleton */}
+                    <div className="mt-2">
+                        <div className="h-2 bg-white/10 rounded-full skeleton-shimmer" />
+                        <div className="h-4 w-16 bg-white/10 rounded skeleton-shimmer mt-1" />
+                    </div>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="px-4">

@@ -63,15 +63,15 @@ export function PnLBySourceCard() {
         data-testid="pnl-by-source-card"
         className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-5"
       >
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 w-28 bg-white/10 rounded" />
+        <div data-testid="source-pnl-loading-skeleton" className="space-y-4">
+          <div className="h-4 w-28 bg-white/10 rounded skeleton-shimmer" />
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/10 rounded-lg" />
-                <div className="h-4 w-24 bg-white/10 rounded" />
+                <div className="w-10 h-10 bg-white/10 rounded-lg skeleton-shimmer" />
+                <div className="h-4 w-24 bg-white/10 rounded skeleton-shimmer" />
               </div>
-              <div className="h-4 w-20 bg-white/10 rounded" />
+              <div className="h-4 w-20 bg-white/10 rounded skeleton-shimmer" />
             </div>
           ))}
         </div>

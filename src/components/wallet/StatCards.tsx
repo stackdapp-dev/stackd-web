@@ -7,9 +7,33 @@ import { ArrowUpRight } from "lucide-react";
 interface StatCardsProps {
     cashBalance: number;
     holdingsBalance: number;
+    isLoading?: boolean;
 }
 
-export default function StatCards({ cashBalance, holdingsBalance }: StatCardsProps) {
+export default function StatCards({ cashBalance, holdingsBalance, isLoading = false }: StatCardsProps) {
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-2 gap-3 px-4" data-testid="stat-cards-loading-skeleton">
+                {/* CASH Card Skeleton */}
+                <Card appearance="glassDark" padding="default">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="h-3 w-10 bg-white/10 rounded skeleton-shimmer" />
+                        <div className="w-4 h-4 bg-white/10 rounded skeleton-shimmer" />
+                    </div>
+                    <div className="h-6 w-24 bg-white/10 rounded skeleton-shimmer" />
+                </Card>
+
+                {/* HOLDINGS Card Skeleton */}
+                <Card appearance="glassDark" padding="default">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="h-3 w-16 bg-white/10 rounded skeleton-shimmer" />
+                    </div>
+                    <div className="h-6 w-24 bg-white/10 rounded skeleton-shimmer" />
+                </Card>
+            </div>
+        );
+    }
+
     return (
         <div className="grid grid-cols-2 gap-3 px-4">
             {/* CASH Card */}

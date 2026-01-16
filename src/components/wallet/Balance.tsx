@@ -10,6 +10,7 @@ interface BalanceProps {
   onToggleVisibility?: () => void;
   change24h?: number;
   changePercent24h?: number;
+  isLoading?: boolean;
 }
 
 export default function Balance({
@@ -18,6 +19,7 @@ export default function Balance({
   onToggleVisibility,
   change24h = 0,
   changePercent24h = 0,
+  isLoading = false,
 }: BalanceProps) {
   const isPositive = change24h >= 0;
   const changeColor = isPositive ? "text-green-400" : "text-red-400";
@@ -41,34 +43,44 @@ export default function Balance({
               Total Collateral Balance
             </p>
 
-            {/* Hero Balance with toggle icon */}
-            <div className="flex items-center gap-3">
-              <MaskedValue
-                value={amount || 0}
-                mask="long"
-                visible={visible}
-                className="text-4xl sm:text-5xl font-bold text-white"
-              />
-              {/* Custom visibility toggle */}
-              <button
-                onClick={onToggleVisibility}
-                className="p-2 rounded-full border border-white/20 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-              >
-                {visible ? (
-                  <Eye className="w-4 h-4" />
-                ) : (
-                  <EyeOff className="w-4 h-4" />
-                )}
-              </button>
-            </div>
+            {isLoading ? (
+              /* Loading Skeleton */
+              <div data-testid="balance-loading-skeleton" className="space-y-3">
+                <div className="h-12 w-48 bg-white/10 rounded skeleton-shimmer" />
+                <div className="h-5 w-40 bg-white/10 rounded skeleton-shimmer" />
+              </div>
+            ) : (
+              <>
+                {/* Hero Balance with toggle icon */}
+                <div className="flex items-center gap-3">
+                  <MaskedValue
+                    value={amount || 0}
+                    mask="long"
+                    visible={visible}
+                    className="text-4xl sm:text-5xl font-bold text-white"
+                  />
+                  {/* Custom visibility toggle */}
+                  <button
+                    onClick={onToggleVisibility}
+                    className="p-2 rounded-full border border-white/20 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                  >
+                    {visible ? (
+                      <Eye className="w-4 h-4" />
+                    ) : (
+                      <EyeOff className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
 
-            {/* 24h Change - always display */}
-            <div className="mt-3 flex items-center gap-2">
-              <span className={`text-sm font-medium ${changeColor}`}>
-                {sign}{formatCurrency(Math.abs(change24h))} ({sign}{changePercent24h.toFixed(2)}%)
-              </span>
-              <span className="text-white/40 text-sm">24h</span>
-            </div>
+                {/* 24h Change - always display */}
+                <div className="mt-3 flex items-center gap-2">
+                  <span className={`text-sm font-medium ${changeColor}`}>
+                    {sign}{formatCurrency(Math.abs(change24h))} ({sign}{changePercent24h.toFixed(2)}%)
+                  </span>
+                  <span className="text-white/40 text-sm">24h</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
