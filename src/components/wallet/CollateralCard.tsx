@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Card from "@/components/ui/card";
 import Text from "@/components/ui/text";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
+import { useFluid } from "@/hooks/useFluid";
+import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { formatAmount, formatCurrency, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
 import { Lock, Unlock, AlertTriangle, ChevronDown } from "lucide-react";
@@ -42,7 +44,41 @@ const tokenNames: Record<string, string> = {
 export default function CollateralCard({ otherAssets = [], isLoading = false }: CollateralCardProps) {
     const visibility = useVisibility();
     const { breakdown, hasLockedCollateral } = useCollateralBreakdown();
+    const fluid = useFluid();
+    const getTokenPrice = useGetTokenPrice();
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isXautExpanded, setIsXautExpanded] = useState(false);
+
+    // XAUT price for calculations
+    const xautPrice = getTokenPrice("XAUT");
+
+    // Calculate XAUT collateral breakdown
+    const xautBreakdown = useMemo(() => {
+        const xautCollateral = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
+        const totalXaut = xautCollateral?.amount || 0;
+        const totalXautUsd = xautCollateral?.usdValue || 0;
+
+        // Calculate locked XAUT based on borrowed amount and max LTV
+        const borrowedUsd = fluid.borrowedAssets.reduce((sum, a) => sum + a.usdValue, 0);
+        const lockedXautUsd = borrowedUsd > 0 && fluid.maxLtv > 0
+            ? borrowedUsd / (fluid.maxLtv / 100)
+            : 0;
+        const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
+
+        // Available to withdraw = total - locked
+        const availableXaut = Math.max(0, totalXaut - lockedXaut);
+        const availableXautUsd = availableXaut * xautPrice;
+
+        return {
+            totalXaut,
+            totalXautUsd,
+            lockedXaut,
+            lockedXautUsd,
+            availableXaut,
+            availableXautUsd,
+            hasLocked: lockedXaut > 0,
+        };
+    }, [fluid.suppliedAssets, fluid.borrowedAssets, fluid.maxLtv, xautPrice]);
 
     // Calculate health indicator color
     const getHealthColor = () => {
@@ -235,6 +271,94 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         </div>
                     )}
                 </Card>
+
+                {/* XAUT Collateral Card - Show when user has XAUT collateral */}
+                {xautBreakdown.totalXaut > 0 && (
+                    <Card appearance="glassDark" padding="compact">
+                        {/* XAUT Header Row - Clickable when has locked collateral */}
+                        <button
+                            type="button"
+                            onClick={() => xautBreakdown.hasLocked && setIsXautExpanded(!isXautExpanded)}
+                            className={`flex items-center justify-between w-full py-1 ${xautBreakdown.hasLocked ? 'cursor-pointer' : 'cursor-default'}`}
+                            disabled={!xautBreakdown.hasLocked}
+                        >
+                            <div className="flex items-center gap-3">
+                                <TokenIcon symbol="XAUT" width={36} height={36} />
+                                <div className="flex flex-col text-left">
+                                    <span className="text-white font-semibold">Tether Gold</span>
+                                    <span className="text-white/50 text-xs">
+                                        {maskString(formatAmount(xautBreakdown.totalXaut, 4), visibility.visible, MASK_SHORT)}
+                                    </span>
+                                    <span className="text-white/50 text-xs">XAUT</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-white font-medium">
+                                    {maskString(formatCurrency(xautBreakdown.totalXautUsd), visibility.visible, MASK_LONG)}
+                                </span>
+                                {xautBreakdown.hasLocked && (
+                                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                                        <ChevronDown
+                                            className={`w-4 h-4 text-white/50 transition-transform duration-200 ${isXautExpanded ? 'rotate-180' : ''}`}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </button>
+
+                        {/* Collapsible Locked/Available Breakdown */}
+                        {xautBreakdown.hasLocked && (
+                            <div
+                                className={`overflow-hidden transition-all duration-200 ease-in-out ${isXautExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                                    }`}
+                            >
+                                <div className="mt-3 ml-5 pl-5 border-l border-white/10 space-y-2 pb-1">
+                                    {/* Locked Collateral */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                <Lock className="w-3 h-3 text-amber-400" />
+                                            </div>
+                                            <div>
+                                                <Text className="text-white text-xs">Locked</Text>
+                                                <span className="text-white/40 text-[10px]">Backing loans</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <Text weight="semibold" className="text-amber-400 text-xs">
+                                                {maskString(formatAmount(xautBreakdown.lockedXaut, 4), visibility.visible, MASK_SHORT)} XAUT
+                                            </Text>
+                                            <span className="text-white/40 text-[10px]">
+                                                {maskString(formatCurrency(xautBreakdown.lockedXautUsd), visibility.visible, MASK_LONG)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Available to Withdraw */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                                <Unlock className="w-3 h-3 text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <Text className="text-white text-xs">Available</Text>
+                                                <span className="text-white/40 text-[10px]">Can withdraw</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <Text weight="semibold" className="text-emerald-400 text-xs">
+                                                {maskString(formatAmount(xautBreakdown.availableXaut, 4), visibility.visible, MASK_SHORT)} XAUT
+                                            </Text>
+                                            <span className="text-white/40 text-[10px]">
+                                                {maskString(formatCurrency(xautBreakdown.availableXautUsd), visibility.visible, MASK_LONG)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </Card>
+                )}
             </div>
         </div>
     );
