@@ -32,7 +32,27 @@ export default function ActiveLoans() {
         Active Loans
       </h2>
 
-      {hasActiveLoans ? (
+      {isLoading ? (
+        // Loading skeleton while fetching loan data
+        <Card appearance="glassDark" data-testid="active-loans-loading-skeleton">
+          <div className="flex justify-between items-start mb-3">
+            <div className="space-y-2">
+              <div className="h-5 w-28 bg-white/10 rounded skeleton-shimmer" />
+              <div className="h-4 w-40 bg-white/10 rounded skeleton-shimmer" />
+            </div>
+            <div className="text-right space-y-2">
+              <div className="h-5 w-20 bg-white/10 rounded skeleton-shimmer" />
+              <div className="h-4 w-24 bg-white/10 rounded skeleton-shimmer" />
+            </div>
+          </div>
+
+          {/* LTV Progress Bar Skeleton */}
+          <div className="mt-2">
+            <div className="h-2 bg-white/10 rounded-full skeleton-shimmer" />
+            <div className="h-4 w-16 bg-white/10 rounded skeleton-shimmer mt-1" />
+          </div>
+        </Card>
+      ) : hasActiveLoans ? (
         <div className="space-y-3">
           {allPositions.map((position) => {
             const ltvPercent = Math.min(position.ltv, position.maxLtv);
@@ -84,6 +104,7 @@ export default function ActiveLoans() {
           <p className="text-white/50 text-center text-sm">No Open Loans</p>
         </Card>
       )}
+
     </div>
   );
 }

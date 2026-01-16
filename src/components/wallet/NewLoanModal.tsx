@@ -55,7 +55,7 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
       const depositSymbol = selectedCollateral.type === "WBTC" ? "BTC" : "XAUT";
       showInfoToast(`${selectedCollateral.name} deposit required before borrowing`);
       setTimeout(() => {
-        router.push(`/wallet/deposit/${depositSymbol}`);
+        router.push("/wallet/cash-in");
         onClose();
       }, 2000);
     }
@@ -186,11 +186,10 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
           <Button
             onClick={handleContinue}
             disabled={!selectedCollateral}
-            className={`flex-1 ${
-              selectedCollateral
+            className={`flex-1 ${selectedCollateral
                 ? "bg-amber-500 hover:bg-amber-600 text-black"
                 : "bg-white/10 text-white/40"
-            }`}
+              }`}
           >
             Continue
           </Button>

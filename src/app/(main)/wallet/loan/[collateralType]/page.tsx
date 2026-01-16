@@ -45,7 +45,7 @@ const LOAN_CONFIGS: Record<CollateralType, LoanConfig> = {
         externalUrl: "https://app.compound.finance/?market=usdt-arb",
         externalLabel: "View Loan on Compound",
         liquidationPriceLabel: "BTC Price",
-        depositPath: "/wallet/deposit/WBTC",
+        depositPath: "/wallet/cash-in",
     },
     xaut: {
         collateralSymbol: "XAUT",
@@ -56,7 +56,7 @@ const LOAN_CONFIGS: Record<CollateralType, LoanConfig> = {
         externalUrl: "https://fluid.instadapp.io/",
         externalLabel: "View Loan on Fluid",
         liquidationPriceLabel: "Gold Price",
-        depositPath: "/wallet/deposit/XAUT",
+        depositPath: "/wallet/cash-in",
     },
 };
 
@@ -377,17 +377,15 @@ export default function LoanDetailsPage({
                             <p className="text-white/50 text-sm">Health Factor</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <p className={`font-bold text-xl ${
-                                healthStatus === "safe" ? "text-green-400" :
-                                healthStatus === "warning" ? "text-orange-400" : "text-red-400"
-                            }`}>
+                            <p className={`font-bold text-xl ${healthStatus === "safe" ? "text-green-400" :
+                                    healthStatus === "warning" ? "text-orange-400" : "text-red-400"
+                                }`}>
                                 {isFinite(healthFactor) ? healthFactor.toFixed(2) : "N/A"}
                             </p>
-                            <span className={`text-sm px-2 py-0.5 rounded-full ${
-                                healthStatus === "safe" ? "bg-green-500/20 text-green-400" :
-                                healthStatus === "warning" ? "bg-orange-500/20 text-orange-400" :
-                                "bg-red-500/20 text-red-400"
-                            }`}>
+                            <span className={`text-sm px-2 py-0.5 rounded-full ${healthStatus === "safe" ? "bg-green-500/20 text-green-400" :
+                                    healthStatus === "warning" ? "bg-orange-500/20 text-orange-400" :
+                                        "bg-red-500/20 text-red-400"
+                                }`}>
                                 {healthStatus === "safe" ? "Safe" : healthStatus === "warning" ? "Warning" : "At Risk"}
                             </span>
                         </div>

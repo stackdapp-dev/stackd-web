@@ -62,8 +62,9 @@ const Wallet = () => {
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
         walletAddress={activeWalletAddress || ""}
-        isLoading={isLoading || collateralLoading}
+        isLoading={isLoading || collateralLoading || fluid.isLoading}
       />
+
 
       {/* Action Buttons */}
       <ActionButtons />
