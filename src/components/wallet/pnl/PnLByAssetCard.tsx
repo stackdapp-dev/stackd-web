@@ -139,20 +139,20 @@ export function PnLByAssetCard() {
         data-testid="pnl-by-asset-card"
         className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-5"
       >
-        <div data-testid="asset-pnl-loading-skeleton" className="animate-pulse space-y-4">
-          <div className="h-4 w-28 bg-white/10 rounded" />
+        <div data-testid="asset-pnl-loading-skeleton" className="space-y-4">
+          <div className="h-4 w-28 bg-white/10 rounded skeleton-shimmer" />
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white/10 rounded-full" />
+                <div className="w-8 h-8 bg-white/10 rounded-full skeleton-shimmer" />
                 <div className="space-y-1">
-                  <div className="h-4 w-16 bg-white/10 rounded" />
-                  <div className="h-3 w-20 bg-white/10 rounded" />
+                  <div className="h-4 w-16 bg-white/10 rounded skeleton-shimmer" />
+                  <div className="h-3 w-20 bg-white/10 rounded skeleton-shimmer" />
                 </div>
               </div>
               <div className="text-right space-y-1">
-                <div className="h-4 w-16 bg-white/10 rounded" />
-                <div className="h-3 w-12 bg-white/10 rounded" />
+                <div className="h-4 w-16 bg-white/10 rounded skeleton-shimmer" />
+                <div className="h-3 w-12 bg-white/10 rounded skeleton-shimmer" />
               </div>
             </div>
           ))}

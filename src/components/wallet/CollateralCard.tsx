@@ -65,6 +65,38 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
     // in the parent component and must be displayed here. Even with 0 balance,
     // WBTC should be visible to users as it's the primary collateral asset.
 
+    // Show skeleton loading state
+    if (isLoading) {
+        return (
+            <div className="w-full px-4">
+                {/* Section Header */}
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-white text-sm font-medium uppercase tracking-wider">
+                        Assets
+                    </h2>
+                </div>
+
+                <div data-testid="collateral-loading-skeleton" className="flex flex-col gap-2">
+                    {/* Skeleton Asset Rows */}
+                    {[1, 2, 3].map((i) => (
+                        <Card key={i} appearance="glassDark" padding="compact">
+                            <div className="flex items-center justify-between py-1">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-white/10 skeleton-shimmer" />
+                                    <div className="space-y-2">
+                                        <div className="h-4 w-32 bg-white/10 rounded skeleton-shimmer" />
+                                        <div className="h-3 w-20 bg-white/10 rounded skeleton-shimmer" />
+                                    </div>
+                                </div>
+                                <div className="h-4 w-20 bg-white/10 rounded skeleton-shimmer" />
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full px-4">
             {/* Section Header */}

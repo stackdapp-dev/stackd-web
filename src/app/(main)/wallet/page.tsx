@@ -15,7 +15,7 @@ import { useEffect, useMemo } from "react";
 
 const Wallet = () => {
   const { assets, isLoading } = useWalletBalanceContext();
-  const { breakdown } = useCollateralBreakdown();
+  const { breakdown, isLoading: collateralLoading } = useCollateralBreakdown();
   const fluid = useFluid();
   const visibility = useVisibility();
   const { activeWalletAddress } = useWeb3();
@@ -62,6 +62,7 @@ const Wallet = () => {
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
         walletAddress={activeWalletAddress || ""}
+        isLoading={isLoading || collateralLoading}
       />
 
       {/* Action Buttons */}

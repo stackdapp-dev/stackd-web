@@ -70,12 +70,12 @@ export function PnLOverviewCard() {
         data-testid="pnl-overview-card"
         className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-5"
       >
-        <div data-testid="pnl-loading-skeleton" className="animate-pulse space-y-4">
-          <div className="h-4 w-24 bg-white/10 rounded" />
-          <div className="h-10 w-40 bg-white/10 rounded" />
+        <div data-testid="pnl-loading-skeleton" className="space-y-4">
+          <div className="h-4 w-24 bg-white/10 rounded skeleton-shimmer" />
+          <div className="h-10 w-40 bg-white/10 rounded skeleton-shimmer" />
           <div className="flex gap-4">
-            <div className="h-6 w-24 bg-white/10 rounded" />
-            <div className="h-6 w-20 bg-white/10 rounded" />
+            <div className="h-6 w-24 bg-white/10 rounded skeleton-shimmer" />
+            <div className="h-6 w-20 bg-white/10 rounded skeleton-shimmer" />
           </div>
         </div>
       </div>
