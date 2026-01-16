@@ -34,17 +34,18 @@ interface LoanCalculationsContextType {
   loanCalcs: LoanCalculations;
   setPreviewAmount: (amount: number) => void;
   refetchLoanData: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const LoanCalculationsContext = createContext<LoanCalculationsContextType | undefined>(undefined);
 
 export function LoanCalculationsProvider({ children }: { children: ReactNode }) {
   const [previewAmount, setPreviewAmount] = useState(0);
-  const { suppliedAssets, borrowedAssets, refetch: refetchLoanData } = useCompound();
+  const { suppliedAssets, borrowedAssets, refetch: refetchLoanData, isLoading } = useCompound();
   const loanCalcs = useLoanCalculations(suppliedAssets, borrowedAssets, previewAmount);
 
   return (
-    <LoanCalculationsContext.Provider value={{ loanCalcs, setPreviewAmount, refetchLoanData }}>
+    <LoanCalculationsContext.Provider value={{ loanCalcs, setPreviewAmount, refetchLoanData, isLoading }}>
       {children}
     </LoanCalculationsContext.Provider>
   );

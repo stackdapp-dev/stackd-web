@@ -108,61 +108,143 @@ export const ERC20_ABI = [
 export const FLUID_VAULT_RESOLVER_ADDR =
   "0x93CAB6529aD849b2583EBAe32D13817A2F38cEb4" as const; // Fluid VaultResolver on Ethereum mainnet
 
+// ABI for getVaultEntireData - returns VaultEntireData with borrow rate info
+// Verified working structure from Etherscan contract source
+// borrowRateVault is in basis points (10000 = 100%, so 515 = 5.15% APR)
 export const FLUID_VAULT_RESOLVER_ABI = [
   {
-    inputs: [{ name: "user_", type: "address" }],
-    name: "positionsByUser",
+    inputs: [{ name: "vault_", type: "address" }],
+    name: "getVaultEntireData",
     outputs: [
-      {
-        name: "userPositions_",
-        type: "tuple[]",
-        components: [
-          { name: "nftId", type: "uint256" },
-          { name: "supply", type: "uint256" },
-          { name: "borrow", type: "uint256" },
-        ],
-      },
-      {
-        name: "vaultsData_",
-        type: "tuple[]",
-        components: [
-          { name: "vault", type: "address" },
-          { name: "supplyToken", type: "address" },
-          { name: "borrowToken", type: "address" },
-          { name: "collateralFactor", type: "uint256" },
-          { name: "liquidationThreshold", type: "uint256" },
-          { name: "supplyRate", type: "uint256" },
-          { name: "borrowRate", type: "uint256" },
-        ],
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ name: "nftId_", type: "uint256" }],
-    name: "positionByNftId",
-    outputs: [
-      {
-        name: "userPosition_",
-        type: "tuple",
-        components: [
-          { name: "nftId", type: "uint256" },
-          { name: "supply", type: "uint256" },
-          { name: "borrow", type: "uint256" },
-        ],
-      },
       {
         name: "vaultData_",
         type: "tuple",
         components: [
           { name: "vault", type: "address" },
-          { name: "supplyToken", type: "address" },
-          { name: "borrowToken", type: "address" },
-          { name: "collateralFactor", type: "uint256" },
-          { name: "liquidationThreshold", type: "uint256" },
-          { name: "supplyRate", type: "uint256" },
-          { name: "borrowRate", type: "uint256" },
+          // ConstantViews struct (from IFluidVaultT1)
+          {
+            name: "constantVariables", type: "tuple", components: [
+              { name: "liquidity", type: "address" },
+              { name: "factory", type: "address" },
+              { name: "adminImplementation", type: "address" },
+              { name: "secondaryImplementation", type: "address" },
+              { name: "supplyToken", type: "address" },
+              { name: "borrowToken", type: "address" },
+              { name: "supplyDecimals", type: "uint8" },
+              { name: "borrowDecimals", type: "uint8" },
+              { name: "vaultId", type: "uint256" },
+              { name: "liquiditySupplyExchangePriceSlot", type: "bytes32" },
+              { name: "liquidityBorrowExchangePriceSlot", type: "bytes32" },
+              { name: "liquidityUserSupplySlot", type: "bytes32" },
+              { name: "liquidityUserBorrowSlot", type: "bytes32" },
+            ]
+          },
+          // Configs struct
+          {
+            name: "configs", type: "tuple", components: [
+              { name: "supplyRateMagnifier", type: "uint16" },
+              { name: "borrowRateMagnifier", type: "uint16" },
+              { name: "collateralFactor", type: "uint16" },
+              { name: "liquidationThreshold", type: "uint16" },
+              { name: "liquidationMaxLimit", type: "uint16" },
+              { name: "withdrawalGap", type: "uint16" },
+              { name: "liquidationPenalty", type: "uint16" },
+              { name: "borrowFee", type: "uint16" },
+              { name: "oracle", type: "address" },
+              { name: "oraclePrice", type: "uint256" },
+              { name: "rebalancer", type: "address" },
+            ]
+          },
+          // ExchangePricesAndRates struct - contains borrowRateVault!
+          {
+            name: "exchangePricesAndRates", type: "tuple", components: [
+              { name: "lastStoredLiquiditySupplyExchangePrice", type: "uint256" },
+              { name: "lastStoredLiquidityBorrowExchangePrice", type: "uint256" },
+              { name: "lastStoredVaultSupplyExchangePrice", type: "uint256" },
+              { name: "lastStoredVaultBorrowExchangePrice", type: "uint256" },
+              { name: "liquiditySupplyExchangePrice", type: "uint256" },
+              { name: "liquidityBorrowExchangePrice", type: "uint256" },
+              { name: "vaultSupplyExchangePrice", type: "uint256" },
+              { name: "vaultBorrowExchangePrice", type: "uint256" },
+              { name: "supplyRateVault", type: "uint256" },
+              { name: "borrowRateVault", type: "uint256" },
+              { name: "supplyRateLiquidity", type: "uint256" },
+              { name: "borrowRateLiquidity", type: "uint256" },
+              { name: "rewardsRate", type: "uint256" },
+            ]
+          },
+          // TotalSupplyAndBorrow struct
+          {
+            name: "totalSupplyAndBorrow", type: "tuple", components: [
+              { name: "totalSupplyVault", type: "uint256" },
+              { name: "totalBorrowVault", type: "uint256" },
+              { name: "totalSupplyLiquidity", type: "uint256" },
+              { name: "totalBorrowLiquidity", type: "uint256" },
+              { name: "absorbedSupply", type: "uint256" },
+              { name: "absorbedBorrow", type: "uint256" },
+            ]
+          },
+          // LimitsAndAvailability struct (7 fields)
+          {
+            name: "limitsAndAvailability", type: "tuple", components: [
+              { name: "withdrawLimit", type: "uint256" },
+              { name: "withdrawableUntilLimit", type: "uint256" },
+              { name: "withdrawable", type: "uint256" },
+              { name: "borrowLimit", type: "uint256" },
+              { name: "borrowableUntilLimit", type: "uint256" },
+              { name: "borrowable", type: "uint256" },
+              { name: "minimumBorrowing", type: "uint256" },
+            ]
+          },
+          // VaultState struct with nested CurrentBranchState
+          {
+            name: "vaultState", type: "tuple", components: [
+              { name: "totalPositions", type: "uint256" },
+              { name: "topTick", type: "int256" },
+              { name: "currentBranch", type: "uint256" },
+              { name: "totalBranch", type: "uint256" },
+              { name: "totalBorrow", type: "uint256" },
+              { name: "totalSupply", type: "uint256" },
+              { name: "currentBranchState", type: "tuple", components: [
+                { name: "status", type: "uint256" },
+                { name: "minimaTick", type: "int256" },
+                { name: "debtFactor", type: "uint256" },
+                { name: "partials", type: "uint256" },
+                { name: "debtLiquidity", type: "uint256" },
+                { name: "baseBranchId", type: "uint256" },
+                { name: "baseBranchMinima", type: "int256" },
+              ]},
+            ]
+          },
+          // UserSupplyData struct (9 fields)
+          {
+            name: "liquidityUserSupplyData", type: "tuple", components: [
+              { name: "modeWithInterest", type: "bool" },
+              { name: "supply", type: "uint256" },
+              { name: "withdrawalLimit", type: "uint256" },
+              { name: "lastUpdateTimestamp", type: "uint256" },
+              { name: "expandPercent", type: "uint256" },
+              { name: "expandDuration", type: "uint256" },
+              { name: "baseWithdrawalLimit", type: "uint256" },
+              { name: "withdrawableUntilLimit", type: "uint256" },
+              { name: "withdrawable", type: "uint256" },
+            ]
+          },
+          // UserBorrowData struct (10 fields)
+          {
+            name: "liquidityUserBorrowData", type: "tuple", components: [
+              { name: "modeWithInterest", type: "bool" },
+              { name: "borrow", type: "uint256" },
+              { name: "borrowLimit", type: "uint256" },
+              { name: "lastUpdateTimestamp", type: "uint256" },
+              { name: "expandPercent", type: "uint256" },
+              { name: "expandDuration", type: "uint256" },
+              { name: "baseBorrowLimit", type: "uint256" },
+              { name: "maxBorrowLimit", type: "uint256" },
+              { name: "borrowableUntilLimit", type: "uint256" },
+              { name: "borrowable", type: "uint256" },
+            ]
+          },
         ],
       },
     ],

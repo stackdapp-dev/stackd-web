@@ -11,6 +11,7 @@ interface BalanceProps {
   visible?: boolean;
   onToggleVisibility?: () => void;
   walletAddress: string;
+  isLoading?: boolean;
 }
 
 export default function Balance({
@@ -18,6 +19,7 @@ export default function Balance({
   visible = true,
   onToggleVisibility,
   walletAddress,
+  isLoading = false,
 }: BalanceProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -78,43 +80,53 @@ export default function Balance({
               Total Collateral Balance
             </p>
 
-            {/* Hero Balance with toggle icon */}
-            <div className="flex items-center gap-3">
-              <MaskedValue
-                value={amount || 0}
-                mask="long"
-                visible={visible}
-                className="text-4xl sm:text-5xl font-bold text-white"
-              />
-              {/* Custom visibility toggle */}
-              <button
-                onClick={onToggleVisibility}
-                className="p-2 rounded-full border border-white/20 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-              >
-                {visible ? (
-                  <Eye className="w-4 h-4" />
-                ) : (
-                  <EyeOff className="w-4 h-4" />
-                )}
-              </button>
-            </div>
+            {isLoading ? (
+              /* Loading Skeleton */
+              <div data-testid="balance-loading-skeleton" className="space-y-3">
+                <div className="h-12 w-48 bg-white/10 rounded skeleton-shimmer" />
+                <div className="h-5 w-40 bg-white/10 rounded skeleton-shimmer" />
+              </div>
+            ) : (
+              <>
+                {/* Hero Balance with toggle icon */}
+                <div className="flex items-center gap-3">
+                  <MaskedValue
+                    value={amount || 0}
+                    mask="long"
+                    visible={visible}
+                    className="text-4xl sm:text-5xl font-bold text-white"
+                  />
+                  {/* Custom visibility toggle */}
+                  <button
+                    onClick={onToggleVisibility}
+                    className="p-2 rounded-full border border-white/20 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                  >
+                    {visible ? (
+                      <Eye className="w-4 h-4" />
+                    ) : (
+                      <EyeOff className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
 
-            {/* Wallet Address Pill */}
-            <div className="mt-3">
-              <button
-                onClick={handleCopyAddress}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-              >
-                <span className="text-white/60 text-sm font-mono">
-                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                </span>
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-400" />
-                ) : (
-                  <Copy className="w-4 h-4 text-white/40" />
-                )}
-              </button>
-            </div>
+                {/* Wallet Address Pill */}
+                <div className="mt-3">
+                  <button
+                    onClick={handleCopyAddress}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                  >
+                    <span className="text-white/60 text-sm font-mono">
+                      {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                    </span>
+                    {copied ? (
+                      <Check className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-white/40" />
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

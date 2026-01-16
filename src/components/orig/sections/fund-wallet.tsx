@@ -55,7 +55,6 @@ const FundWallet = () => {
       | {
           erc20: Hex;
         }
-      | "USDC"
       | "native-currency"
   ) => {
     if (!isEvmWallet || !selectedWallet) {
@@ -72,7 +71,7 @@ const FundWallet = () => {
       showErrorToast("Failed to fund wallet. Please try again.");
     }
   };
-  const fundWalletSolanaHandler = (asset?: "USDC" | "native-currency") => {
+  const fundWalletSolanaHandler = (asset?: "native-currency") => {
     if (!isSolanaWallet || !selectedWallet) {
       showErrorToast("Please select a Solana wallet");
       return;
@@ -95,22 +94,8 @@ const FundWallet = () => {
       disabled: !isEvmWallet,
     },
     {
-      name: "Fund USDC (EVM)",
-      function: () => {
-        fundWalletEvmHandler("USDC");
-      },
-      disabled: !isEvmWallet,
-    },
-    {
       name: "Fund SOL",
       function: fundWalletSolanaHandler,
-      disabled: !isSolanaWallet,
-    },
-    {
-      name: "Fund USDC (Solana)",
-      function: () => {
-        fundWalletSolanaHandler("USDC");
-      },
       disabled: !isSolanaWallet,
     },
   ];

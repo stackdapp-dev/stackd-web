@@ -47,3 +47,6 @@ playwright-report/
 
 test-results/
 .env*.local
+
+# Service Worker (auto-generated)
+public/sw.js

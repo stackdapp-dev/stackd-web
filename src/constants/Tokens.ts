@@ -36,14 +36,6 @@ export const TOKEN_METADATA = {
     coingeckoSymbol: "tether-gold",
     icon: "/assets/tokens/xaut.png",
   },
-  USDC: {
-    symbol: "USDC",
-    name: "USD Coin",
-    decimals: 6,
-    address: ETHEREUM_TOKEN_ADDRESSES.USDC,
-    coingeckoSymbol: "usd-coin",
-    icon: "/assets/tokens/usdc.png",
-  },
 } as const;
 
 export type TokenSymbol = keyof typeof TOKEN_ADDRESSES;

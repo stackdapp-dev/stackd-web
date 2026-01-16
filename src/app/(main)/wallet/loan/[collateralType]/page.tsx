@@ -45,18 +45,18 @@ const LOAN_CONFIGS: Record<CollateralType, LoanConfig> = {
         externalUrl: "https://app.compound.finance/?market=usdt-arb",
         externalLabel: "View Loan on Compound",
         liquidationPriceLabel: "BTC Price",
-        depositPath: "/wallet/deposit/WBTC",
+        depositPath: "/wallet/cash-in",
     },
     xaut: {
         collateralSymbol: "XAUT",
         collateralName: "Tether Gold",
-        borrowSymbol: "USDC",
+        borrowSymbol: "USDT",
         pairDisplay: "XAU:USD",
         network: "Ethereum",
         externalUrl: "https://fluid.instadapp.io/",
         externalLabel: "View Loan on Fluid",
         liquidationPriceLabel: "Gold Price",
-        depositPath: "/wallet/deposit/XAUT",
+        depositPath: "/wallet/cash-in",
     },
 };
 
@@ -102,6 +102,22 @@ export default function LoanDetailsPage({
         borrowApr,
         refetch: refetchLoanData,
     } = loanData;
+
+    // Get NFT ID for Fluid positions to construct direct link
+    const fluidNftId = !isWbtc ? fluidData.nftId : undefined;
+
+    // Construct dynamic external URL for Fluid positions
+    const externalUrl = useMemo(() => {
+        if (isWbtc) {
+            return config.externalUrl;
+        }
+        // For Fluid positions, construct direct link using NFT ID
+        if (fluidNftId) {
+            return `https://fluid.io/nfts/1/${fluidNftId.toString()}`;
+        }
+        // Fallback to generic Fluid page if no NFT ID
+        return config.externalUrl;
+    }, [isWbtc, fluidNftId, config.externalUrl]);
 
     // Calculate loan metrics
     const totalSuppliedUsd = suppliedAssets.reduce((sum, asset) => sum + asset.usdValue, 0);
@@ -361,17 +377,15 @@ export default function LoanDetailsPage({
                             <p className="text-white/50 text-sm">Health Factor</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <p className={`font-bold text-xl ${
-                                healthStatus === "safe" ? "text-green-400" :
-                                healthStatus === "warning" ? "text-orange-400" : "text-red-400"
-                            }`}>
+                            <p className={`font-bold text-xl ${healthStatus === "safe" ? "text-green-400" :
+                                    healthStatus === "warning" ? "text-orange-400" : "text-red-400"
+                                }`}>
                                 {isFinite(healthFactor) ? healthFactor.toFixed(2) : "N/A"}
                             </p>
-                            <span className={`text-sm px-2 py-0.5 rounded-full ${
-                                healthStatus === "safe" ? "bg-green-500/20 text-green-400" :
-                                healthStatus === "warning" ? "bg-orange-500/20 text-orange-400" :
-                                "bg-red-500/20 text-red-400"
-                            }`}>
+                            <span className={`text-sm px-2 py-0.5 rounded-full ${healthStatus === "safe" ? "bg-green-500/20 text-green-400" :
+                                    healthStatus === "warning" ? "bg-orange-500/20 text-orange-400" :
+                                        "bg-red-500/20 text-red-400"
+                                }`}>
                                 {healthStatus === "safe" ? "Safe" : healthStatus === "warning" ? "Warning" : "At Risk"}
                             </span>
                         </div>
@@ -394,7 +408,7 @@ export default function LoanDetailsPage({
             {/* View on External Protocol Button */}
             <div className="pb-8">
                 <button
-                    onClick={() => window.open(config.externalUrl, "_blank")}
+                    onClick={() => window.open(externalUrl, "_blank")}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
                 >
                     <span className="text-white/70">{config.externalLabel}</span>

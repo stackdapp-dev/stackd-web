@@ -6,17 +6,11 @@ import { describe, it, expect } from "vitest";
 import { calculateTransactionUsdValue } from "@/lib/transactionUtils";
 
 describe("calculateTransactionUsdValue", () => {
-  describe("with stablecoins (USDT, USDC, USD₮0)", () => {
+  describe("with stablecoins (USDT, USD₮0)", () => {
     it("should return the amount for USDT regardless of price", () => {
       // USDT is pegged to $1, so 100 USDT = $100
       const result = calculateTransactionUsdValue(100, "USDT", () => 1);
       expect(result).toBe(100);
-    });
-
-    it("should return the amount for USDC regardless of price", () => {
-      // USDC is pegged to $1, so 50 USDC = $50
-      const result = calculateTransactionUsdValue(50, "USDC", () => 1);
-      expect(result).toBe(50);
     });
 
     it("should return the amount for USD₮0 (USDT0 variant) regardless of price", () => {

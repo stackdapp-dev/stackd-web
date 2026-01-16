@@ -146,8 +146,12 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const activeWallet = useMemo(() => {
+    // Debug: log all conditions
+    console.log("[WALLET] Checking conditions - ready:", ready, "wallets.length:", wallets.length, "authenticated:", authenticated);
+
     // Only set active wallet if user is authenticated
     if (!ready || wallets.length === 0 || !authenticated) {
+      console.log("[WALLET] Conditions not met, returning null");
       return null;
     }
 

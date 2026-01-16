@@ -52,7 +52,7 @@ describe("ActiveLoans Component", () => {
     });
 
     it("should display 'XAU:USD' for XAUT collateral loans", () => {
-      // getLoanDisplayName("XAUT", "USDC") returns "XAU:USD"
+      // getLoanDisplayName("XAUT", "USDT") returns "XAU:USD"
       // Displayed in h3 element within each loan card
       expect(true).toBe(true);
     });
@@ -167,7 +167,7 @@ describe("getLoanDisplayName Helper", () => {
   });
 
   it("should return 'XAU:USD' for XAUT collateral", () => {
-    // getLoanDisplayName("XAUT", "USDC") === "XAU:USD"
+    // getLoanDisplayName("XAUT", "USDT") === "XAU:USD"
     expect(true).toBe(true);
   });
 

@@ -48,7 +48,7 @@ const BottomNav = () => {
     });
     // Prefetch other commonly accessed routes
     router.prefetch('/wallet/loan');
-    router.prefetch('/wallet/deposit/WBTC');
+    router.prefetch('/wallet/cash-in');
     router.prefetch('/referrals/tiers');
   }, [router]);
 
