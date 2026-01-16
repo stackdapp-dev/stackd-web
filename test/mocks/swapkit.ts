@@ -16,6 +16,12 @@ export const mockSwapKitQuoteResponse = {
       destinationAddress: '0x1234567890123456789012345678901234567890',
       estimatedTime: 600,
       warnings: [],
+      legs: [],
+      meta: { sellChain: 'BTC', buyChain: 'ARB' },
+      routeId: 'route-1',
+      sellAmount: '0.1',
+      complete: true,
+      path: 'BTC.BTC -> ARB.WBTC',
     },
   ],
 };
@@ -30,4 +36,9 @@ export const mockDepositAddress = {
   halted: false,
   chain_trading_paused: false,
   global_trading_paused: false,
+  pub_key: 'thorpub1test',
+  chain_lp_actions_paused: false,
+  outbound_tx_size: '1000',
+  outbound_fee: '10000',
+  dust_threshold: '10000',
 };

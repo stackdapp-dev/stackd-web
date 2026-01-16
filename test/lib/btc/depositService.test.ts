@@ -35,7 +35,7 @@ describe('DepositService', () => {
       depositAddress: 'bc1qdeposit123',
       memo: 'SWAP:ARB.WBTC:0x1234...',
       estimatedTime: 600,
-      fees: { network: '0.0001', affiliate: '0.0015' },
+      fees: { affiliate: '0.0015', outbound: '0.0001', liquidity: '0.0001' },
       expiresAt: Date.now() + 600000,
       quoteId: 'quote-123',
     });
@@ -208,10 +208,10 @@ describe('DepositService', () => {
       vi.mocked(txMonitor.subscribe).mockImplementation((_, callback) => {
         callback({ status: 'completed', stage: 'complete', confirmations: 6, outputTxHash: 'out123', outputAmount: '0.495' });
         callbackCalled = true;
-        return () => {};
+        return () => { };
       });
 
-      depositService.subscribeToDeposit(deposit.depositId, () => {});
+      depositService.subscribeToDeposit(deposit.depositId, () => { });
 
       expect(callbackCalled).toBe(true);
     });

@@ -16,7 +16,7 @@ import {
   custom,
   http,
 } from "viem";
-import { arbitrum } from "viem/chains";
+import { arbitrum, mainnet } from "viem/chains";
 
 declare global {
   interface Window {
@@ -36,10 +36,13 @@ type SendTransactionParams = {
   to: Address;
   data?: Hex;
   value?: bigint;
+  chainId?: number;
 };
 
 type Web3ProviderValue = {
   publicClient: PublicClient;
+  ethereumPublicClient: PublicClient;
+  getPublicClient: (chainId: number) => PublicClient;
   walletClient: WalletClient | null;
   wallets: ConnectedWallet[];
   activeWalletAddress: Address;
@@ -54,6 +57,12 @@ type Web3ProviderValue = {
 const Web3Context = createContext<Web3ProviderValue | undefined>(undefined);
 const NETWORK = arbitrum;
 const ACTIVE_WALLET_KEY = "stackd_active_wallet";
+
+// Supported chains mapping
+const SUPPORTED_CHAINS = {
+  [arbitrum.id]: arbitrum,
+  [mainnet.id]: mainnet,
+} as const;
 
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -103,12 +112,30 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   const { sendTransaction: privySendTransaction } = useSendTransaction();
   const [isSending, setIsSending] = useState(false);
 
+  // Arbitrum public client (default/primary)
   const [publicClient] = useState<PublicClient>(() =>
     createPublicClient({
       chain: NETWORK,
       transport: http(),
     })
   );
+
+  // Ethereum mainnet public client
+  const [ethereumPublicClient] = useState<PublicClient>(() =>
+    createPublicClient({
+      chain: mainnet,
+      transport: http(),
+    })
+  );
+
+  // Get public client for a specific chain
+  const getPublicClient = (chainId: number): PublicClient => {
+    if (chainId === mainnet.id) {
+      return ethereumPublicClient;
+    }
+    // Default to Arbitrum for any unsupported chain or Arbitrum
+    return publicClient;
+  };
 
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
 
@@ -119,8 +146,12 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const activeWallet = useMemo(() => {
+    // Debug: log all conditions
+    console.log("[WALLET] Checking conditions - ready:", ready, "wallets.length:", wallets.length, "authenticated:", authenticated);
+
     // Only set active wallet if user is authenticated
     if (!ready || wallets.length === 0 || !authenticated) {
+      console.log("[WALLET] Conditions not met, returning null");
       return null;
     }
 
@@ -236,6 +267,45 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     console.log("[WALLET] Wallet state cleared");
   };
 
+  // Ensure wallet is on the correct network for a transaction
+  const ensureNetworkForTransaction = async (targetChainId: number) => {
+    if (!activeWallet) {
+      throw new Error("No active wallet connected");
+    }
+
+    const targetChain = SUPPORTED_CHAINS[targetChainId as keyof typeof SUPPORTED_CHAINS];
+    if (!targetChain) {
+      throw new Error(`Unsupported chain ID: ${targetChainId}`);
+    }
+
+    try {
+      const provider = await activeWallet.getEthereumProvider();
+      const walletChainId = await provider.request({
+        method: "eth_chainId",
+      });
+
+      const currentChainId = parseInt(walletChainId as string, 16);
+
+      if (currentChainId === targetChainId) {
+        console.log(`[NETWORK] Already on ${targetChain.name} network`);
+        return;
+      }
+
+      console.log(
+        `[NETWORK] Switching from chain ${currentChainId} to ${targetChainId} (${targetChain.name})`
+      );
+
+      await activeWallet.switchChain(targetChainId);
+
+      console.log(`[NETWORK] Successfully switched to ${targetChain.name}`);
+    } catch (error) {
+      console.error("[NETWORK] Failed to switch network:", error);
+      throw new Error(
+        `Please switch your wallet to the ${targetChain.name} network to continue`
+      );
+    }
+  };
+
   // Send transaction - sponsored for embedded wallets, regular for external wallets
   const sendSponsoredTransaction = async (
     params: SendTransactionParams
@@ -244,13 +314,17 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       return { hash: null, error: "No active wallet connected" };
     }
 
+    // Default to Arbitrum for backward compatibility
+    const targetChainId = params.chainId ?? NETWORK.id;
+
     try {
       setIsSending(true);
-      await ensureCorrectNetwork();
+      await ensureNetworkForTransaction(targetChainId);
 
       console.log("[TX] Sending transaction:", params);
       console.log("[TX] Using wallet address:", activeWallet.address);
       console.log("[TX] Wallet client type:", activeWallet.walletClientType);
+      console.log("[TX] Target chain ID:", targetChainId);
 
       // Check if this is an embedded wallet (supports gas sponsorship)
       const isEmbeddedWallet = activeWallet.walletClientType === "privy";
@@ -263,7 +337,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
             to: params.to,
             data: params.data,
             value: params.value ? BigInt(params.value) : undefined,
-            chainId: NETWORK.id,
+            chainId: targetChainId,
           },
           {
             // Enable gas sponsorship (requires dashboard configuration)
@@ -289,7 +363,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
             to: params.to,
             data: params.data,
             value: params.value ? BigInt(params.value) : undefined,
-            chainId: NETWORK.id,
+            chainId: targetChainId,
           },
           {
             // No sponsorship for external wallets - user pays gas
@@ -319,6 +393,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
     <Web3Context.Provider
       value={{
         publicClient,
+        ethereumPublicClient,
+        getPublicClient,
         walletClient,
         wallets,
         activeWalletAddress: activeWallet?.address as `0x${string}`,

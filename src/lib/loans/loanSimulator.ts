@@ -7,6 +7,12 @@
  * - Calculating loan metrics
  */
 
+import {
+  STACKD_ADDITIONAL_APR,
+  calculateMonthlyStackdFee,
+  calculateYearlyStackdFee,
+} from "./stackdFee";
+
 export type HealthStatus = "safe" | "warning" | "danger";
 
 export interface LoanState {
@@ -29,6 +35,14 @@ export interface SimulationResult {
   monthlyInterest: number;
   yearlyInterest: number;
   availableToBorrow: number;
+  // Stack'd fee breakdown
+  marketApr: number;
+  stackdFeeApr: number;
+  totalApr: number;
+  monthlyStackdFee: number;
+  yearlyStackdFee: number;
+  monthlyMarketInterest: number;
+  yearlyMarketInterest: number;
 }
 
 export interface SimulationParams {
@@ -201,8 +215,19 @@ export function simulateLoan(params: SimulationParams): SimulationResult {
   const liquidationPrice = calculateLiquidationPrice(borrowedUsd, collateralWbtc, liquidationRatio);
   const healthFactor = calculateHealthFactor(collateralUsd, borrowedUsd, liquidationRatio);
   const healthStatus = getHealthStatus(healthFactor);
-  const yearlyInterest = calculateTotalInterest(borrowedUsd, borrowApr);
-  const monthlyInterest = calculateMonthlyPayment(borrowedUsd, borrowApr);
+
+  // Market interest calculations (based on market APR only)
+  const yearlyMarketInterest = calculateTotalInterest(borrowedUsd, borrowApr);
+  const monthlyMarketInterest = calculateMonthlyPayment(borrowedUsd, borrowApr);
+
+  // Stack'd fee calculations
+  const yearlyStackdFee = calculateYearlyStackdFee(borrowedUsd);
+  const monthlyStackdFee = calculateMonthlyStackdFee(borrowedUsd);
+
+  // Total interest (market + Stack'd)
+  const totalApr = borrowApr + STACKD_ADDITIONAL_APR;
+  const yearlyInterest = yearlyMarketInterest + yearlyStackdFee;
+  const monthlyInterest = monthlyMarketInterest + monthlyStackdFee;
 
   return {
     ltv,
@@ -214,8 +239,17 @@ export function simulateLoan(params: SimulationParams): SimulationResult {
     monthlyInterest,
     yearlyInterest,
     availableToBorrow: borrowableAmount,
+    // Stack'd fee breakdown
+    marketApr: borrowApr,
+    stackdFeeApr: STACKD_ADDITIONAL_APR,
+    totalApr,
+    monthlyStackdFee,
+    yearlyStackdFee,
+    monthlyMarketInterest,
+    yearlyMarketInterest,
   };
 }
+
 
 /**
  * Simulate the effect of a BTC price drop on a loan

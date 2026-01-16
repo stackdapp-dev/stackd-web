@@ -52,14 +52,18 @@ test.describe("Desktop Navigation", () => {
         await page.goto("/wallet");
         await page.waitForLoadState("domcontentloaded");
 
+        // Wait for React hydration - useMediaQuery initializes as false and updates after effect
+        await page.waitForTimeout(1000);
+
         // Check for top-positioned nav (desktop layout)
         const nav = page.locator("nav");
         await expect(nav).toBeVisible();
 
-        // Desktop nav should have top positioning
-        const navClasses = await nav.getAttribute("class");
-        expect(navClasses).toContain("top-");
+        // Desktop nav should have top positioning after hydration
+        // The ResponsiveNav component uses 'top-0' class for desktop
+        await expect(nav).toHaveClass(/top-/);
     });
+
 
     test("should display STACK'D logo on desktop", async ({ page }) => {
         await page.goto("/wallet");

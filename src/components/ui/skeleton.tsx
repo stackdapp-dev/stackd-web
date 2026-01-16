@@ -13,6 +13,7 @@ interface SkeletonProps {
 export function Skeleton({ className }: SkeletonProps) {
     return (
         <div
+            data-testid="skeleton"
             className={cn(
                 "rounded bg-white/10 skeleton-shimmer",
                 className

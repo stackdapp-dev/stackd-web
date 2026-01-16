@@ -56,7 +56,7 @@ export const ResponsiveNav = () => {
             subHrefs.forEach((subHref) => router.prefetch(subHref));
         });
         router.prefetch("/wallet/loan");
-        router.prefetch("/wallet/deposit/WBTC");
+        router.prefetch("/wallet/cash-in");
         router.prefetch("/referrals/tiers");
     }, [router]);
 

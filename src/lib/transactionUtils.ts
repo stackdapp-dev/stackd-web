@@ -19,7 +19,7 @@ export function calculateTransactionUsdValue(
 ): number {
   // For stablecoins, the amount is essentially the USD value
   // USD₮0 is USDT on Arbitrum/other networks
-  if (symbol === "USDT" || symbol === "USDC" || symbol === "USD₮0") {
+  if (symbol === "USDT" || symbol === "USD₮0") {
     return amount;
   }
 

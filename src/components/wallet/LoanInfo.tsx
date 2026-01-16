@@ -203,7 +203,7 @@ export default function LoanInfo() {
         primaryButtonText="Deposit"
         primaryButtonAction={() => {
           setShowCollateralModal(false);
-          router.push("/wallet/deposit/WBTC");
+          router.push("/wallet/cash-in");
         }}
         secondaryButtonText="Go back"
         secondaryButtonAction={() => {

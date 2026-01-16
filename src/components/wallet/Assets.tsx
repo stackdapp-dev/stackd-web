@@ -26,9 +26,9 @@ interface AssetsProps {
 const tokenNames: Record<string, string> = {
   WBTC: "Bitcoin (Wrapped)",
   BTC: "Bitcoin",
-  USDT: "USD Tether",
-  USDC: "USD Coin",
+  USDT: "USDT",
   ETH: "Ethereum",
+  XAUT: "Tether Gold",
 };
 
 // Token icon background colors
@@ -36,7 +36,6 @@ const tokenColors: Record<string, string> = {
   WBTC: "bg-amber-600/30",
   BTC: "bg-orange-500/20",
   USDT: "bg-teal-500/20",
-  USDC: "bg-blue-500/20",
   ETH: "bg-purple-500/20",
 };
 
