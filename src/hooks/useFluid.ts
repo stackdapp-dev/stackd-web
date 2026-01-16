@@ -1,17 +1,25 @@
 import { getTokenMetadata } from "@/constants/Tokens";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
+import { ERC20_ABI } from "@/lib/config/abis";
 import { STACKD_ADDITIONAL_APR } from "@/lib/loans/stackdFee";
 import {
   getUserPositions,
+  encodeFluidSupply,
+  encodeFluidWithdraw,
+  encodeFluidBorrow,
+  encodeFluidRepay,
+  XAUT_USDT_VAULT,
   type FluidUserPosition,
   type FluidVaultData,
 } from "@/lib/web3/fluid";
+import { encodeApproveData } from "@/lib/web3/compound";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useQuery, QueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import type { Address, PublicClient } from "viem";
+import type { Address, Hex, PublicClient } from "viem";
 import { formatUnits } from "viem";
+import { mainnet } from "viem/chains";
 
 // Token symbols used for collateral in Fluid
 const COLLATERAL_TOKEN = "XAUT";
@@ -49,6 +57,8 @@ type Asset = {
   decimals: number;
 };
 
+type TransactionResult = { txHash: Hex | null; error: string | null };
+
 type UseFluidResult = {
   collateralRaw: bigint;
   borrowRaw: bigint;
@@ -65,6 +75,13 @@ type UseFluidResult = {
   netLoanValue: number;
   hasPosition: boolean;
   nftId?: bigint;
+  // Transaction functions
+  supply: (amount: bigint) => Promise<TransactionResult>;
+  withdraw: (amount: bigint) => Promise<TransactionResult>;
+  borrow: (amount: bigint) => Promise<TransactionResult>;
+  repay: (amount: bigint) => Promise<TransactionResult>;
+  approve: (token: Address, amount: bigint, spender?: Address) => Promise<TransactionResult>;
+  allowance: (token: Address, spender?: Address) => Promise<bigint | null>;
 };
 
 // Query key factory for Fluid data
@@ -175,7 +192,7 @@ async function fetchFluidData(
 }
 
 export function useFluid(): UseFluidResult {
-  const { ethereumPublicClient, walletClient, activeWalletAddress } = useWeb3();
+  const { ethereumPublicClient, walletClient, activeWalletAddress, sendSponsoredTransaction } = useWeb3();
   const getTokenPrice = useGetTokenPrice();
   const acct = walletClient?.account?.address || activeWalletAddress;
 
@@ -257,6 +274,181 @@ export function useFluid(): UseFluidResult {
     await refetch();
   }, [refetch]);
 
+  // Transaction functions for Fluid vault operations on Ethereum mainnet
+
+  const supply = useCallback(
+    async (amount: bigint): Promise<TransactionResult> => {
+      if (!nftId) {
+        return { txHash: null, error: "No active position found. Cannot supply without nftId." };
+      }
+      if (!acct) {
+        return { txHash: null, error: "No account connected" };
+      }
+
+      try {
+        const data = encodeFluidSupply(nftId, amount, acct as Address);
+        const result = await sendSponsoredTransaction({
+          to: XAUT_USDT_VAULT as Address,
+          data,
+          chainId: mainnet.id,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown supply error";
+        console.error("[FLUID] Supply failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [nftId, acct, sendSponsoredTransaction]
+  );
+
+  const withdraw = useCallback(
+    async (amount: bigint): Promise<TransactionResult> => {
+      if (!nftId) {
+        return { txHash: null, error: "No active position found. Cannot withdraw without nftId." };
+      }
+      if (!acct) {
+        return { txHash: null, error: "No account connected" };
+      }
+
+      try {
+        const data = encodeFluidWithdraw(nftId, amount, acct as Address);
+        const result = await sendSponsoredTransaction({
+          to: XAUT_USDT_VAULT as Address,
+          data,
+          chainId: mainnet.id,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown withdraw error";
+        console.error("[FLUID] Withdraw failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [nftId, acct, sendSponsoredTransaction]
+  );
+
+  const borrow = useCallback(
+    async (amount: bigint): Promise<TransactionResult> => {
+      if (!nftId) {
+        return { txHash: null, error: "No active position found. Cannot borrow without nftId." };
+      }
+      if (!acct) {
+        return { txHash: null, error: "No account connected" };
+      }
+
+      try {
+        const data = encodeFluidBorrow(nftId, amount, acct as Address);
+        const result = await sendSponsoredTransaction({
+          to: XAUT_USDT_VAULT as Address,
+          data,
+          chainId: mainnet.id,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown borrow error";
+        console.error("[FLUID] Borrow failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [nftId, acct, sendSponsoredTransaction]
+  );
+
+  const repay = useCallback(
+    async (amount: bigint): Promise<TransactionResult> => {
+      if (!nftId) {
+        return { txHash: null, error: "No active position found. Cannot repay without nftId." };
+      }
+      if (!acct) {
+        return { txHash: null, error: "No account connected" };
+      }
+
+      try {
+        const data = encodeFluidRepay(nftId, amount, acct as Address);
+        const result = await sendSponsoredTransaction({
+          to: XAUT_USDT_VAULT as Address,
+          data,
+          chainId: mainnet.id,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown repay error";
+        console.error("[FLUID] Repay failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [nftId, acct, sendSponsoredTransaction]
+  );
+
+  const approve = useCallback(
+    async (
+      token: Address,
+      amount: bigint,
+      spender: Address = XAUT_USDT_VAULT as Address
+    ): Promise<TransactionResult> => {
+      if (!acct) {
+        return { txHash: null, error: "No account connected" };
+      }
+
+      try {
+        const data = encodeApproveData(spender, amount);
+        const result = await sendSponsoredTransaction({
+          to: token,
+          data,
+          chainId: mainnet.id,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown approval error";
+        console.error("[FLUID] Approve failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [acct, sendSponsoredTransaction]
+  );
+
+  const allowance = useCallback(
+    async (
+      token: Address,
+      spender: Address = XAUT_USDT_VAULT as Address
+    ): Promise<bigint | null> => {
+      if (!ethereumPublicClient || !acct) return null;
+      try {
+        const result = await ethereumPublicClient.readContract({
+          address: token,
+          abi: ERC20_ABI,
+          functionName: "allowance",
+          args: [acct as Address, spender],
+        });
+        return result as bigint;
+      } catch (err) {
+        console.error("[FLUID] Allowance read failed:", err);
+        return null;
+      }
+    },
+    [ethereumPublicClient, acct]
+  );
+
   return {
     collateralRaw,
     borrowRaw,
@@ -277,6 +469,13 @@ export function useFluid(): UseFluidResult {
     netLoanValue,
     hasPosition,
     nftId,
+    // Transaction functions
+    supply,
+    withdraw,
+    borrow,
+    repay,
+    approve,
+    allowance,
   };
 }
 
