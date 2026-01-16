@@ -178,3 +178,191 @@ describe("useFluid - Supported Borrow Tokens", () => {
         });
     });
 });
+
+/**
+ * TDD tests for useFluid transaction functions
+ *
+ * These tests define the expected behavior for supply, withdraw, borrow, repay,
+ * approve, and allowance functions that will be added to the useFluid hook.
+ */
+describe("useFluid - Transaction Functions", () => {
+    describe("Implementation verification for transaction functions", () => {
+        it("should export supply function from useFluid hook", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have supply function in the return statement
+            expect(hookCode).toContain("supply:");
+            // Should have supply function implementation
+            expect(hookCode).toMatch(/const supply\s*=\s*useCallback/);
+        });
+
+        it("should export withdraw function from useFluid hook", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have withdraw function in the return statement
+            expect(hookCode).toContain("withdraw:");
+            // Should have withdraw function implementation
+            expect(hookCode).toMatch(/const withdraw\s*=\s*useCallback/);
+        });
+
+        it("should export borrow function from useFluid hook", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have borrow function in the return statement
+            expect(hookCode).toContain("borrow:");
+            // Should have borrow function implementation
+            expect(hookCode).toMatch(/const borrow\s*=\s*useCallback/);
+        });
+
+        it("should export repay function from useFluid hook", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have repay function in the return statement
+            expect(hookCode).toContain("repay:");
+            // Should have repay function implementation
+            expect(hookCode).toMatch(/const repay\s*=\s*useCallback/);
+        });
+
+        it("should export approve function from useFluid hook", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have approve function in the return statement
+            expect(hookCode).toContain("approve:");
+            // Should have approve function implementation
+            expect(hookCode).toMatch(/const approve\s*=\s*useCallback/);
+        });
+
+        it("should export allowance function from useFluid hook", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have allowance function in the return statement
+            expect(hookCode).toContain("allowance:");
+            // Should have allowance function implementation
+            expect(hookCode).toMatch(/const allowance\s*=\s*useCallback/);
+        });
+
+        it("should use encodeFluidSupply for supply operations", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should import encodeFluidSupply
+            expect(hookCode).toContain("encodeFluidSupply");
+        });
+
+        it("should use encodeFluidWithdraw for withdraw operations", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should import encodeFluidWithdraw
+            expect(hookCode).toContain("encodeFluidWithdraw");
+        });
+
+        it("should use encodeFluidBorrow for borrow operations", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should import encodeFluidBorrow
+            expect(hookCode).toContain("encodeFluidBorrow");
+        });
+
+        it("should use encodeFluidRepay for repay operations", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should import encodeFluidRepay
+            expect(hookCode).toContain("encodeFluidRepay");
+        });
+
+        it("should send transactions to XAUT_USDT_VAULT address", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should import XAUT_USDT_VAULT from fluid.ts
+            expect(hookCode).toContain("XAUT_USDT_VAULT");
+        });
+
+        it("should include UseFluidResult type with transaction functions", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // UseFluidResult type should include transaction function types
+            const typeMatch = hookCode.match(/type UseFluidResult\s*=\s*\{[^}]+\}/s);
+            expect(typeMatch).not.toBeNull();
+            const typeCode = typeMatch![0];
+
+            expect(typeCode).toContain("supply:");
+            expect(typeCode).toContain("withdraw:");
+            expect(typeCode).toContain("borrow:");
+            expect(typeCode).toContain("repay:");
+            expect(typeCode).toContain("approve:");
+            expect(typeCode).toContain("allowance:");
+        });
+
+        it("should use sendSponsoredTransaction with Ethereum chainId for mainnet transactions", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should use sendSponsoredTransaction with chainId for Ethereum mainnet
+            expect(hookCode).toContain("sendSponsoredTransaction");
+            // Should specify Ethereum mainnet chainId (1)
+            expect(hookCode).toContain("chainId:");
+        });
+
+        it("should check for nftId before executing transactions", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Supply, withdraw, borrow, repay all need nftId
+            // Look for nftId validation in transaction functions
+            expect(hookCode).toMatch(/if\s*\(\s*!nftId\s*\)/);
+        });
+    });
+});

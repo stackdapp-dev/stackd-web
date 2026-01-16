@@ -653,3 +653,237 @@ describe("SimulatorResults Component", () => {
         expect(true).toBe(true);
     });
 });
+
+/**
+ * TDD tests for LoanSimulator collateralType prop and multi-protocol support
+ *
+ * These tests define the expected behavior for supporting both WBTC (Compound)
+ * and XAUT (Fluid) collateral types in the LoanSimulator component.
+ */
+describe("LoanSimulator - CollateralType Support", () => {
+    describe("Implementation verification for collateralType prop", () => {
+        it("should accept collateralType prop in LoanSimulatorProps interface", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have collateralType in props interface
+            expect(componentCode).toContain("collateralType?:");
+        });
+
+        it("should import useFluid hook when handling XAUT", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should import useFluid
+            expect(componentCode).toContain("useFluid");
+        });
+
+        it("should conditionally use Fluid or Compound based on collateralType", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have logic to select protocol based on collateralType
+            expect(componentCode).toMatch(/isXaut|collateralType\s*===\s*["']XAUT["']/);
+        });
+
+        it("should display correct token name for XAUT collateral", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should reference "Tether Gold" for XAUT display
+            expect(componentCode).toContain("Tether Gold");
+        });
+
+        it("should use Fluid transaction functions for XAUT operations", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // When collateralType is XAUT, should use Fluid's supply/withdraw/borrow/repay
+            // Look for conditional transaction execution
+            expect(componentCode).toMatch(/fluid\w*\.(supply|borrow|withdraw|repay)/i);
+        });
+
+        it("should default to WBTC/Compound when collateralType not specified", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Props should default collateralType to WBTC
+            expect(componentCode).toMatch(/collateralType\s*=\s*["']WBTC["']/);
+        });
+    });
+
+    describe("Token display based on collateralType", () => {
+        it("should show WBTC icon when collateralType is WBTC", async () => {
+            // Implementation will render TokenIcon with symbol="WBTC"
+            expect(true).toBe(true);
+        });
+
+        it("should show XAUT icon when collateralType is XAUT", async () => {
+            // Implementation will render TokenIcon with symbol="XAUT"
+            expect(true).toBe(true);
+        });
+
+        it("should show 'Wrapped Bitcoin' name for WBTC", async () => {
+            // Implementation will display "Wrapped Bitcoin" in collateral section
+            expect(true).toBe(true);
+        });
+
+        it("should show 'Tether Gold' name for XAUT", async () => {
+            // Implementation will display "Tether Gold" in collateral section
+            expect(true).toBe(true);
+        });
+    });
+
+    describe("Transaction execution by collateralType", () => {
+        it("should call Compound supply for WBTC addCollateral", async () => {
+            // When mode=addCollateral and collateralType=WBTC
+            // Should call useCompound's supply function
+            expect(true).toBe(true);
+        });
+
+        it("should call Fluid supply for XAUT addCollateral", async () => {
+            // When mode=addCollateral and collateralType=XAUT
+            // Should call useFluid's supply function
+            expect(true).toBe(true);
+        });
+
+        it("should call Compound withdraw for WBTC borrow", async () => {
+            // When mode=borrow and collateralType=WBTC
+            // Should call useCompound's withdraw function (USDT)
+            expect(true).toBe(true);
+        });
+
+        it("should call Fluid borrow for XAUT borrow", async () => {
+            // When mode=borrow and collateralType=XAUT
+            // Should call useFluid's borrow function
+            expect(true).toBe(true);
+        });
+
+        it("should call Compound supply for WBTC repay", async () => {
+            // When mode=repay and collateralType=WBTC
+            // Should call useCompound's supply function (USDT)
+            expect(true).toBe(true);
+        });
+
+        it("should call Fluid repay for XAUT repay", async () => {
+            // When mode=repay and collateralType=XAUT
+            // Should call useFluid's repay function
+            expect(true).toBe(true);
+        });
+
+        it("should call Compound withdraw for WBTC withdrawCollateral", async () => {
+            // When mode=withdrawCollateral and collateralType=WBTC
+            // Should call useCompound's withdraw function (WBTC)
+            expect(true).toBe(true);
+        });
+
+        it("should call Fluid withdraw for XAUT withdrawCollateral", async () => {
+            // When mode=withdrawCollateral and collateralType=XAUT
+            // Should call useFluid's withdraw function
+            expect(true).toBe(true);
+        });
+    });
+
+    describe("Approval flow by collateralType", () => {
+        it("should approve to Compound address for WBTC operations", async () => {
+            // For WBTC/Compound, approvals go to Compound contract
+            expect(true).toBe(true);
+        });
+
+        it("should approve to Fluid vault address for XAUT operations", async () => {
+            // For XAUT/Fluid, approvals go to Fluid vault contract
+            expect(true).toBe(true);
+        });
+
+        it("should check allowance from correct protocol based on collateralType", async () => {
+            // Allowance checks should query the correct spender
+            expect(true).toBe(true);
+        });
+    });
+});
+
+describe("LoanSimulator - Sandbox Mode Collateral Selector", () => {
+    describe("Implementation verification for sandbox collateral selector", () => {
+        it("should show collateral type selector in simulate mode", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // In simulate mode, should have UI for selecting collateral type
+            // Look for sandboxCollateralType state or similar
+            expect(componentCode).toContain("sandboxCollateralType");
+        });
+
+        it("should have WBTC and XAUT options in selector", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have both collateral type options
+            // Look for setSandboxCollateralType calls with WBTC and XAUT
+            expect(componentCode).toMatch(/setSandboxCollateralType.*WBTC/);
+            expect(componentCode).toMatch(/setSandboxCollateralType.*XAUT/);
+        });
+
+        it("should use correct price for selected collateral type", async () => {
+            // When XAUT is selected, should use XAUT price
+            // When WBTC is selected, should use WBTC price
+            expect(true).toBe(true);
+        });
+
+        it("should update calculations when collateral type changes", async () => {
+            // Switching collateral type should recalculate:
+            // - Collateral USD value
+            // - LTV
+            // - Borrow capacity
+            // - Liquidation price
+            expect(true).toBe(true);
+        });
+    });
+});

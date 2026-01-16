@@ -14,15 +14,19 @@ import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useCompound } from "@/hooks/useCompound";
+import { useFluid } from "@/hooks/useFluid";
 import { getTokenMetadata } from "@/constants/Tokens";
+import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
 import { RotateCcw, AlertTriangle, CheckCircle } from "lucide-react";
 import { parseUnits } from "viem";
 
 export type SimulatorMode = "borrow" | "addCollateral" | "repay" | "withdrawCollateral" | "simulate";
+export type CollateralType = "WBTC" | "XAUT";
 
 interface LoanSimulatorProps {
   mode?: SimulatorMode;
+  collateralType?: CollateralType;
   onComplete?: () => void;
 }
 
@@ -30,16 +34,36 @@ interface LoanSimulatorProps {
  * LoanSimulator - Unified simulator component for borrow, add collateral, and repay
  *
  * Modes:
- * - borrow: Withdraw USDT from Compound (increases debt)
- * - addCollateral: Supply WBTC to Compound (increases collateral)
- * - repay: Supply USDT to Compound (decreases debt)
+ * - borrow: Withdraw USDT from Compound/Fluid (increases debt)
+ * - addCollateral: Supply WBTC/XAUT to Compound/Fluid (increases collateral)
+ * - repay: Supply USDT to Compound/Fluid (decreases debt)
+ * - withdrawCollateral: Withdraw WBTC/XAUT from Compound/Fluid (decreases collateral)
+ *
+ * collateralType:
+ * - WBTC: Uses Compound protocol on Arbitrum
+ * - XAUT: Uses Fluid protocol on Ethereum mainnet
  */
-export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimulatorProps) {
+export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC", onComplete }: LoanSimulatorProps) {
   const { refetchBalances, wbtcBalance, usdtBalance } = useWalletBalanceContext();
   const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
   const getPrice = useGetTokenPrice();
-  const { withdraw, supply, approve, allowance } = useCompound();
+  const compound = useCompound();
+  const fluid = useFluid();
   const { breakdown } = useCollateralBreakdown();
+
+  // Determine which protocol to use based on collateralType
+  const isXaut = collateralType === "XAUT";
+  const collateralSymbol = collateralType;
+  const collateralName = isXaut ? "Tether Gold" : "Wrapped Bitcoin";
+  const collateralDecimals = isXaut ? 6 : 8;
+
+  // Sandbox mode state for collateral type selection
+  const [sandboxCollateralType, setSandboxCollateralType] = useState<CollateralType>("WBTC");
+  const effectiveCollateralType = mode === "simulate" ? sandboxCollateralType : collateralType;
+  const effectiveIsXaut = effectiveCollateralType === "XAUT";
+  const effectiveCollateralSymbol = effectiveCollateralType;
+  const effectiveCollateralName = effectiveIsXaut ? "Tether Gold" : "Wrapped Bitcoin";
+  const effectiveCollateralDecimals = effectiveIsXaut ? 6 : 8;
 
   // Modal and processing state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -69,10 +93,10 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
       case "addCollateral":
         return {
           title: "Add Collateral",
-          inputLabel: "Collateral Amount (WBTC)",
-          tokenSymbol: "WBTC" as const,
+          inputLabel: `Collateral Amount (${collateralSymbol})`,
+          tokenSymbol: collateralSymbol,
           actionButtonText: "Add Collateral",
-          maxValue: wbtcBalance, // Max is wallet WBTC balance
+          maxValue: wbtcBalance, // Max is wallet balance (TODO: support XAUT balance)
           isRiskReducing: true,
           warningText: "This will increase your collateral and reduce liquidation risk.",
           successIcon: true,
@@ -82,7 +106,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
         return {
           title: "Repay Loan",
           inputLabel: "Repay Amount (USDT)",
-          tokenSymbol: "USDT" as const,
+          tokenSymbol: "USDT",
           actionButtonText: "Repay Loan",
           maxValue: Math.min(usdtBalance, currentBorrowedAmount), // Max is min of wallet balance and borrowed
           isRiskReducing: true,
@@ -93,8 +117,8 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
       case "withdrawCollateral":
         return {
           title: "Withdraw Collateral",
-          inputLabel: "Withdraw Amount (WBTC)",
-          tokenSymbol: "WBTC" as const,
+          inputLabel: `Withdraw Amount (${collateralSymbol})`,
+          tokenSymbol: collateralSymbol,
           actionButtonText: "Withdraw",
           maxValue: breakdown.availableToWithdrawBtc * 0.99, // 1% safety buffer for precision
           isRiskReducing: false,
@@ -115,7 +139,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
           useSlider: false,
         };
     }
-  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.availableToWithdrawBtc]);
+  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.availableToWithdrawBtc, collateralSymbol]);
 
   // Simulator state - store input as string
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "0");
@@ -239,22 +263,42 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
   // Check allowance for supply operations
   useEffect(() => {
     const checkAllowance = async () => {
-      if ((mode === "addCollateral" || mode === "repay") && transactionAmount > 0 && allowance) {
-        const tokenMeta = getTokenMetadata(modeConfig.tokenSymbol);
-        if (!tokenMeta) return;
+      if ((mode === "addCollateral" || mode === "repay") && transactionAmount > 0) {
+        const tokenSymbol = modeConfig.tokenSymbol;
+        let tokenAddress: `0x${string}`;
+        let decimals: number;
 
-        const tokenAddress = tokenMeta.address as `0x${string}`;
-        const currentAllowance = await allowance(tokenAddress);
-        const amountBigInt = parseUnits(String(transactionAmount), tokenMeta.decimals);
+        if (isXaut) {
+          // Use Ethereum mainnet addresses for Fluid
+          if (tokenSymbol === "XAUT") {
+            tokenAddress = ETHEREUM_TOKEN_ADDRESSES.XAUT as `0x${string}`;
+            decimals = 6;
+          } else if (tokenSymbol === "USDT") {
+            tokenAddress = ETHEREUM_TOKEN_ADDRESSES.USDT as `0x${string}`;
+            decimals = 6;
+          } else {
+            return;
+          }
+          const currentAllowance = await fluid.allowance(tokenAddress);
+          const amountBigInt = parseUnits(String(transactionAmount), decimals);
+          setNeedsApproval(currentAllowance !== null && currentAllowance < amountBigInt);
+        } else {
+          // Use Arbitrum addresses for Compound
+          const tokenMeta = getTokenMetadata(tokenSymbol);
+          if (!tokenMeta || !compound.allowance) return;
 
-        setNeedsApproval(currentAllowance !== null && currentAllowance < amountBigInt);
+          tokenAddress = tokenMeta.address as `0x${string}`;
+          const currentAllowance = await compound.allowance(tokenAddress);
+          const amountBigInt = parseUnits(String(transactionAmount), tokenMeta.decimals);
+          setNeedsApproval(currentAllowance !== null && currentAllowance < amountBigInt);
+        }
       } else {
         setNeedsApproval(false);
       }
     };
 
     void checkAllowance();
-  }, [mode, transactionAmount, allowance, modeConfig.tokenSymbol]);
+  }, [mode, transactionAmount, compound.allowance, fluid.allowance, isXaut, modeConfig.tokenSymbol]);
 
   // Handle input change
   const handleInputChange = useCallback(
@@ -288,14 +332,33 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
 
     setIsApproving(true);
     try {
-      const tokenMeta = getTokenMetadata(modeConfig.tokenSymbol);
-      if (!tokenMeta) throw new Error(`${modeConfig.tokenSymbol} metadata not found`);
+      // For XAUT, use Ethereum mainnet token addresses
+      const tokenSymbol = modeConfig.tokenSymbol;
+      let tokenAddress: `0x${string}`;
 
-      const tokenAddress = tokenMeta.address as `0x${string}`;
+      if (isXaut) {
+        // Use Ethereum mainnet addresses for Fluid
+        if (tokenSymbol === "XAUT") {
+          tokenAddress = ETHEREUM_TOKEN_ADDRESSES.XAUT as `0x${string}`;
+        } else if (tokenSymbol === "USDT") {
+          tokenAddress = ETHEREUM_TOKEN_ADDRESSES.USDT as `0x${string}`;
+        } else {
+          throw new Error(`Unknown token ${tokenSymbol} for Fluid`);
+        }
+      } else {
+        // Use Arbitrum addresses for Compound
+        const tokenMeta = getTokenMetadata(tokenSymbol);
+        if (!tokenMeta) throw new Error(`${tokenSymbol} metadata not found`);
+        tokenAddress = tokenMeta.address as `0x${string}`;
+      }
+
       // Approve max uint256 for convenience
       const maxAmount = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
-      const result = await approve(tokenAddress, maxAmount);
+      const result = isXaut
+        ? await fluid.approve(tokenAddress, maxAmount)
+        : await compound.approve(tokenAddress, maxAmount);
+
       if (result.error) throw new Error(result.error);
 
       setNeedsApproval(false);
@@ -304,7 +367,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
     } finally {
       setIsApproving(false);
     }
-  }, [isApproving, approve, modeConfig.tokenSymbol]);
+  }, [isApproving, compound, fluid, isXaut, modeConfig.tokenSymbol]);
 
   // Execute transaction
   const handleConfirm = useCallback(async () => {
@@ -319,18 +382,33 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
       const amountBigInt = parseUnits(String(transactionAmount), tokenMeta.decimals);
 
       let result;
-      if (mode === "borrow" || mode === "withdrawCollateral") {
-        // Borrow = withdraw USDT from Compound
-        // Withdraw collateral = withdraw WBTC from Compound
-        result = await withdraw(tokenAddress, amountBigInt);
+
+      if (isXaut) {
+        // Use Fluid protocol for XAUT
+        if (mode === "borrow") {
+          result = await fluid.borrow(amountBigInt);
+        } else if (mode === "withdrawCollateral") {
+          result = await fluid.withdraw(amountBigInt);
+        } else if (mode === "addCollateral") {
+          result = await fluid.supply(amountBigInt);
+        } else if (mode === "repay") {
+          result = await fluid.repay(amountBigInt);
+        }
       } else {
-        // Add collateral or repay = supply to Compound
-        result = await supply(tokenAddress, amountBigInt);
+        // Use Compound protocol for WBTC
+        if (mode === "borrow" || mode === "withdrawCollateral") {
+          // Borrow = withdraw USDT from Compound
+          // Withdraw collateral = withdraw WBTC from Compound
+          result = await compound.withdraw(tokenAddress, amountBigInt);
+        } else {
+          // Add collateral or repay = supply to Compound
+          result = await compound.supply(tokenAddress, amountBigInt);
+        }
       }
 
-      if (result.error) throw new Error(result.error);
+      if (result?.error) throw new Error(result.error);
 
-      await Promise.all([refetchBalances(), refetchLoanData()]);
+      await Promise.all([refetchBalances(), refetchLoanData(), isXaut ? fluid.refetch() : Promise.resolve()]);
       setShowConfirmModal(false);
 
       // Reset input and call completion callback
@@ -346,7 +424,7 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, transactionAmount, mode, modeConfig.tokenSymbol, withdraw, supply, refetchBalances, refetchLoanData, parsedInput, onComplete]);
+  }, [isProcessing, transactionAmount, mode, modeConfig.tokenSymbol, compound, fluid, isXaut, refetchBalances, refetchLoanData, parsedInput, onComplete]);
 
   // Format display values based on mode
   const formatInputDisplay = useCallback((value: number) => {
@@ -370,14 +448,44 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
         {/* Input Field */}
         <div className="mt-6">
           {mode === "simulate" ? (
-            /* Sandbox Mode - Collateral Input + Borrow Slider */
+            /* Sandbox Mode - Collateral Type Selector + Collateral Input + Borrow Slider */
             <div className="flex flex-col gap-6">
+              {/* Collateral Type Selector */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSandboxCollateralType("WBTC")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg border flex-1 justify-center transition-all",
+                    sandboxCollateralType === "WBTC"
+                      ? "bg-amber-500/20 border-amber-500/30"
+                      : "bg-white/5 border-white/10 hover:bg-white/10"
+                  )}
+                >
+                  <TokenIcon symbol="WBTC" width={20} height={20} />
+                  <span className="text-white/80 text-sm font-medium">WBTC</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSandboxCollateralType("XAUT")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg border flex-1 justify-center transition-all",
+                    sandboxCollateralType === "XAUT"
+                      ? "bg-amber-500/20 border-amber-500/30"
+                      : "bg-white/5 border-white/10 hover:bg-white/10"
+                  )}
+                >
+                  <TokenIcon symbol="XAUT" width={20} height={20} />
+                  <span className="text-white/80 text-sm font-medium">XAUT</span>
+                </button>
+              </div>
+
               {/* Collateral Input */}
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
-                    <TokenIcon symbol="WBTC" width={24} height={24} />
-                    <span className="text-white/70 text-sm">Collateral Amount (WBTC)</span>
+                    <TokenIcon symbol={effectiveCollateralSymbol} width={24} height={24} />
+                    <span className="text-white/70 text-sm">Collateral Amount ({effectiveCollateralSymbol})</span>
                   </div>
                 </div>
                 <div className="relative">
@@ -395,10 +503,10 @@ export default function LoanSimulator({ mode = "borrow", onComplete }: LoanSimul
                     )}
                     placeholder="0"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">WBTC</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">{effectiveCollateralSymbol}</span>
                 </div>
                 <p className="text-white/40 text-xs mt-1 text-right">
-                  ≈ {formatCurrency(parsedSandboxCollateral * btcPrice)}
+                  ≈ {formatCurrency(parsedSandboxCollateral * (effectiveIsXaut ? getPrice("XAUT") : btcPrice))}
                 </p>
               </div>
 
