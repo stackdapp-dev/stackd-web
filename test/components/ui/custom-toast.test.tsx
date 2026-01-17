@@ -1,4 +1,8 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * @vitest-environment jsdom
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render } from "@testing-library/react";
 import {
     showSuccessToast,
     showErrorToast,
@@ -8,25 +12,27 @@ import {
 import { toast } from "react-toastify";
 
 // Mock react-toastify
-jest.mock("react-toastify", () => ({
-    toast: jest.fn(),
+vi.mock("react-toastify", () => ({
+    toast: vi.fn(),
 }));
+
+const mockedToast = vi.mocked(toast);
 
 describe("Custom Toast System", () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     afterEach(() => {
-        jest.resetAllMocks();
+        vi.resetAllMocks();
     });
 
     describe("showSuccessToast", () => {
         it("should call toast with correct message and top-center position", () => {
             showSuccessToast("Address copied");
 
-            expect(toast).toHaveBeenCalledTimes(1);
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockedToast).toHaveBeenCalledTimes(1);
+            expect(mockedToast).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.objectContaining({
                     position: "top-center",
@@ -39,8 +45,8 @@ describe("Custom Toast System", () => {
         it("should use transparent background style to integrate with custom styling", () => {
             showSuccessToast("Test message");
 
-            const callArgs = (toast as jest.Mock).mock.calls[0][1];
-            expect(callArgs.style).toEqual(
+            const callArgs = mockedToast.mock.calls[0][1];
+            expect(callArgs?.style).toEqual(
                 expect.objectContaining({
                     background: "transparent",
                     boxShadow: "none",
@@ -51,9 +57,9 @@ describe("Custom Toast System", () => {
         it("should disable closeButton and icon for clean custom appearance", () => {
             showSuccessToast("Test message");
 
-            const callArgs = (toast as jest.Mock).mock.calls[0][1];
-            expect(callArgs.closeButton).toBe(false);
-            expect(callArgs.icon).toBe(false);
+            const callArgs = mockedToast.mock.calls[0][1];
+            expect(callArgs?.closeButton).toBe(false);
+            expect(callArgs?.icon).toBe(false);
         });
     });
 
@@ -61,8 +67,8 @@ describe("Custom Toast System", () => {
         it("should call toast with error variant", () => {
             showErrorToast("Failed to copy");
 
-            expect(toast).toHaveBeenCalledTimes(1);
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockedToast).toHaveBeenCalledTimes(1);
+            expect(mockedToast).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.objectContaining({
                     position: "top-center",
@@ -75,8 +81,8 @@ describe("Custom Toast System", () => {
         it("should call toast with info variant and shorter autoClose", () => {
             showInfoToast("Deposit required");
 
-            expect(toast).toHaveBeenCalledTimes(1);
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockedToast).toHaveBeenCalledTimes(1);
+            expect(mockedToast).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.objectContaining({
                     position: "top-center",
@@ -88,7 +94,7 @@ describe("Custom Toast System", () => {
 
     describe("CustomToast component", () => {
         it("should render with success variant by default", () => {
-            const { container } = require("@testing-library/react").render(
+            const { container } = render(
                 <CustomToast message="Success message" />
             );
 
@@ -96,7 +102,7 @@ describe("Custom Toast System", () => {
         });
 
         it("should render with error variant when specified", () => {
-            const { container } = require("@testing-library/react").render(
+            const { container } = render(
                 <CustomToast message="Error message" variant="error" />
             );
 
@@ -104,7 +110,7 @@ describe("Custom Toast System", () => {
         });
 
         it("should render with info variant when specified", () => {
-            const { container } = require("@testing-library/react").render(
+            const { container } = render(
                 <CustomToast message="Info message" variant="info" />
             );
 
@@ -118,9 +124,9 @@ describe("Custom Toast System", () => {
             // not individual toast level, ensuring all toasts are visible
             showSuccessToast("Test");
 
-            const callArgs = (toast as jest.Mock).mock.calls[0][1];
+            const callArgs = mockedToast.mock.calls[0][1];
             // The style should NOT contain z-index - that's set on the container
-            expect(callArgs.style.zIndex).toBeUndefined();
+            expect(callArgs?.style?.zIndex).toBeUndefined();
         });
     });
 });

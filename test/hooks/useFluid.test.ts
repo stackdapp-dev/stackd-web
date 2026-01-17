@@ -173,8 +173,8 @@ describe("useFluid - Supported Borrow Tokens", () => {
             // Should use first borrowed asset (dynamic)
             expect(providerCode).toContain("borrowedAssets[0]");
 
-            // Should use dynamic borrowToken from the asset
-            expect(providerCode).toContain("borrowToken: xautBorrowed.symbol");
+            // Should use dynamic borrowToken from the asset (with fallback for collateral-only positions)
+            expect(providerCode).toContain("borrowToken: xautBorrowed?.symbol");
         });
     });
 });
