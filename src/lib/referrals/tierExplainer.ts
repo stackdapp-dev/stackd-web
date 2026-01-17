@@ -27,8 +27,8 @@ export interface TierBenefit {
 const TIER_SPECIFIC_BENEFITS: Record<UserTier, TierBenefit[]> = {
     BRONZE: [
         {
-            name: 'Base earnings (0.5%/0.1%/0.1%)',
-            description: 'Earn on direct and network referrals',
+            name: 'Earnings locked',
+            description: 'Upgrade to Silver to start earning referral rewards',
             inherited: false,
         },
         {
