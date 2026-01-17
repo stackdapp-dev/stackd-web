@@ -8,9 +8,10 @@ import { TierProgress } from "@/components/referrals/TierProgress";
 import { getUserTier } from "@/lib/referrals/tiers";
 import {
     Copy, Share2, Lock, Trophy, Users,
-    CreditCard, Check, Sparkles, Medal
+    CreditCard, Check, Sparkles, Medal, TrendingUp
 } from "lucide-react";
 import { LeaderboardModal } from "@/components/referrals/LeaderboardModal";
+import RewardsSimulatorModal from "@/components/referrals/RewardsSimulatorModal";
 import { useState } from "react";
 import { cn, shortenAddress } from "@/lib/utils";
 import { UserTier, RecentInvite } from "@/lib/db/types";
@@ -64,6 +65,7 @@ export function ReferralDashboard() {
     const { borrowedAssets: fluidBorrowedAssets } = useFluid();
     const [copied, setCopied] = useState(false);
     const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+    const [simulatorOpen, setSimulatorOpen] = useState(false);
 
     // Get personal loan balance from borrowed assets across ALL protocols (Compound + Fluid)
     const compoundLoanBalance = loanCalcs.borrowedAssets.reduce(
@@ -271,6 +273,18 @@ export function ReferralDashboard() {
                 </div>
             </GlassCard>
 
+            {/* Simulate My Rewards Button */}
+            <button
+                onClick={() => setSimulatorOpen(true)}
+                className="w-full bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30
+                           text-white py-4 rounded-2xl hover:bg-emerald-500/30 transition-all duration-300
+                           flex items-center justify-center gap-3 font-medium"
+                data-testid="simulate-rewards-button"
+            >
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                Simulate My Rewards
+            </button>
+
             {/* Tier Progress - Dual Progress Bars (Loan Size + Network Volume) */}
             <TierProgress
                 currentTier={calculatedTier}
@@ -398,10 +412,15 @@ export function ReferralDashboard() {
                 </div>
             </GlassCard>
 
-            {/* Leaderboard Modal */}
             <LeaderboardModal
                 open={leaderboardOpen}
                 onOpenChange={setLeaderboardOpen}
+            />
+
+            {/* Rewards Simulator Modal */}
+            <RewardsSimulatorModal
+                isOpen={simulatorOpen}
+                onClose={() => setSimulatorOpen(false)}
             />
         </div >
     );
