@@ -1,12 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { COLLATERAL_OPTIONS, CollateralOption } from "@/types/loans";
 import { showInfoToast } from "@/components/ui/custom-toast";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
+
+// Token logo paths
+const TOKEN_LOGOS: Record<string, string> = {
+  WBTC: "/assets/tokens/wbtc.png",
+  XAUT: "/assets/tokens/xaut.png",
+};
 
 interface NewLoanModalProps {
   isOpen: boolean;
@@ -61,18 +68,28 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
     }
   };
 
-  // Get icon letter based on collateral type
-  const getIconLetter = (type: string) => {
-    if (type === "WBTC") return "B";
-    if (type === "XAUT") return "G";
-    return type[0];
-  };
-
-  // Get icon background color
-  const getIconBgColor = (type: string) => {
-    if (type === "WBTC") return "bg-amber-500";
-    if (type === "XAUT") return "bg-yellow-500";
-    return "bg-gray-500";
+  // Render token logo image
+  const renderTokenLogo = (type: string) => {
+    const logoPath = TOKEN_LOGOS[type];
+    if (logoPath) {
+      return (
+        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-white/10">
+          <Image
+            src={logoPath}
+            alt={`${type} logo`}
+            width={40}
+            height={40}
+            className="object-contain"
+          />
+        </div>
+      );
+    }
+    // Fallback for unknown tokens
+    return (
+      <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center">
+        <span className="text-black font-bold text-lg">{type[0]}</span>
+      </div>
+    );
   };
 
   if (!isOpen) return null;
@@ -117,12 +134,8 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
           >
             {selectedCollateral ? (
               <div className="flex items-center gap-3">
-                {/* Token Icon */}
-                <div className={`w-10 h-10 rounded-full ${getIconBgColor(selectedCollateral.type)} flex items-center justify-center`}>
-                  <span className="text-black font-bold text-lg">
-                    {getIconLetter(selectedCollateral.type)}
-                  </span>
-                </div>
+                {/* Token Logo */}
+                {renderTokenLogo(selectedCollateral.type)}
                 {/* Token Info */}
                 <div className="text-left">
                   <p className="text-white font-medium">{selectedCollateral.name}</p>
@@ -152,12 +165,8 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
                   className="w-full p-4 flex items-center justify-between hover:bg-white/10 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    {/* Token Icon */}
-                    <div className={`w-10 h-10 rounded-full ${getIconBgColor(option.type)} flex items-center justify-center`}>
-                      <span className="text-black font-bold text-lg">
-                        {getIconLetter(option.type)}
-                      </span>
-                    </div>
+                    {/* Token Logo */}
+                    {renderTokenLogo(option.type)}
                     {/* Token Info */}
                     <div className="text-left">
                       <p className="text-white font-medium">{option.name}</p>

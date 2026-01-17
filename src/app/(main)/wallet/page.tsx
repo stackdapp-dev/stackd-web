@@ -42,9 +42,9 @@ const Wallet = () => {
     };
   }, [activeWalletAddress, queryClient]);
 
-  // Filter out WBTC from assets list - it's shown separately in CollateralCard with breakdown
+  // Filter out WBTC and XAUT from assets list - they're shown separately in CollateralCard with breakdown
   const nonCollateralAssets = useMemo(() => {
-    return assets.filter(asset => asset.symbol !== "WBTC");
+    return assets.filter(asset => asset.symbol !== "WBTC" && asset.symbol !== "XAUT");
   }, [assets]);
 
   // Calculate total collateral USD from all sources (WBTC from Compound + XAUT from Fluid)

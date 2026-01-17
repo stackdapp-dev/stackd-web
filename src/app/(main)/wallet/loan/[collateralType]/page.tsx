@@ -154,8 +154,15 @@ export default function LoanDetailsPage({
 
     const handleBorrow = async () => {
         try {
-            // Auto-lend only applies to WBTC/Compound
-            if (isWbtc && wbtcBalance > 0) {
+            // If user already has collateral deposited, go directly to borrow modal
+            if (collateral && collateral.amount > 0 && borrowableAmount > MIN_BORROWABLE_AMOUNT) {
+                setActiveModal("borrow");
+                return;
+            }
+
+            // Auto-lend only applies to WBTC/Compound when user has NO deposited collateral
+            // This handles the case where user wants to create a NEW position from idle wallet balance
+            if (isWbtc && wbtcBalance > 0 && (!collateral || collateral.amount === 0)) {
                 const hasLent = await startLend();
                 if (hasLent) {
                     await Promise.all([refetchBalances(), refetchLoanData()]);

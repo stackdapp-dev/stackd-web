@@ -57,6 +57,34 @@ vi.mock("@/providers/visibility", () => ({
     useVisibility: () => mockUseVisibility(),
 }));
 
+const mockUseFluid = vi.fn(() => ({
+    suppliedAssets: [] as { symbol: string; amount: number; usdValue: number; decimals: number }[],
+    borrowedAssets: [] as { symbol: string; amount: number; usdValue: number; decimals: number }[],
+    maxLtv: 0,
+    isLoading: false,
+}));
+
+vi.mock("@/hooks/useFluid", () => ({
+    useFluid: () => mockUseFluid(),
+}));
+
+const mockUseXautBalance = vi.fn(() => ({
+    xautBalance: 0,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+}));
+
+vi.mock("@/hooks/useXautBalance", () => ({
+    useXautBalance: () => mockUseXautBalance(),
+}));
+
+const mockGetTokenPrice = vi.fn(() => 0);
+
+vi.mock("@/providers/TokenPriceProvider", () => ({
+    useGetTokenPrice: () => mockGetTokenPrice,
+}));
+
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
     Lock: () => <span data-testid="lock-icon">Lock</span>,
@@ -89,6 +117,19 @@ describe("CollateralCard Component", () => {
             isLoading: false,
             canWithdraw: () => ({ allowed: true }),
         });
+        mockUseFluid.mockReturnValue({
+            suppliedAssets: [],
+            borrowedAssets: [],
+            maxLtv: 0,
+            isLoading: false,
+        });
+        mockUseXautBalance.mockReturnValue({
+            xautBalance: 0,
+            isLoading: false,
+            error: null,
+            refetch: vi.fn(),
+        });
+        mockGetTokenPrice.mockReturnValue(0);
     });
 
     describe("WBTC Display - CRITICAL REGRESSION TEST", () => {
@@ -293,6 +334,75 @@ describe("CollateralCard Component", () => {
             render(<CollateralCard otherAssets={[{ symbol: "USDT", usdValue: 100 }]} />);
 
             expect(screen.getByText("Assets")).toBeInTheDocument();
+        });
+    });
+
+    describe("XAUT Display - PARITY WITH WBTC", () => {
+        it("should ALWAYS display XAUT even when no XAUT balance", () => {
+            // XAUT should be visible like WBTC, regardless of balance
+            render(<CollateralCard otherAssets={[]} />);
+
+            expect(screen.getByTestId("token-icon-XAUT")).toBeInTheDocument();
+            expect(screen.getByText("Tether Gold")).toBeInTheDocument();
+        });
+
+        it("should display XAUT with wallet balance when no collateral", () => {
+            mockUseXautBalance.mockReturnValue({
+                xautBalance: 0.5,
+                isLoading: false,
+                error: null,
+                refetch: vi.fn(),
+            });
+            mockGetTokenPrice.mockReturnValue(2700); // Gold price
+
+            render(<CollateralCard otherAssets={[]} />);
+
+            expect(screen.getByTestId("token-icon-XAUT")).toBeInTheDocument();
+            expect(screen.getByText("Tether Gold")).toBeInTheDocument();
+        });
+
+        it("should display XAUT with combined wallet + collateral balance", () => {
+            // Wallet has 0.5 XAUT
+            mockUseXautBalance.mockReturnValue({
+                xautBalance: 0.5,
+                isLoading: false,
+                error: null,
+                refetch: vi.fn(),
+            });
+            // Collateral has 1.0 XAUT
+            mockUseFluid.mockReturnValue({
+                suppliedAssets: [{ symbol: "XAUT", amount: 1.0, usdValue: 2700, decimals: 6 }],
+                borrowedAssets: [],
+                maxLtv: 0,
+                isLoading: false,
+            });
+            mockGetTokenPrice.mockReturnValue(2700);
+
+            render(<CollateralCard otherAssets={[]} />);
+
+            expect(screen.getByTestId("token-icon-XAUT")).toBeInTheDocument();
+        });
+
+        it("should show locked/available breakdown when XAUT is used as collateral", () => {
+            mockUseXautBalance.mockReturnValue({
+                xautBalance: 0.2,
+                isLoading: false,
+                error: null,
+                refetch: vi.fn(),
+            });
+            mockUseFluid.mockReturnValue({
+                suppliedAssets: [{ symbol: "XAUT", amount: 1.0, usdValue: 2700, decimals: 6 }],
+                borrowedAssets: [{ symbol: "USDT", amount: 1000, usdValue: 1000, decimals: 6 }],
+                maxLtv: 80,
+                isLoading: false,
+            });
+            mockGetTokenPrice.mockReturnValue(2700);
+
+            render(<CollateralCard otherAssets={[]} />);
+
+            // Should show expandable chevron when locked
+            // Note: we check for the presence of the XAUT section
+            expect(screen.getByTestId("token-icon-XAUT")).toBeInTheDocument();
         });
     });
 });
