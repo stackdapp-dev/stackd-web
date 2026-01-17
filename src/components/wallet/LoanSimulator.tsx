@@ -80,10 +80,18 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const liquidationRatio = isXaut ? fluid.liquidationRatio : loanCalcs.liquidationRatio;
   const borrowApr = isXaut ? fluid.borrowApr : loanCalcs.borrowApr;
 
+  // Effective protocol data for simulate mode (respects sandbox collateral type selection)
+  const effectiveMaxLtv = effectiveIsXaut ? fluid.maxLtv : loanCalcs.maxLtv;
+  const effectiveLiquidationRatio = effectiveIsXaut ? fluid.liquidationRatio : loanCalcs.liquidationRatio;
+  const effectiveBorrowApr = effectiveIsXaut ? fluid.borrowApr : loanCalcs.borrowApr;
+
   // Get current values - use collateralSymbol based on collateralType prop
   const currentCollateral = suppliedAssets.find((a) => a.symbol === collateralSymbol);
   const currentBorrowed = borrowedAssets.find((a) => a.symbol === "USDT");
   const collateralPrice = getPrice(collateralSymbol);
+
+  // Effective collateral price for simulate mode (uses sandbox-selected collateral type)
+  const effectiveCollateralPrice = getPrice(effectiveCollateralSymbol);
 
   const currentCollateralAmount = currentCollateral?.amount || 0;
   const currentBorrowedAmount = currentBorrowed?.usdValue || 0;
@@ -206,15 +214,15 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
   // Calculate current simulation result
   const currentResult = useMemo((): SimulationResult => {
-    // In simulate mode, start from blank state
+    // In simulate mode, start from blank state with effective (sandbox-selected) values
     if (mode === "simulate") {
       return simulateLoan({
         collateralWbtc: 0,
         borrowedUsd: 0,
-        btcPrice: collateralPrice,
-        maxLtv,
-        liquidationRatio,
-        borrowApr,
+        btcPrice: effectiveCollateralPrice,
+        maxLtv: effectiveMaxLtv,
+        liquidationRatio: effectiveLiquidationRatio,
+        borrowApr: effectiveBorrowApr,
       });
     }
     return simulateLoan({
@@ -225,10 +233,21 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       liquidationRatio,
       borrowApr,
     });
-  }, [mode, currentCollateralAmount, currentBorrowedAmount, collateralPrice, maxLtv, liquidationRatio, borrowApr]);
+  }, [mode, currentCollateralAmount, currentBorrowedAmount, collateralPrice, maxLtv, liquidationRatio, borrowApr, effectiveCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
 
   // Calculate simulated result
   const simulatedResult = useMemo((): SimulationResult => {
+    // In simulate mode, use effective (sandbox-selected) values
+    if (mode === "simulate") {
+      return simulateLoan({
+        collateralWbtc: simulatedCollateral,
+        borrowedUsd: simulatedBorrow,
+        btcPrice: effectiveCollateralPrice,
+        maxLtv: effectiveMaxLtv,
+        liquidationRatio: effectiveLiquidationRatio,
+        borrowApr: effectiveBorrowApr,
+      });
+    }
     return simulateLoan({
       collateralWbtc: simulatedCollateral,
       borrowedUsd: simulatedBorrow,
@@ -237,7 +256,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       liquidationRatio,
       borrowApr,
     });
-  }, [simulatedCollateral, simulatedBorrow, collateralPrice, maxLtv, liquidationRatio, borrowApr]);
+  }, [mode, simulatedCollateral, simulatedBorrow, collateralPrice, maxLtv, liquidationRatio, borrowApr, effectiveCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
 
   // Calculate max borrow with safety buffer for borrow mode
   const maxBorrow = useMemo(() => {
@@ -245,12 +264,12 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       return simulatedResult.borrowCapacity * 0.99;
     }
     if (mode === "simulate") {
-      // Max borrow based on sandbox collateral value
-      const collateralUsd = parsedSandboxCollateral * collateralPrice;
-      return collateralUsd * (maxLtv / 100) * 0.99;
+      // Max borrow based on sandbox collateral value - use EFFECTIVE price/LTV for sandbox mode
+      const collateralUsd = parsedSandboxCollateral * effectiveCollateralPrice;
+      return collateralUsd * (effectiveMaxLtv / 100) * 0.99;
     }
     return modeConfig.maxValue;
-  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue, parsedSandboxCollateral, collateralPrice, maxLtv]);
+  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue, parsedSandboxCollateral, effectiveCollateralPrice, effectiveMaxLtv]);
 
   // Check if value has changed
   const hasChanges = useMemo(() => {

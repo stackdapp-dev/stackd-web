@@ -1,16 +1,25 @@
 /**
  * Tests for leaderboard API integration with subgraph deposits
- * 
+ *
  * The leaderboard now queries deposits for each Stack'd user individually
  * rather than filtering global top depositors.
- * 
+ *
+ * NOTE: The leaderboard now uses getTotalCollateralByAddress from multiProtocolCollateral
+ * which combines Compound + Fluid deposits. See leaderboard-multi-protocol.test.ts for
+ * those specific tests.
+ *
  * @vitest-environment node
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock the subgraph module
+// Mock the subgraph module (for backward compatibility tests)
 vi.mock('@/lib/compound/subgraph', () => ({
     getDepositorByAddress: vi.fn(),
+}));
+
+// Mock the multi-protocol collateral module (used by leaderboard)
+vi.mock('@/lib/collateral/multiProtocolCollateral', () => ({
+    getTotalCollateralByAddress: vi.fn(),
 }));
 
 // Mock Supabase client

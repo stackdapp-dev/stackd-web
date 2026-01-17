@@ -1,4 +1,4 @@
-export type UserTier = 'BRONZE' | 'SILVER' | 'GOLD';
+export type UserTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'BLACK';
 
 export interface DbUser {
     id: string;
