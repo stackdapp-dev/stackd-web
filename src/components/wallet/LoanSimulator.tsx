@@ -71,13 +71,12 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const [needsApproval, setNeedsApproval] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
-  const {
-    suppliedAssets,
-    borrowedAssets,
-    maxLtv,
-    liquidationRatio,
-    borrowApr,
-  } = loanCalcs;
+  // Conditionally source data from Compound (loanCalcs) or Fluid based on collateralType
+  const suppliedAssets = isXaut ? fluid.suppliedAssets : loanCalcs.suppliedAssets;
+  const borrowedAssets = isXaut ? fluid.borrowedAssets : loanCalcs.borrowedAssets;
+  const maxLtv = isXaut ? fluid.maxLtv : loanCalcs.maxLtv;
+  const liquidationRatio = isXaut ? fluid.liquidationRatio : loanCalcs.liquidationRatio;
+  const borrowApr = isXaut ? fluid.borrowApr : loanCalcs.borrowApr;
 
   // Get current values - use collateralSymbol based on collateralType prop
   const currentCollateral = suppliedAssets.find((a) => a.symbol === collateralSymbol);
@@ -86,6 +85,23 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
   const currentCollateralAmount = currentCollateral?.amount || 0;
   const currentBorrowedAmount = currentBorrowed?.usdValue || 0;
+
+  // Calculate available withdrawal for XAUT (based on Fluid position data)
+  const xautAvailableToWithdraw = useMemo(() => {
+    if (!isXaut) return 0;
+    const xautCollateral = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
+    const totalXaut = xautCollateral?.amount || 0;
+    const borrowedUsd = fluid.borrowedAssets.reduce((sum, a) => sum + a.usdValue, 0);
+    const xautPrice = getPrice("XAUT");
+
+    // Calculate locked XAUT based on borrowed amount and max LTV
+    const lockedXautUsd = borrowedUsd > 0 && fluid.maxLtv > 0
+      ? borrowedUsd / (fluid.maxLtv / 100)
+      : 0;
+    const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
+
+    return Math.max(0, totalXaut - lockedXaut) * 0.99; // 1% safety buffer
+  }, [isXaut, fluid.suppliedAssets, fluid.borrowedAssets, fluid.maxLtv, getPrice]);
 
   // Mode-specific configuration
   const modeConfig = useMemo(() => {
@@ -96,7 +112,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           inputLabel: `Collateral Amount (${collateralSymbol})`,
           tokenSymbol: collateralSymbol,
           actionButtonText: "Add Collateral",
-          maxValue: wbtcBalance, // Max is wallet balance (TODO: support XAUT balance)
+          // For XAUT, we'd need XAUT wallet balance - for now use 0 as placeholder
+          // Users can still type values manually
+          maxValue: isXaut ? 0 : wbtcBalance,
           isRiskReducing: true,
           warningText: "This will increase your collateral and reduce liquidation risk.",
           successIcon: true,
@@ -112,7 +130,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           isRiskReducing: true,
           warningText: "This will reduce your borrowed amount and liquidation risk.",
           successIcon: true,
-          useSlider: false,
+          useSlider: true, // Enable slider for repay mode
         };
       case "withdrawCollateral":
         return {
@@ -120,7 +138,8 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           inputLabel: `Withdraw Amount (${collateralSymbol})`,
           tokenSymbol: collateralSymbol,
           actionButtonText: "Withdraw",
-          maxValue: breakdown.availableToWithdrawBtc * 0.99, // 1% safety buffer for precision
+          // Use XAUT available for XAUT, or BTC breakdown for WBTC  
+          maxValue: isXaut ? xautAvailableToWithdraw : breakdown.availableToWithdrawBtc * 0.99,
           isRiskReducing: false,
           warningText: "This will reduce your collateral and increase liquidation risk.",
           successIcon: false,
@@ -136,10 +155,10 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           isRiskReducing: false,
           warningText: "This will increase your LTV and the risk of liquidation.",
           successIcon: false,
-          useSlider: false,
+          useSlider: true, // Enable slider for borrow mode
         };
     }
-  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.availableToWithdrawBtc, collateralSymbol]);
+  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.availableToWithdrawBtc, collateralSymbol, isXaut, xautAvailableToWithdraw]);
 
   // Simulator state - store input as string
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "0");
