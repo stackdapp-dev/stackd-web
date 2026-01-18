@@ -19,7 +19,7 @@ const Profile = () => {
   const { fullLogout, isLoading } = useFullLogout();
 
   return (
-    <div className="p-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
+    <div className="px-4 md:px-6 py-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
       <PageHeader title="Profile" />
 
       <div className="flex flex-col gap-4">

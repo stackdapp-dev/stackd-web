@@ -41,7 +41,7 @@ const WithdrawViaOTC = () => {
   };
 
   return (
-    <div className="p-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
+    <div className="px-4 md:px-6 py-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
       <PageHeader title="Withdraw via OTC" />
 
       <div className="flex flex-col gap-4">
@@ -68,8 +68,8 @@ const WithdrawViaOTC = () => {
               {Number(amount) > available
                 ? "Withdraw amount exceeds your available balance"
                 : "Withdraw amount must be at least " +
-                  MIN_USDT_WITHDRAW_AMOUNT +
-                  " USDT"}
+                MIN_USDT_WITHDRAW_AMOUNT +
+                " USDT"}
             </span>
           )}
         </div>

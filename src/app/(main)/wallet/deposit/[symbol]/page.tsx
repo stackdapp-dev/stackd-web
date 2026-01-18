@@ -35,7 +35,7 @@ export default function DepositPage({
   );
 
   return (
-    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+    <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
       <PageHeader title={`Deposit ${symbol}`} />
 
       <div className="flex justify-center">{qrNode}</div>

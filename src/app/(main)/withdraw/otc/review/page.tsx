@@ -126,7 +126,7 @@ const ReviewOrder = () => {
   };
 
   return (
-    <div className="p-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
+    <div className="px-4 md:px-6 py-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)] flex flex-col gap-8">
       <PageHeader title="Review Order" />
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
@@ -257,7 +257,7 @@ const ReviewOrder = () => {
 
       <Modal
         isOpen={isLoading}
-        onClose={() => {}}
+        onClose={() => { }}
         title=""
         message="Creating order..."
         icon={<Loading size="lg" />}

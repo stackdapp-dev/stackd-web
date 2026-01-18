@@ -139,7 +139,7 @@ export default function ConvertPage() {
     const canConvert = parsedAmount > 0 && parsedAmount <= fromBalance && quote && !isSwapping;
 
     return (
-        <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+        <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
             <PageHeader title="Convert" />
 
             {/* From Token */}
