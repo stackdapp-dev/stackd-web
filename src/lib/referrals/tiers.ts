@@ -71,12 +71,20 @@ export function canWithdrawEarnings(tier: UserTier): boolean {
 }
 
 /**
+ * Check if user can earn referral rewards (Silver+ required)
+ * Bronze tier users do NOT earn any referral rewards.
+ */
+export function canEarnReferralRewards(tier: UserTier): boolean {
+    return tier !== 'BRONZE';
+}
+
+/**
  * Get tier benefits description
  */
 export function getTierBenefits(tier: UserTier): string {
     switch (tier) {
         case 'BRONZE':
-            return 'Base earnings (0.5%/0.1%/0.1%)';
+            return 'Earnings locked until Silver';
         case 'SILVER':
             return 'Payouts unlocked';
         case 'GOLD':

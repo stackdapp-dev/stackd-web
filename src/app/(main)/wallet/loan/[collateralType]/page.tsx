@@ -154,8 +154,15 @@ export default function LoanDetailsPage({
 
     const handleBorrow = async () => {
         try {
-            // Auto-lend only applies to WBTC/Compound
-            if (isWbtc && wbtcBalance > 0) {
+            // If user already has collateral deposited, go directly to borrow modal
+            if (collateral && collateral.amount > 0 && borrowableAmount > MIN_BORROWABLE_AMOUNT) {
+                setActiveModal("borrow");
+                return;
+            }
+
+            // Auto-lend only applies to WBTC/Compound when user has NO deposited collateral
+            // This handles the case where user wants to create a NEW position from idle wallet balance
+            if (isWbtc && wbtcBalance > 0 && (!collateral || collateral.amount === 0)) {
                 const hasLent = await startLend();
                 if (hasLent) {
                     await Promise.all([refetchBalances(), refetchLoanData()]);
@@ -183,8 +190,8 @@ export default function LoanDetailsPage({
         setActiveModal("withdrawCollateral");
     };
 
-    // XAUT loans use Fluid which doesn't have a simulator yet
-    const isSimulatorAvailable = isWbtc;
+    // Simulator is now available for both WBTC (Compound) and XAUT (Fluid)
+    const isSimulatorAvailable = true;
 
     return (
         <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
@@ -332,19 +339,6 @@ export default function LoanDetailsPage({
                 </button>
             </div>
 
-            {/* Coming Soon Notice for XAUT */}
-            {!isSimulatorAvailable && (
-                <Card appearance="glassDark" padding="default">
-                    <div className="flex items-center gap-3 text-white/60">
-                        <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                        <p className="text-sm">
-                            Loan management actions for {config.pairDisplay} positions are coming soon.
-                            You can view your position details and manage it directly on {config.externalLabel.replace("View Loan on ", "")}.
-                        </p>
-                    </div>
-                </Card>
-            )}
-
             {/* Loan Statistics */}
             <div>
                 <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
@@ -448,7 +442,11 @@ export default function LoanDetailsPage({
                             </button>
                         </div>
                         {/* Simulator Content */}
-                        <LoanSimulator mode={activeModal} onComplete={() => setActiveModal(null)} />
+                        <LoanSimulator
+                            mode={activeModal}
+                            collateralType={config.collateralSymbol as "WBTC" | "XAUT"}
+                            onComplete={() => setActiveModal(null)}
+                        />
                     </div>
                 </div>
             )}

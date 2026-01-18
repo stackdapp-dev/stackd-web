@@ -5,21 +5,37 @@ import { Balance } from "@/components/wallet";
 import ActionButtons from "@/components/wallet/ActionButtons";
 import ActiveLoans from "@/components/wallet/ActiveLoans";
 import CollateralCard from "@/components/wallet/CollateralCard";
+import NewLoanModal from "@/components/wallet/NewLoanModal";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useFluid } from "@/hooks/useFluid";
 import { prefetchTransactionHistory } from "@/hooks/useTransactionHistory";
 import { useVisibility } from "@/providers/visibility";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
-const Wallet = () => {
+function WalletContent() {
   const { assets, isLoading } = useWalletBalanceContext();
   const { breakdown, isLoading: collateralLoading } = useCollateralBreakdown();
   const fluid = useFluid();
   const visibility = useVisibility();
   const { activeWalletAddress } = useWeb3();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [loanModalOpen, setLoanModalOpen] = useState(false);
+
+  // Auto-open New Loan modal when navigating from rewards simulator
+  useEffect(() => {
+    if (searchParams.get("openLoan") === "true") {
+      setLoanModalOpen(true);
+      // Clean up URL param without navigation
+      const url = new URL(window.location.href);
+      url.searchParams.delete("openLoan");
+      router.replace(url.pathname, { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // Prefetch transaction history data for the history page
   // This runs during idle time so navigation to /history feels instant
@@ -42,9 +58,9 @@ const Wallet = () => {
     };
   }, [activeWalletAddress, queryClient]);
 
-  // Filter out WBTC from assets list - it's shown separately in CollateralCard with breakdown
+  // Filter out WBTC and XAUT from assets list - they're shown separately in CollateralCard with breakdown
   const nonCollateralAssets = useMemo(() => {
-    return assets.filter(asset => asset.symbol !== "WBTC");
+    return assets.filter(asset => asset.symbol !== "WBTC" && asset.symbol !== "XAUT");
   }, [assets]);
 
   // Calculate total collateral USD from all sources (WBTC from Compound + XAUT from Fluid)
@@ -74,8 +90,23 @@ const Wallet = () => {
 
       {/* Active Loans */}
       <ActiveLoans />
+
+      {/* New Loan Modal - auto-opens when navigating from rewards simulator */}
+      <NewLoanModal
+        isOpen={loanModalOpen}
+        onClose={() => setLoanModalOpen(false)}
+      />
     </div>
   );
-};
+}
 
-export default Wallet;
+// Wrap with Suspense for useSearchParams SSR compatibility
+export default function Wallet() {
+  return (
+    <Suspense fallback={<div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
+      <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
+    </div>}>
+      <WalletContent />
+    </Suspense>
+  );
+}

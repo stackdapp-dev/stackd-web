@@ -10,7 +10,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { dbService as mockDbService } from './mock';
 import type { User } from './supabase.types';
 import type { ReferralStats } from './types';
-import { getDepositorByAddress } from '@/lib/compound/subgraph';
+import { getTotalCollateralByAddress } from '@/lib/collateral/multiProtocolCollateral';
 
 // Create Supabase client with service role key for server-side operations (bypasses RLS)
 // Only create if env vars are present (prevents CI/CD failures)
@@ -435,13 +435,13 @@ class ReferralDatabaseService {
                 .slice(0, 10)
                 .map((e, i) => ({ ...e, rank: i + 1 }));
 
-            // Fetch deposits for each Stack'd user individually
-            // This ensures we get ALL Stack'd users with deposits, not just those in global top 100
+            // Fetch deposits for each Stack'd user individually from BOTH protocols (Compound + Fluid)
+            // This ensures we get ALL Stack'd users with deposits across all protocols
             const stackdDepositPromises = usersWithReferrals.map(async (user) => {
-                const deposit = await getDepositorByAddress(user.wallet_address);
+                const collateral = await getTotalCollateralByAddress(user.wallet_address);
                 return {
                     walletAddress: user.wallet_address.toLowerCase(),
-                    totalDepositsUsd: deposit?.totalDepositsUsd || 0,
+                    totalDepositsUsd: collateral?.totalCollateralUsd || 0,
                 };
             });
 
@@ -472,12 +472,12 @@ class ReferralDatabaseService {
                     // Count users with more referrals
                     const referralRank = entries.filter(e => e.referralCount > userEntry.referralCount).length + 1;
 
-                    // Get user's deposit amount from subgraph for deposit rank (among Stack'd users only)
+                    // Get user's total collateral from BOTH protocols for deposit rank (among Stack'd users only)
                     let depositsRank = 0;
-                    const userDeposit = await getDepositorByAddress(normalizedWallet);
-                    if (userDeposit && userDeposit.totalDepositsUsd > 0) {
+                    const userCollateral = await getTotalCollateralByAddress(normalizedWallet);
+                    if (userCollateral && userCollateral.totalCollateralUsd > 0) {
                         // Count Stack'd depositors with more deposits than user
-                        depositsRank = stackdDeposits.filter(d => d.totalDepositsUsd > userDeposit.totalDepositsUsd).length + 1;
+                        depositsRank = stackdDeposits.filter(d => d.totalDepositsUsd > userCollateral.totalCollateralUsd).length + 1;
                     }
 
                     userRank = {

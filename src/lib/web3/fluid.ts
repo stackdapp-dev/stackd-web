@@ -3,7 +3,33 @@ import {
   FLUID_VAULT_RESOLVER_ABI,
 } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
-import { type Address, type PublicClient, parseAbi } from "viem";
+import { type Address, type PublicClient, type Hex, parseAbi, encodeFunctionData } from "viem";
+
+// Fluid Vault ABI for the operate function - the core transaction method for all position changes
+// The operate function handles: add collateral, withdraw collateral, borrow, repay
+// Parameters:
+//   nftId_: Position NFT ID (0 to create new position)
+//   newCol_: Collateral change (positive = add, negative = withdraw)
+//   newDebt_: Debt change (positive = borrow, negative = repay)
+//   to_: Recipient address for withdrawn tokens
+export const FLUID_VAULT_ABI = [
+  {
+    name: "operate",
+    inputs: [
+      { name: "nftId_", type: "uint256" },
+      { name: "newCol_", type: "int256" },
+      { name: "newDebt_", type: "int256" },
+      { name: "to_", type: "address" },
+    ],
+    outputs: [
+      { name: "nftId_", type: "uint256" },
+      { name: "supplyAmt_", type: "int256" },
+      { name: "borrowAmt_", type: "int256" },
+    ],
+    stateMutability: "payable",
+    type: "function",
+  },
+] as const;
 
 const VAULT_RESOLVER_ADDRESS = formatAddress(FLUID_VAULT_RESOLVER_ADDR);
 
@@ -370,6 +396,87 @@ export async function getUserPositionsWithVaultData(
     position,
     vaultData: vaultsData[index],
   }));
+}
+
+// ============ Encode functions for sponsored transactions ============
+
+/**
+ * Encode the operate function call for a Fluid vault
+ * This is the core encoding function used by all position operations
+ *
+ * @param nftId - Position NFT ID (use 0 to create new position)
+ * @param collateralDelta - Collateral change (+ve = add, -ve = withdraw)
+ * @param debtDelta - Debt change (+ve = borrow, -ve = repay)
+ * @param recipient - Address to receive withdrawn tokens
+ * @returns Encoded function data as hex string
+ */
+export function encodeFluidOperateData(
+  nftId: bigint,
+  collateralDelta: bigint,
+  debtDelta: bigint,
+  recipient: Address
+): Hex {
+  return encodeFunctionData({
+    abi: FLUID_VAULT_ABI,
+    functionName: "operate",
+    args: [nftId, collateralDelta, debtDelta, recipient],
+  });
+}
+
+/**
+ * Encode a supply (add collateral) operation
+ * @param nftId - Position NFT ID
+ * @param amount - Amount of collateral to add (positive value)
+ * @param recipient - Address (typically the user's address)
+ */
+export function encodeFluidSupply(
+  nftId: bigint,
+  amount: bigint,
+  recipient: Address
+): Hex {
+  return encodeFluidOperateData(nftId, amount, BigInt(0), recipient);
+}
+
+/**
+ * Encode a withdraw collateral operation
+ * @param nftId - Position NFT ID
+ * @param amount - Amount of collateral to withdraw (positive value, will be negated)
+ * @param recipient - Address to receive the withdrawn collateral
+ */
+export function encodeFluidWithdraw(
+  nftId: bigint,
+  amount: bigint,
+  recipient: Address
+): Hex {
+  return encodeFluidOperateData(nftId, -amount, BigInt(0), recipient);
+}
+
+/**
+ * Encode a borrow operation
+ * @param nftId - Position NFT ID
+ * @param amount - Amount to borrow (positive value)
+ * @param recipient - Address to receive the borrowed tokens
+ */
+export function encodeFluidBorrow(
+  nftId: bigint,
+  amount: bigint,
+  recipient: Address
+): Hex {
+  return encodeFluidOperateData(nftId, BigInt(0), amount, recipient);
+}
+
+/**
+ * Encode a repay debt operation
+ * @param nftId - Position NFT ID
+ * @param amount - Amount to repay (positive value, will be negated)
+ * @param recipient - Address (typically the user's address)
+ */
+export function encodeFluidRepay(
+  nftId: bigint,
+  amount: bigint,
+  recipient: Address
+): Hex {
+  return encodeFluidOperateData(nftId, BigInt(0), -amount, recipient);
 }
 
 export { VAULT_RESOLVER_ADDRESS, XAUT_USDT_VAULT, KNOWN_VAULTS };

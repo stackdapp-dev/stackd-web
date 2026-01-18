@@ -1,7 +1,7 @@
 "use client";
 
 import MaskedValue from "@/components/ui/maskedValue";
-import { Eye, EyeOff, ArrowDownToLine, Copy, Check } from "lucide-react";
+import { Eye, EyeOff, ArrowDownToLine, Copy, Check, MoreVertical } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { showSuccessToast } from "@/components/ui/custom-toast";
 import { useState, useCallback } from "react";
@@ -56,8 +56,17 @@ export default function Balance({
 
   return (
     <div className="px-4 pt-6">
-      {/* WALLET Header */}
-      <h1 className="text-white text-xl font-semibold mb-4">Wallet</h1>
+      {/* WALLET Header with Menu Button */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-white text-xl font-semibold">Wallet</h1>
+        <button
+          onClick={() => router.push("/menu")}
+          className="p-2 rounded-full border border-white/20 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+          aria-label="Open menu"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* Card with gradient border and interior gradient */}
       <div className="relative rounded-2xl p-[1px] bg-gradient-to-r from-amber-500/40 via-amber-600/20 to-indigo-500/20">

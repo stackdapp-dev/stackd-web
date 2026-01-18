@@ -3,7 +3,7 @@
  * TDD: Write tests FIRST, then implement
  */
 import { describe, it, expect } from "vitest";
-import { getUserTier, getTierBenefits, TIER_THRESHOLDS, type UserTier } from "@/lib/referrals/tiers";
+import { getUserTier, getTierBenefits, canEarnReferralRewards, TIER_THRESHOLDS, type UserTier } from "@/lib/referrals/tiers";
 
 describe("getUserTier", () => {
     describe("Bronze Tier (Default)", () => {
@@ -150,6 +150,19 @@ describe("TIER_THRESHOLDS", () => {
 });
 
 describe("getTierBenefits", () => {
+    describe("BRONZE tier benefits - earnings locked", () => {
+        it("should return 'Earnings locked until Silver' for BRONZE tier", () => {
+            const benefits = getTierBenefits("BRONZE");
+            expect(benefits).toBe("Earnings locked until Silver");
+        });
+
+        it("should NOT contain earning rates for BRONZE tier", () => {
+            const benefits = getTierBenefits("BRONZE");
+            expect(benefits).not.toContain("0.5%");
+            expect(benefits).not.toContain("0.1%");
+        });
+    });
+
     describe("GOLD tier benefits - APY removal regression test", () => {
         it("should NOT contain APY in GOLD tier benefits", () => {
             const benefits = getTierBenefits("GOLD");
@@ -160,5 +173,32 @@ describe("getTierBenefits", () => {
             const benefits = getTierBenefits("GOLD");
             expect(benefits).toBe("Priority support");
         });
+    });
+});
+
+describe("canEarnReferralRewards", () => {
+    it("should return false for BRONZE tier", () => {
+        const canEarn = canEarnReferralRewards("BRONZE");
+        expect(canEarn).toBe(false);
+    });
+
+    it("should return true for SILVER tier", () => {
+        const canEarn = canEarnReferralRewards("SILVER");
+        expect(canEarn).toBe(true);
+    });
+
+    it("should return true for GOLD tier", () => {
+        const canEarn = canEarnReferralRewards("GOLD");
+        expect(canEarn).toBe(true);
+    });
+
+    it("should return true for PLATINUM tier", () => {
+        const canEarn = canEarnReferralRewards("PLATINUM");
+        expect(canEarn).toBe(true);
+    });
+
+    it("should return true for BLACK tier", () => {
+        const canEarn = canEarnReferralRewards("BLACK");
+        expect(canEarn).toBe(true);
     });
 });

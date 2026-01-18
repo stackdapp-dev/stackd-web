@@ -22,46 +22,55 @@ export function MultiLoanProvider({ children }: { children: React.ReactNode }) {
   const allPositions = useMemo(() => {
     const positions: LoanPosition[] = [];
 
-    // Add Compound/WBTC position if has borrowed
+    // Add Compound/WBTC position if has collateral (even without active loan)
+    const wbtcCollateral = compound.suppliedAssets.find(a => a.symbol === "WBTC");
     const wbtcBorrowed = compound.borrowedAssets.find(a => a.symbol === "USDT");
-    if (wbtcBorrowed && wbtcBorrowed.amount > 0) {
-      const wbtcCollateral = compound.suppliedAssets.find(a => a.symbol === "WBTC");
+
+    // Include position if there's any collateral (regardless of borrow amount)
+    if (wbtcCollateral && wbtcCollateral.amount > 0) {
+      const borrowAmount = wbtcBorrowed?.amount || 0;
+      const borrowUsd = wbtcBorrowed?.usdValue || 0;
       positions.push({
         id: "compound-wbtc",
         protocol: "compound",
         chain: "arbitrum",
         collateralToken: "WBTC",
         borrowToken: "USDT",
-        collateralAmount: wbtcCollateral?.amount || 0,
-        collateralUsd: wbtcCollateral?.usdValue || 0,
-        borrowAmount: wbtcBorrowed.amount,
-        borrowUsd: wbtcBorrowed.usdValue,
-        ltv: compound.maxLtv > 0 ? ((wbtcBorrowed.usdValue / (wbtcCollateral?.usdValue || 1)) * 100) : 0,
+        collateralAmount: wbtcCollateral.amount,
+        collateralUsd: wbtcCollateral.usdValue,
+        borrowAmount,
+        borrowUsd,
+        ltv: wbtcCollateral.usdValue > 0 && borrowUsd > 0
+          ? (borrowUsd / wbtcCollateral.usdValue) * 100
+          : 0,
         apr: compound.borrowApr,
         maxLtv: compound.maxLtv,
         liquidationRatio: compound.liquidationRatio,
       });
     }
 
-    // Add Fluid/XAUT position if has borrowed (supports USDT)
+    // Add Fluid/XAUT position if has collateral (even without active loan)
+    const xautCollateral = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
     const xautBorrowed = fluid.borrowedAssets[0]; // First asset is the borrow token
-    if (xautBorrowed && xautBorrowed.amount > 0) {
-      const xautCollateral = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
-      const collateralUsdValue = xautCollateral?.usdValue || 0;
+
+    // Include position if there's any collateral (regardless of borrow amount)
+    if (xautCollateral && xautCollateral.amount > 0) {
+      const borrowAmount = xautBorrowed?.amount || 0;
+      const borrowUsd = xautBorrowed?.usdValue || 0;
       // Only calculate LTV if we have valid collateral value to avoid division issues
-      const calculatedLtv = collateralUsdValue > 0
-        ? (xautBorrowed.usdValue / collateralUsdValue) * 100
+      const calculatedLtv = xautCollateral.usdValue > 0 && borrowUsd > 0
+        ? (borrowUsd / xautCollateral.usdValue) * 100
         : 0;
       positions.push({
         id: "fluid-xaut",
         protocol: "fluid",
         chain: "ethereum",
         collateralToken: "XAUT",
-        borrowToken: xautBorrowed.symbol, // Dynamic: USDT
-        collateralAmount: xautCollateral?.amount || 0,
-        collateralUsd: collateralUsdValue,
-        borrowAmount: xautBorrowed.amount,
-        borrowUsd: xautBorrowed.usdValue,
+        borrowToken: xautBorrowed?.symbol || "USDT", // Default to USDT if no borrow
+        collateralAmount: xautCollateral.amount,
+        collateralUsd: xautCollateral.usdValue,
+        borrowAmount,
+        borrowUsd,
         ltv: calculatedLtv,
         apr: fluid.borrowApr,
         maxLtv: fluid.maxLtv,
