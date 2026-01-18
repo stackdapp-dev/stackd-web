@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { History, Menu, Wallet, Sparkles, LucideIcon } from "lucide-react";
+import { History, CreditCard, Wallet, Sparkles, LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useCallback } from "react";
@@ -37,10 +37,10 @@ const navItems: NavItem[] = [
         subHrefs: [],
     },
     {
-        href: "/menu",
-        icon: Menu,
-        label: "Menu",
-        subHrefs: ["/withdraw", "/withdraw/otc", "/profile"],
+        href: "/card",
+        icon: CreditCard,
+        label: "Card",
+        subHrefs: [],
     },
 ];
 
