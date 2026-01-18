@@ -125,7 +125,7 @@ describe("TierCard Component", () => {
         it("should list tier benefits for Bronze", () => {
             render(<TierCard {...createTierCardProps({ tier: "BRONZE" })} />);
             const benefitsList = screen.getByTestId("tier-benefits");
-            expect(within(benefitsList).getByText(/base earnings/i)).toBeInTheDocument();
+            expect(within(benefitsList).getByText(/earnings locked/i)).toBeInTheDocument();
             expect(within(benefitsList).getByText(/track referral network/i)).toBeInTheDocument();
         });
 

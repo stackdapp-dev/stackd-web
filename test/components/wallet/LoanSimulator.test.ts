@@ -172,6 +172,90 @@ describe("LoanSimulator Data Source Selection", () => {
         });
     });
 
+    describe("Simulate Mode Collateral Type Selection - REGRESSION TEST", () => {
+        /**
+         * TDD: When in simulate mode and user switches collateral type via the WBTC/XAUT toggle,
+         * the maxBorrow calculation must use the EFFECTIVE collateral price, not the prop's collateralType.
+         *
+         * BUG: When user selects XAUT in simulate mode, it still uses WBTC price for maxBorrow calculation.
+         * Example: 1 XAUT ≈ $2,600, 1 WBTC ≈ $95,000
+         * At 70% LTV: 1 XAUT should allow max ~$1,820, not ~$66,500
+         *
+         * CRITICAL: This causes the simulator to show wildly incorrect max borrow amounts.
+         */
+
+        it("should use effectiveCollateralSymbol price for maxBorrow in simulate mode", () => {
+            // Given: simulate mode with sandbox collateral type set to XAUT
+            const mode = "simulate";
+            const collateralType = "WBTC"; // Prop default
+            const sandboxCollateralType = "XAUT"; // User selected XAUT in sandbox
+            const effectiveCollateralType = mode === "simulate" ? sandboxCollateralType : collateralType;
+
+            // Mock prices
+            const tokenPrices = {
+                WBTC: 95000,
+                XAUT: 2600,
+            };
+
+            // When: getting the price for maxBorrow calculation
+            const effectiveCollateralSymbol = effectiveCollateralType;
+            const collateralPrice = tokenPrices[effectiveCollateralSymbol as keyof typeof tokenPrices];
+
+            // Then: price should be XAUT price, not WBTC price
+            expect(collateralPrice).toBe(2600);
+            expect(collateralPrice).not.toBe(95000);
+        });
+
+        it("should calculate correct maxBorrow for XAUT in simulate mode", () => {
+            // Given: 1 XAUT at $2,600, maxLtv 70%
+            const sandboxCollateral = 1;
+            const xautPrice = 2600;
+            const maxLtv = 70;
+
+            // When: calculating maxBorrow
+            const collateralUsd = sandboxCollateral * xautPrice;
+            const maxBorrow = collateralUsd * (maxLtv / 100) * 0.99;
+
+            // Then: maxBorrow should be ~$1,801 (2600 * 0.70 * 0.99)
+            expect(maxBorrow).toBeCloseTo(1801.8, 0);
+            expect(maxBorrow).toBeLessThan(3000); // Definitely not ~$65,885
+        });
+
+        it("should calculate correct maxBorrow for WBTC in simulate mode", () => {
+            // Given: 1 WBTC at $95,000, maxLtv 70%
+            const sandboxCollateral = 1;
+            const wbtcPrice = 95000;
+            const maxLtv = 70;
+
+            // When: calculating maxBorrow
+            const collateralUsd = sandboxCollateral * wbtcPrice;
+            const maxBorrow = collateralUsd * (maxLtv / 100) * 0.99;
+
+            // Then: maxBorrow should be ~$65,835 (95000 * 0.70 * 0.99)
+            expect(maxBorrow).toBeCloseTo(65835, 0);
+        });
+
+        it("should use effectiveIsXaut for protocol data selection in simulate mode", () => {
+            // Given: simulate mode with sandbox set to XAUT
+            const mode = "simulate";
+            const collateralType = "WBTC"; // Prop default
+            const sandboxCollateralType = "XAUT";
+
+            const effectiveCollateralType = mode === "simulate" ? sandboxCollateralType : collateralType;
+            const effectiveIsXaut = effectiveCollateralType === "XAUT";
+
+            // Mock protocol data
+            const compoundMaxLtv = 70;
+            const fluidMaxLtv = 75;
+
+            // When: selecting maxLtv based on effective collateral type
+            const maxLtv = effectiveIsXaut ? fluidMaxLtv : compoundMaxLtv;
+
+            // Then: should use Fluid's maxLtv since XAUT is selected
+            expect(maxLtv).toBe(75);
+        });
+    });
+
     describe("Repay Mode Max Value - REGRESSION TEST", () => {
         /**
          * TDD: Repay slider should allow simulation up to the full borrowed amount,

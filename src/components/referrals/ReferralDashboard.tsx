@@ -2,13 +2,16 @@
 
 import { useReferral } from "@/hooks/useReferral";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
+import { useFluid } from "@/hooks/useFluid";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { TierProgress } from "@/components/referrals/TierProgress";
+import { getUserTier } from "@/lib/referrals/tiers";
 import {
     Copy, Share2, Lock, Trophy, Users,
-    CreditCard, Check, Sparkles, Medal
+    CreditCard, Check, Sparkles, Medal, TrendingUp
 } from "lucide-react";
 import { LeaderboardModal } from "@/components/referrals/LeaderboardModal";
+import RewardsSimulatorModal from "@/components/referrals/RewardsSimulatorModal";
 import { useState } from "react";
 import { cn, shortenAddress } from "@/lib/utils";
 import { UserTier, RecentInvite } from "@/lib/db/types";
@@ -42,19 +45,45 @@ const tierStyles: Record<UserTier, { bg: string; border: string; text: string; i
         text: "text-yellow-400",
         icon: "text-yellow-400",
     },
+    PLATINUM: {
+        bg: "bg-purple-500/10",
+        border: "border-purple-500/20",
+        text: "text-purple-400",
+        icon: "text-purple-400",
+    },
+    BLACK: {
+        bg: "bg-zinc-800/50",
+        border: "border-zinc-700/50",
+        text: "text-zinc-200",
+        icon: "text-zinc-200",
+    },
 };
 
 export function ReferralDashboard() {
     const { stats, referralCode, loading, createCode } = useReferral();
     const { loanCalcs } = useLoanCalculationsContext();
+    const { borrowedAssets: fluidBorrowedAssets } = useFluid();
     const [copied, setCopied] = useState(false);
     const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+    const [simulatorOpen, setSimulatorOpen] = useState(false);
 
-    // Get personal loan balance from borrowed assets (USDT)
-    const personalLoanBalance = loanCalcs.borrowedAssets.reduce(
+    // Get personal loan balance from borrowed assets across ALL protocols (Compound + Fluid)
+    const compoundLoanBalance = loanCalcs.borrowedAssets.reduce(
         (sum, asset) => sum + asset.usdValue,
         0
     );
+    const fluidLoanBalance = fluidBorrowedAssets.reduce(
+        (sum, asset) => sum + asset.usdValue,
+        0
+    );
+    const personalLoanBalance = compoundLoanBalance + fluidLoanBalance;
+
+    // Calculate tier client-side using actual loan balance (overrides server-side calculation)
+    // Server calculates based on referral count, but tier should be based on loan volume
+    const calculatedTier = getUserTier({
+        personalLoanBalance,
+        networkVolume: stats?.network_volume || 0,
+    });
 
     const copyToClipboard = () => {
         if (!referralCode) return;
@@ -131,7 +160,8 @@ export function ReferralDashboard() {
         );
     }
 
-    const tierStyle = tierStyles[stats.tier];
+    // Use client-calculated tier based on actual loan balance
+    const tierStyle = tierStyles[calculatedTier];
 
     // Calculate total earnings (inflation avoided + referral rewards)
     const referralRewards = stats.total_earnings;
@@ -170,7 +200,7 @@ export function ReferralDashboard() {
                             "text-xs px-3 py-1.5 rounded-full border",
                             tierStyle.bg, tierStyle.border, tierStyle.text
                         )}>
-                            {stats.tier.charAt(0) + stats.tier.slice(1).toLowerCase()} Tier
+                            {calculatedTier.charAt(0) + calculatedTier.slice(1).toLowerCase()} Tier
                         </span>
                     </div>
 
@@ -243,9 +273,21 @@ export function ReferralDashboard() {
                 </div>
             </GlassCard>
 
+            {/* Simulate My Rewards Button */}
+            <button
+                onClick={() => setSimulatorOpen(true)}
+                className="w-full bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30
+                           text-white py-4 rounded-2xl hover:bg-emerald-500/30 transition-all duration-300
+                           flex items-center justify-center gap-3 font-medium"
+                data-testid="simulate-rewards-button"
+            >
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                Simulate My Rewards
+            </button>
+
             {/* Tier Progress - Dual Progress Bars (Loan Size + Network Volume) */}
             <TierProgress
-                currentTier={stats.tier}
+                currentTier={calculatedTier}
                 personalLoanBalance={personalLoanBalance}
                 networkVolume={stats.network_volume}
                 totalReferrals={stats.total_invites}
@@ -370,10 +412,15 @@ export function ReferralDashboard() {
                 </div>
             </GlassCard>
 
-            {/* Leaderboard Modal */}
             <LeaderboardModal
                 open={leaderboardOpen}
                 onOpenChange={setLeaderboardOpen}
+            />
+
+            {/* Rewards Simulator Modal */}
+            <RewardsSimulatorModal
+                isOpen={simulatorOpen}
+                onClose={() => setSimulatorOpen(false)}
             />
         </div >
     );

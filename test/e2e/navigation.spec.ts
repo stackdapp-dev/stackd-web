@@ -84,13 +84,13 @@ test.describe("Desktop Navigation", () => {
         await expect(page.getByRole("button", { name: /rewards/i })).toBeVisible();
     });
 
-    test("should display Menu item on desktop", async ({ page }) => {
+    test("should display Card item on desktop", async ({ page }) => {
         await page.goto("/wallet");
         await page.waitForLoadState("domcontentloaded");
 
-        // Menu should be visible on desktop
-        const menuButton = page.getByRole("button", { name: /^menu$/i });
-        await expect(menuButton).toBeVisible();
+        // Card should be visible on desktop
+        const cardButton = page.getByRole("button", { name: /^card$/i });
+        await expect(cardButton).toBeVisible();
     });
 
     test("should highlight active nav item on desktop", async ({ page }) => {
@@ -150,13 +150,13 @@ test.describe("Mobile Navigation", () => {
         await expect(logo).not.toBeVisible();
     });
 
-    test("should display Menu item on mobile", async ({ page }) => {
+    test("should display Card item on mobile", async ({ page }) => {
         await page.goto("/wallet");
         await page.waitForLoadState("domcontentloaded");
 
-        // Menu should be visible on mobile
-        const menuButton = page.getByLabel("Menu");
-        await expect(menuButton).toBeVisible();
+        // Card should be visible on mobile
+        const cardButton = page.getByLabel("Card");
+        await expect(cardButton).toBeVisible();
     });
 
     test("should navigate when clicking nav items on mobile", async ({ page }) => {

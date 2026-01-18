@@ -94,7 +94,7 @@ describe("Tier Explainer Helper Functions", () => {
 
             expect(benefits).toContainEqual(
                 expect.objectContaining({
-                    name: expect.stringMatching(/base earnings/i),
+                    name: expect.stringMatching(/earnings locked/i),
                 })
             );
             expect(benefits).toContainEqual(

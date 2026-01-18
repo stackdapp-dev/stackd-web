@@ -75,7 +75,7 @@
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
-    "jsdom": "^27.3.0",
+    "jsdom": "25",
     "msw": "^2.12.4",
     "null-loader": "^4.0.1",
     "rimraf": "^6.1.2",

@@ -181,7 +181,7 @@ describe("TierExplainer Page", () => {
         it("should show benefits for Bronze tier", () => {
             render(<TierExplainer />);
             const bronzeCard = screen.getByTestId("tier-card-BRONZE");
-            expect(within(bronzeCard).getByText(/base earnings/i)).toBeInTheDocument();
+            expect(within(bronzeCard).getByText(/earnings locked/i)).toBeInTheDocument();
         });
 
         it("should show benefits for Silver tier (payouts unlocked)", () => {
