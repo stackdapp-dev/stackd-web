@@ -71,7 +71,7 @@ function WalletContent() {
   }, [breakdown.totalCollateralUsd, fluid.suppliedAssets]);
 
   return (
-    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
+    <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
       {/* Hero Balance - Total collateral deposited in lending positions (WBTC + XAUT) */}
       <Balance
         amount={totalCollateralUsd}
@@ -103,7 +103,7 @@ function WalletContent() {
 // Wrap with Suspense for useSearchParams SSR compatibility
 export default function Wallet() {
   return (
-    <Suspense fallback={<div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
+    <Suspense fallback={<div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
       <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
     </div>}>
       <WalletContent />
