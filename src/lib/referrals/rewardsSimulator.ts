@@ -6,6 +6,7 @@
  * - Average referrals per friend (determines L2 count)
  * - Average USDT loan position per referral
  * - Time period (0-12 months)
+ * - User tier (affects earning rates)
  * 
  * Note: These are SIMULATED projections using simplified rates.
  * Actual earnings may vary based on:
@@ -14,6 +15,8 @@
  * - Proration for partial months
  * - User tier (Bronze users don't earn - enforced at payout time)
  */
+
+import { UserTier } from './tiers';
 
 /**
  * Monthly earning rates for simulation
@@ -27,11 +30,24 @@ export const SIMULATOR_RATES = {
     L2: 0.0025, // 0.25% monthly (for L2 referrals)
 } as const;
 
+/**
+ * Tier-based rate multipliers
+ * Higher tiers earn more from their network
+ */
+export const TIER_MULTIPLIERS: Record<UserTier, number> = {
+    BRONZE: 0,      // Bronze users don't earn
+    SILVER: 1,      // Base rate
+    GOLD: 1,        // Same as Silver (future: could add bonus)
+    PLATINUM: 1,    // Same as Silver (future: could add bonus)
+    BLACK: 1,       // Same as Silver (future: could add bonus)
+} as const;
+
 export interface SimulatorInput {
     directReferrals: number;       // L1 count
     avgReferralsPerFriend: number; // How many each L1 brings (L2 multiplier)
     avgLoanPosition: number;       // USDT per referral
     timePeriodMonths: number;      // 0-12 slider value
+    tier?: UserTier;               // User tier (defaults to SILVER for backwards compatibility)
 }
 
 export interface SimulatorOutput {
@@ -58,16 +74,20 @@ export function calculateRewardsSimulation(input: SimulatorInput): SimulatorOutp
         directReferrals,
         avgReferralsPerFriend,
         avgLoanPosition,
-        timePeriodMonths
+        timePeriodMonths,
+        tier = 'SILVER', // Default to SILVER if not provided
     } = input;
+
+    // Get tier multiplier
+    const tierMultiplier = TIER_MULTIPLIERS[tier];
 
     // Calculate network counts
     const l1Count = directReferrals;
     const l2Count = directReferrals * avgReferralsPerFriend;
     const totalNetwork = l1Count + l2Count;
 
-    // Handle zero cases
-    if (totalNetwork === 0 || avgLoanPosition === 0 || timePeriodMonths === 0) {
+    // Handle zero cases (including Bronze tier which earns nothing)
+    if (totalNetwork === 0 || avgLoanPosition === 0 || timePeriodMonths === 0 || tierMultiplier === 0) {
         return {
             totalNetwork,
             perMonth: 0,
@@ -77,9 +97,9 @@ export function calculateRewardsSimulation(input: SimulatorInput): SimulatorOutp
         };
     }
 
-    // Calculate monthly earnings
-    const l1Monthly = l1Count * avgLoanPosition * SIMULATOR_RATES.L1;
-    const l2Monthly = l2Count * avgLoanPosition * SIMULATOR_RATES.L2;
+    // Calculate monthly earnings with tier multiplier
+    const l1Monthly = l1Count * avgLoanPosition * SIMULATOR_RATES.L1 * tierMultiplier;
+    const l2Monthly = l2Count * avgLoanPosition * SIMULATOR_RATES.L2 * tierMultiplier;
     const perMonth = l1Monthly + l2Monthly;
 
     // Calculate total over time period

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, TrendingUp, Users, DollarSign, Calendar, Share2 } from "lucide-react";
+import { X, TrendingUp, Users, DollarSign, Calendar, Share2, Award } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
     calculateRewardsSimulation,
     formatSimulatorCurrency,
 } from "@/lib/referrals/rewardsSimulator";
+import { UserTier, getTierDisplayName } from "@/lib/referrals/tiers";
 
 interface RewardsSimulatorModalProps {
     isOpen: boolean;
@@ -25,6 +26,10 @@ export default function RewardsSimulatorModal({
     const [avgReferralsPerFriend, setAvgReferralsPerFriend] = useState(5);
     const [avgLoanPosition, setAvgLoanPosition] = useState(5000);
     const [timePeriodMonths, setTimePeriodMonths] = useState(6);
+    const [selectedTier, setSelectedTier] = useState<UserTier>('SILVER');
+
+    // All available tiers for dropdown
+    const allTiers: UserTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'BLACK'];
 
     // Calculate results
     const result = useMemo(() => {
@@ -33,8 +38,9 @@ export default function RewardsSimulatorModal({
             avgReferralsPerFriend,
             avgLoanPosition,
             timePeriodMonths,
+            tier: selectedTier,
         });
-    }, [directReferrals, avgReferralsPerFriend, avgLoanPosition, timePeriodMonths]);
+    }, [directReferrals, avgReferralsPerFriend, avgLoanPosition, timePeriodMonths, selectedTier]);
 
     const handleStartEarning = () => {
         onClose();
@@ -84,7 +90,7 @@ export default function RewardsSimulatorModal({
             />
 
             {/* Modal Content */}
-            <div className="relative w-full max-w-md bg-neutral-900 rounded-2xl p-6 animate-fade-in max-h-[90vh] overflow-auto">
+            <div className="relative w-full max-w-md bg-neutral-900 rounded-2xl p-6 animate-fade-in max-h-[90vh] overflow-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
@@ -175,6 +181,27 @@ export default function RewardsSimulatorModal({
                         <span>0 mo</span>
                         <span>12 mo</span>
                     </div>
+                </div>
+
+                {/* Input: Tier Selection */}
+                <div className="mb-6">
+                    <label className="flex items-center gap-2 text-white/60 text-sm mb-2">
+                        <Award className="w-4 h-4" />
+                        Your Tier
+                    </label>
+                    <select
+                        value={selectedTier}
+                        onChange={(e) => setSelectedTier(e.target.value as UserTier)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white text-lg focus:outline-none focus:border-emerald-500/50 appearance-none cursor-pointer"
+                        aria-label="Select Tier"
+                    >
+                        {allTiers.map((tier) => (
+                            <option key={tier} value={tier} className="bg-neutral-900 text-white">
+                                {getTierDisplayName(tier)}
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-white/40 text-xs mt-1">Tier affects your reward rates</p>
                 </div>
 
                 {/* Output: Summary Cards */}

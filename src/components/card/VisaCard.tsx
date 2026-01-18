@@ -101,22 +101,20 @@ export function VisaCard({
                     </div>
                 </div>
 
-                {/* Card Number */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <span className="text-white/80 text-xl tracking-[0.3em] font-mono">
-                            {displayNumber}
-                        </span>
-                        {onReveal && !isRevealed && (
-                            <button
-                                onClick={onReveal}
-                                className="text-xs text-orange-400 hover:text-orange-300 ml-2"
-                                aria-label="Show card details"
-                            >
-                                Show
-                            </button>
-                        )}
-                    </div>
+                {/* Card Number - Lower left corner */}
+                <div className="absolute bottom-6 left-6 flex items-center gap-2">
+                    <span className="text-white/60 text-xs tracking-[0.2em] font-mono">
+                        {displayNumber}
+                    </span>
+                    {onReveal && !isRevealed && (
+                        <button
+                            onClick={onReveal}
+                            className="text-xs text-orange-400 hover:text-orange-300"
+                            aria-label="Show card details"
+                        >
+                            Show
+                        </button>
+                    )}
                 </div>
 
                 {/* VISA Logo */}
