@@ -19,15 +19,15 @@
 import { UserTier } from './tiers';
 
 /**
- * Monthly earning rates for simulation
- * These are monthly rates to provide realistic projections
+ * Annual earning rates (APY) - converted to monthly for calculation
+ * These rates match the payout.ts implementation:
  * 
- * - L1 (Direct): 0.5% of loan position per month
- * - L2 (Friend's referrals): 0.25% per month
+ * - L1 (Direct): 0.5% APY → 0.5% / 12 = 0.04167% per month
+ * - L2 (Friend's referrals): 0.1% APY → 0.1% / 12 = 0.00833% per month
  */
 export const SIMULATOR_RATES = {
-    L1: 0.005,  // 0.5% monthly (for L1 referrals)
-    L2: 0.0025, // 0.25% monthly (for L2 referrals)
+    L1: 0.005 / 12,  // 0.5% APY / 12 = monthly rate for L1 referrals
+    L2: 0.001 / 12,  // 0.1% APY / 12 = monthly rate for L2 referrals
 } as const;
 
 /**

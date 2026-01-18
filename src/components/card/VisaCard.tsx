@@ -42,7 +42,7 @@ export function VisaCard({
             <div
                 data-testid="visa-card"
                 className={cn(
-                    "relative w-full aspect-[1.586/1] max-w-[400px] rounded-2xl p-6",
+                    "relative w-full aspect-[1.586/1] rounded-2xl p-6",
                     "bg-gradient-to-br from-gray-800 via-gray-900 to-black",
                     "border border-gray-700/50 shadow-2xl",
                     "overflow-hidden",
