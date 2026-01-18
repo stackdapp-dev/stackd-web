@@ -1,6 +1,16 @@
 /**
  * Unit tests for Rewards Simulator calculation logic
- * TDD: Write tests FIRST, then implement
+ * 
+ * Rates are ANNUAL rates divided by 12 for monthly calculation:
+ * - L1: 0.5% APY / 12 = 0.0004167 per month
+ * - L2: 0.1% APY / 12 = 0.0000833 per month
+ * 
+ * Example calculation for Scenario 2:
+ * - 1 L1 + 1 L2 at $1,000, 12 months
+ * - L1 monthly: 1 * 1000 * (0.005/12) = $0.417
+ * - L2 monthly: 1 * 1000 * (0.001/12) = $0.083
+ * - Total monthly: $0.50
+ * - Total 12 months: $6.00
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -10,19 +20,19 @@ import {
 } from "@/lib/referrals/rewardsSimulator";
 
 describe("SIMULATOR_RATES", () => {
-    it("should have correct L1 rate (0.5% monthly)", () => {
-        expect(SIMULATOR_RATES.L1).toBe(0.005);
+    it("should have correct L1 rate (0.5% APY / 12)", () => {
+        expect(SIMULATOR_RATES.L1).toBeCloseTo(0.005 / 12, 8);
     });
 
-    it("should have correct L2 rate (0.25% monthly)", () => {
-        expect(SIMULATOR_RATES.L2).toBe(0.0025);
+    it("should have correct L2 rate (0.1% APY / 12)", () => {
+        expect(SIMULATOR_RATES.L2).toBeCloseTo(0.001 / 12, 8);
     });
 });
 
 describe("calculateRewardsSimulation", () => {
     describe("Scenario 1: Bronze Tier Setup (1 L1 + 1 L2 at $500)", () => {
-        // Note: Simulator shows POTENTIAL earnings - Bronze users see what they COULD earn
-        // The actual earning restriction is enforced at payout time
+        // From implementation_plan.md Scenario 1:
+        // With these rates, $500 loan = $3.00 per year for 1 L1 + 1 L2
         const input: SimulatorInput = {
             directReferrals: 1,
             avgReferralsPerFriend: 1,
@@ -32,28 +42,26 @@ describe("calculateRewardsSimulation", () => {
 
         it("should calculate correct total over 12 months", () => {
             const result = calculateRewardsSimulation(input);
-            // L1: 1 * 500 * 0.005 * 12 = $30
-            // L2: 1 * 500 * 0.0025 * 12 = $15
-            // Total: $45
-            expect(result.estimatedEarnings).toBeCloseTo(45.00, 2);
+            // L1: 1 * 500 * (0.005/12) * 12 = $2.50
+            // L2: 1 * 500 * (0.001/12) * 12 = $0.50
+            // Total: $3.00
+            expect(result.estimatedEarnings).toBeCloseTo(3.00, 2);
         });
 
         it("should calculate correct L1 earnings", () => {
             const result = calculateRewardsSimulation(input);
-            // L1: 1 * 500 * 0.005 * 12 = $30
-            expect(result.l1Earnings).toBeCloseTo(30.00, 2);
+            expect(result.l1Earnings).toBeCloseTo(2.50, 2);
         });
 
         it("should calculate correct L2 earnings", () => {
             const result = calculateRewardsSimulation(input);
-            // L2: 1 * 500 * 0.0025 * 12 = $15
-            expect(result.l2Earnings).toBeCloseTo(15.00, 2);
+            expect(result.l2Earnings).toBeCloseTo(0.50, 2);
         });
 
         it("should calculate correct monthly earnings", () => {
             const result = calculateRewardsSimulation(input);
-            // Monthly: $45 / 12 = $3.75
-            expect(result.perMonth).toBeCloseTo(3.75, 2);
+            // Monthly: $3.00 / 12 = $0.25
+            expect(result.perMonth).toBeCloseTo(0.25, 2);
         });
 
         it("should calculate correct total network (2)", () => {
@@ -62,7 +70,11 @@ describe("calculateRewardsSimulation", () => {
         });
     });
 
-    describe("Scenario 2: Silver Tier Setup (1 L1 + 1 L2 at $1000)", () => {
+    describe("Scenario 2: Silver Tier Setup (1 L1 + 1 L2 at $1000) - from implementation_plan.md", () => {
+        // From implementation_plan.md Scenario 2:
+        // L1: 1 * $1,000 * (0.5%/12) = $0.417/month, $5.00/year
+        // L2: 1 * $1,000 * (0.1%/12) = $0.083/month, $1.00/year
+        // Total: $0.50/month, $6.00/year
         const input: SimulatorInput = {
             directReferrals: 1,
             avgReferralsPerFriend: 1,
@@ -70,53 +82,48 @@ describe("calculateRewardsSimulation", () => {
             timePeriodMonths: 12,
         };
 
-        it("should calculate correct total over 12 months", () => {
+        it("should calculate $6.00 total over 12 months", () => {
             const result = calculateRewardsSimulation(input);
-            // L1: 1 * 1000 * 0.005 * 12 = $60
-            // L2: 1 * 1000 * 0.0025 * 12 = $30
-            // Total: $90
-            expect(result.estimatedEarnings).toBeCloseTo(90.00, 2);
+            expect(result.estimatedEarnings).toBeCloseTo(6.00, 2);
         });
 
-        it("should calculate correct L1 earnings", () => {
+        it("should calculate $5.00 L1 earnings", () => {
             const result = calculateRewardsSimulation(input);
-            expect(result.l1Earnings).toBeCloseTo(60.00, 2);
+            expect(result.l1Earnings).toBeCloseTo(5.00, 2);
         });
 
-        it("should calculate correct L2 earnings", () => {
+        it("should calculate $1.00 L2 earnings", () => {
             const result = calculateRewardsSimulation(input);
-            expect(result.l2Earnings).toBeCloseTo(30.00, 2);
+            expect(result.l2Earnings).toBeCloseTo(1.00, 2);
         });
 
-        it("should calculate correct monthly earnings", () => {
+        it("should calculate $0.50 monthly earnings", () => {
             const result = calculateRewardsSimulation(input);
-            // Monthly: $90 / 12 = $7.50
-            expect(result.perMonth).toBeCloseTo(7.50, 2);
+            expect(result.perMonth).toBeCloseTo(0.50, 2);
+        });
+
+        it("should calculate $3.00 for 6 months", () => {
+            const result = calculateRewardsSimulation({ ...input, timePeriodMonths: 6 });
+            expect(result.estimatedEarnings).toBeCloseTo(3.00, 2);
         });
     });
 
-    describe("Scenario 3: Larger network (5 L1, 3 avg per friend, $3000 loan)", () => {
-        const input: SimulatorInput = {
-            directReferrals: 5,
-            avgReferralsPerFriend: 3,
-            avgLoanPosition: 3000,
-            timePeriodMonths: 12,
-        };
+    describe("Scenario 3: Gold Tier Mixed Network - from implementation_plan.md", () => {
+        // From implementation_plan.md Scenario 3:
+        // L1: 1 * $3,000 * (0.5%/12) = $1.25/month, $15.00/year
+        // L2: 1 * $1,500 * (0.1%/12) = $0.125/month, $1.50/year  
+        // L3: 1 * $500 * (0.1%/12) = $0.042/month, $0.50/year
+        // Note: Simulator only handles L1/L2 with uniform avg loan, so we test core logic
 
-        it("should calculate correct total network", () => {
-            const result = calculateRewardsSimulation(input);
-            // 5 L1 + (5 * 3) L2 = 5 + 15 = 20
-            expect(result.totalNetwork).toBe(20);
-        });
-
-        it("should calculate correct earnings", () => {
-            const result = calculateRewardsSimulation(input);
-            // L1: 5 * 3000 * 0.005 * 12 = $900
-            // L2: 15 * 3000 * 0.0025 * 12 = $1350
-            // Total: $2250
-            expect(result.l1Earnings).toBeCloseTo(900.00, 0);
-            expect(result.l2Earnings).toBeCloseTo(1350.00, 0);
-            expect(result.estimatedEarnings).toBeCloseTo(2250.00, 0);
+        it("should calculate correctly for L1 at $3000", () => {
+            const result = calculateRewardsSimulation({
+                directReferrals: 1,
+                avgReferralsPerFriend: 0,
+                avgLoanPosition: 3000,
+                timePeriodMonths: 12,
+            });
+            // L1 only: 1 * 3000 * (0.005/12) * 12 = $15.00
+            expect(result.l1Earnings).toBeCloseTo(15.00, 2);
         });
     });
 
@@ -136,12 +143,12 @@ describe("calculateRewardsSimulation", () => {
 
         it("should calculate correct earnings breakdown", () => {
             const result = calculateRewardsSimulation(input);
-            // L1: 10 * 5000 * 0.005 * 6 = $1500
-            // L2: 50 * 5000 * 0.0025 * 6 = $3750
-            // Total: $5250
-            expect(result.l1Earnings).toBeCloseTo(1500.00, 0);
-            expect(result.l2Earnings).toBeCloseTo(3750.00, 0);
-            expect(result.estimatedEarnings).toBeCloseTo(5250.00, 0);
+            // L1: 10 * 5000 * (0.005/12) * 6 = $125.00
+            // L2: 50 * 5000 * (0.001/12) * 6 = $125.00
+            // Total: $250.00
+            expect(result.l1Earnings).toBeCloseTo(125.00, 0);
+            expect(result.l2Earnings).toBeCloseTo(125.00, 0);
+            expect(result.estimatedEarnings).toBeCloseTo(250.00, 0);
         });
     });
 
@@ -187,8 +194,21 @@ describe("calculateRewardsSimulation", () => {
             });
             expect(result.totalNetwork).toBe(5);
             expect(result.l2Earnings).toBe(0);
-            // L1: 5 * 1000 * 0.005 * 12 = $300
-            expect(result.l1Earnings).toBeCloseTo(300.00, 2);
+            // L1: 5 * 1000 * (0.005/12) * 12 = $25.00
+            expect(result.l1Earnings).toBeCloseTo(25.00, 2);
+        });
+
+        it("should return 0 for Bronze tier", () => {
+            const result = calculateRewardsSimulation({
+                directReferrals: 10,
+                avgReferralsPerFriend: 5,
+                avgLoanPosition: 5000,
+                timePeriodMonths: 12,
+                tier: 'BRONZE',
+            });
+            expect(result.estimatedEarnings).toBe(0);
+            expect(result.perMonth).toBe(0);
+            expect(result.totalNetwork).toBe(60); // Network still counted
         });
     });
 
