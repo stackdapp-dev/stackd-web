@@ -89,12 +89,12 @@ describe("ResponsiveNav", () => {
             expect(screen.getByText("Rewards")).toBeInTheDocument();
         });
 
-        it("should display Menu item on desktop", async () => {
+        it("should display Card item on desktop", async () => {
             const { ResponsiveNav } = await import("@/components/ui/ResponsiveNav");
             render(<ResponsiveNav />);
 
-            // Menu should be visible on desktop
-            expect(screen.getByText("Menu")).toBeInTheDocument();
+            // Card should be visible on desktop
+            expect(screen.getByText("Card")).toBeInTheDocument();
         });
 
         it("should highlight active navigation item", async () => {
@@ -149,13 +149,13 @@ describe("ResponsiveNav", () => {
             expect(screen.queryByTestId("stackd-logo")).not.toBeInTheDocument();
         });
 
-        it("should display Menu item on mobile", async () => {
+        it("should display Card item on mobile", async () => {
             const { ResponsiveNav } = await import("@/components/ui/ResponsiveNav");
             render(<ResponsiveNav />);
 
-            // Menu should be visible on mobile
-            const menuButton = screen.getByLabelText("Menu");
-            expect(menuButton).toBeInTheDocument();
+            // Card should be visible on mobile
+            const cardButton = screen.getByLabelText("Card");
+            expect(cardButton).toBeInTheDocument();
         });
 
         it("should display icon-only navigation on mobile", async () => {

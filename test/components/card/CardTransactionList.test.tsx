@@ -34,7 +34,8 @@ describe('CardTransactionList Component', () => {
             render(<CardTransactionList transactions={mockTransactions} />);
 
             expect(screen.getByText('-$34.48')).toBeInTheDocument();
-            expect(screen.getByText('-$4.12')).toBeInTheDocument();
+            // Multiple transactions have -$4.12
+            expect(screen.getAllByText('-$4.12').length).toBeGreaterThanOrEqual(1);
         });
 
         it('should display merchant categories', async () => {
@@ -42,7 +43,8 @@ describe('CardTransactionList Component', () => {
             render(<CardTransactionList transactions={mockTransactions} />);
 
             expect(screen.getByText('Telecommunication Services')).toBeInTheDocument();
-            expect(screen.getByText('Eating Places, Restaurants')).toBeInTheDocument();
+            // Multiple transactions have 'Eating Places, Restaurants'
+            expect(screen.getAllByText('Eating Places, Restaurants').length).toBeGreaterThanOrEqual(1);
         });
     });
 

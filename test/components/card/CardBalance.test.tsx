@@ -12,11 +12,11 @@ import { mockCardDetails, mockCardWithBalance } from '../../mocks/card';
 
 describe('CardBalance Component', () => {
     describe('Balance Display', () => {
-        it('should display "CARD BALANCE" label', async () => {
+        it('should display "Card Balance" label', async () => {
             const { CardBalance } = await import('@/components/card/CardBalance');
             render(<CardBalance card={mockCardDetails} />);
 
-            expect(screen.getByText('CARD BALANCE')).toBeInTheDocument();
+            expect(screen.getByText('Card Balance')).toBeInTheDocument();
         });
 
         it('should display balance amount', async () => {
