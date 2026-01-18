@@ -194,7 +194,7 @@ export default function LoanDetailsPage({
     const isSimulatorAvailable = true;
 
     return (
-        <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+        <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
             <PageHeader title="Loan Details" />
 
             {lendProcessing && (
@@ -372,13 +372,13 @@ export default function LoanDetailsPage({
                         </div>
                         <div className="flex items-center gap-2">
                             <p className={`font-bold text-xl ${healthStatus === "safe" ? "text-green-400" :
-                                    healthStatus === "warning" ? "text-orange-400" : "text-red-400"
+                                healthStatus === "warning" ? "text-orange-400" : "text-red-400"
                                 }`}>
                                 {isFinite(healthFactor) ? healthFactor.toFixed(2) : "N/A"}
                             </p>
                             <span className={`text-sm px-2 py-0.5 rounded-full ${healthStatus === "safe" ? "bg-green-500/20 text-green-400" :
-                                    healthStatus === "warning" ? "bg-orange-500/20 text-orange-400" :
-                                        "bg-red-500/20 text-red-400"
+                                healthStatus === "warning" ? "bg-orange-500/20 text-orange-400" :
+                                    "bg-red-500/20 text-red-400"
                                 }`}>
                                 {healthStatus === "safe" ? "Safe" : healthStatus === "warning" ? "Warning" : "At Risk"}
                             </span>

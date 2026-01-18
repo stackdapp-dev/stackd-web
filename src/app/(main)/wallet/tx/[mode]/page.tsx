@@ -36,7 +36,7 @@ export default function TxModePage() {
   const isDisabled = available <= 0 || amount <= 0 || isProcessing || !ackChecked || amount > available || (mode === "borrow" && amount < 1);
 
   return (
-    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+    <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
       <PageHeader title={title} />
 
       <div className="flex flex-col gap-2">

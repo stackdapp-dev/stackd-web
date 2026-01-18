@@ -30,7 +30,7 @@ export default function CashInPage() {
     );
 
     return (
-        <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+        <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
             <PageHeader title="Cash In" />
 
             {/* Tab Switcher */}
@@ -38,8 +38,8 @@ export default function CashInPage() {
                 <button
                     onClick={() => setActiveTab("crypto")}
                     className={`flex-1 py-3 px-6 rounded-full font-medium transition-all ${activeTab === "crypto"
-                            ? "bg-amber-500 text-black"
-                            : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+                        ? "bg-amber-500 text-black"
+                        : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
                         }`}
                 >
                     Crypto/Stablecoins
@@ -47,8 +47,8 @@ export default function CashInPage() {
                 <button
                     onClick={() => setActiveTab("otc")}
                     className={`flex-1 py-3 px-6 rounded-full font-medium transition-all ${activeTab === "otc"
-                            ? "bg-amber-500 text-black"
-                            : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+                        ? "bg-amber-500 text-black"
+                        : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
                         }`}
                 >
                     OTC

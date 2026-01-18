@@ -71,7 +71,7 @@ const History = () => {
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto p-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-6">
+    <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-white text-xl font-semibold">Transaction History</h1>
