@@ -37,6 +37,15 @@ vi.mock("@/hooks/useWalletBalanceContext", () => ({
     })),
 }));
 
+// Mock useXautBalance
+vi.mock("@/hooks/useXautBalance", () => ({
+    useXautBalance: vi.fn(() => ({
+        xautBalance: 0,
+        isLoading: false,
+        error: null,
+    })),
+}));
+
 // Mock showInfoToast
 vi.mock("@/components/ui/custom-toast", () => ({
     showInfoToast: vi.fn(),

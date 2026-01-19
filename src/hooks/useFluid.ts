@@ -8,6 +8,7 @@ import {
   encodeFluidWithdraw,
   encodeFluidBorrow,
   encodeFluidRepay,
+  encodeFluidSupplyAndBorrow,
   XAUT_USDT_VAULT,
   type FluidUserPosition,
   type FluidVaultData,
@@ -80,6 +81,7 @@ type UseFluidResult = {
   withdraw: (amount: bigint) => Promise<TransactionResult>;
   borrow: (amount: bigint) => Promise<TransactionResult>;
   repay: (amount: bigint) => Promise<TransactionResult>;
+  supplyAndBorrow: (collateralAmount: bigint, borrowAmount: bigint) => Promise<TransactionResult>;
   approve: (token: Address, amount: bigint, spender?: Address) => Promise<TransactionResult>;
   allowance: (token: Address, spender?: Address) => Promise<bigint | null>;
 };
@@ -449,6 +451,56 @@ export function useFluid(): UseFluidResult {
     [ethereumPublicClient, acct]
   );
 
+  /**
+   * Combined supply collateral + borrow operation
+   * Can create a new position (nftId = 0) or add to existing
+   */
+  const supplyAndBorrow = useCallback(
+    async (
+      collateralAmount: bigint,
+      borrowAmount: bigint
+    ): Promise<TransactionResult> => {
+      if (!acct) {
+        return { txHash: null, error: "No account connected" };
+      }
+
+      try {
+        // Use existing nftId or 0 to create new position
+        const positionNftId = nftId ?? BigInt(0);
+
+        console.log("[FLUID] SupplyAndBorrow:", {
+          nftId: positionNftId.toString(),
+          collateralAmount: collateralAmount.toString(),
+          borrowAmount: borrowAmount.toString(),
+          isNewPosition: positionNftId === BigInt(0),
+        });
+
+        const data = encodeFluidSupplyAndBorrow(
+          positionNftId,
+          collateralAmount,
+          borrowAmount,
+          acct as Address
+        );
+
+        const result = await sendSponsoredTransaction({
+          to: XAUT_USDT_VAULT as Address,
+          data,
+          chainId: mainnet.id,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        console.error("[FLUID] Supply and borrow failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [nftId, acct, sendSponsoredTransaction]
+  );
+
   return {
     collateralRaw,
     borrowRaw,
@@ -474,6 +526,7 @@ export function useFluid(): UseFluidResult {
     withdraw,
     borrow,
     repay,
+    supplyAndBorrow,
     approve,
     allowance,
   };
