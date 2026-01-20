@@ -254,15 +254,29 @@ export default function NewLoanSimulatorModal({
             let txHash: string | null = null;
 
             if (isXaut) {
-                // Approve XAUT for Fluid vault
+                // Approve XAUT for Fluid vault (Ethereum mainnet)
                 const result = await fluid.approve(ETHEREUM_TOKEN_ADDRESSES.XAUT as Address, maxAmount);
+
+                // For XAUT on Ethereum mainnet, show "submitted" message and allow proceeding
+                // Don't wait for confirmation - Ethereum txs take longer and Privy can throw AbortError
+                if (result.txHash || (result.error && isAbortError(new Error(result.error)))) {
+                    console.log("[NEW LOAN] XAUT approval submitted:", result.txHash || "hash unknown (AbortError)");
+                    toast.info(
+                        "Approval submitted. Click 'Create Loan' to continue. If the transaction fails, please try again.",
+                        { autoClose: 6000 }
+                    );
+                    setNeedsApproval(false);
+                    return;
+                }
+
+                // Only show error if we truly have an error with no hash
                 if (result.error) {
                     toast.error(`Approval failed: ${result.error}`);
                     return;
                 }
                 txHash = result.txHash;
             } else {
-                // Approve WBTC for Bulker
+                // Approve WBTC for Bulker (Arbitrum)
                 const tokenMeta = getTokenMetadata("WBTC");
                 if (!tokenMeta) {
                     toast.error("WBTC metadata not found");
@@ -277,14 +291,12 @@ export default function NewLoanSimulatorModal({
                 txHash = result.txHash;
             }
 
-            // Wait for transaction confirmation before declaring success
-            if (txHash) {
-                console.log("[NEW LOAN] Approval tx sent, waiting for confirmation:", txHash);
+            // For WBTC on Arbitrum, wait for transaction confirmation before declaring success
+            if (txHash && !isXaut) {
+                console.log("[NEW LOAN] WBTC approval tx sent, waiting for confirmation:", txHash);
                 setIsConfirming(true);
 
-                // Use the appropriate public client based on the chain
-                const client = isXaut ? ethereumPublicClient : publicClient;
-                const confirmResult = await confirmTransaction(client, txHash as Hash, { timeout: 60000 });
+                const confirmResult = await confirmTransaction(publicClient, txHash as Hash, { timeout: 60000 });
 
                 setIsConfirming(false);
 
@@ -309,7 +321,7 @@ export default function NewLoanSimulatorModal({
             setIsApproving(false);
             setIsConfirming(false);
         }
-    }, [isApproving, isXaut, fluid, compound, collateralSymbol, publicClient, ethereumPublicClient]);
+    }, [isApproving, isXaut, fluid, compound, collateralSymbol, publicClient]);
 
     // Execute transaction
     const handleConfirm = useCallback(async () => {
@@ -323,82 +335,106 @@ export default function NewLoanSimulatorModal({
 
             let result;
             if (isXaut) {
-                // Use Fluid's supplyAndBorrow
+                // Use Fluid's supplyAndBorrow (Ethereum mainnet)
                 result = await fluid.supplyAndBorrow(collateralAmount, borrowAmount);
-            } else {
-                // Use Compound's supplyAndBorrow (via Bulker)
-                result = await compound.supplyAndBorrow(collateralAmount, borrowAmount);
-            }
 
-            // Handle AbortError: Privy sometimes throws abort even when tx succeeds
-            // If we have a hash but got an error, check the actual on-chain status
-            if (result?.error && result?.txHash && isAbortError(new Error(result.error))) {
-                console.log("[NEW LOAN] AbortError detected with hash, checking actual status...");
-                setIsConfirming(true);
+                // For XAUT/Fluid on Ethereum mainnet, show "submitted" message regardless of result
+                // Privy sometimes throws AbortError even when tx succeeds, and Ethereum txs take longer
+                // Just inform the user the tx was submitted and let them refresh
+                if (result?.txHash || (result?.error && isAbortError(new Error(result.error)))) {
+                    console.log("[NEW LOAN] XAUT transaction submitted:", result?.txHash || "hash unknown (AbortError)");
+                    toast.info(
+                        "Transaction submitted. Your active loan position will be updated in a few seconds. Please refresh the wallet page if it doesn't show up right away.",
+                        { autoClose: 8000 }
+                    );
 
-                const client = isXaut ? ethereumPublicClient : publicClient;
-                const statusResult = await checkTransactionStatus(client, result.txHash as Hash);
-
-                setIsConfirming(false);
-
-                if (statusResult.status === "success") {
-                    console.log("[NEW LOAN] Transaction actually succeeded despite AbortError!");
-                    toast.success("Loan created successfully!");
-
-                    // Refetch all data
-                    await Promise.all([
+                    // Refetch data in background
+                    void Promise.all([
                         refetchBalances(),
-                        isXaut ? fluid.refetch() : compound.refetch(),
+                        fluid.refetch(),
                     ]);
 
                     setShowConfirmModal(false);
                     onComplete?.();
                     onClose();
                     return;
-                } else if (statusResult.status === "pending") {
-                    // Transaction is still pending, wait for confirmation
-                    console.log("[NEW LOAN] Transaction still pending, waiting for confirmation...");
-                    const confirmResult = await confirmTransaction(client, result.txHash as Hash, { timeout: 60000 });
+                }
 
-                    if (confirmResult.status === "success") {
-                        console.log("[NEW LOAN] Transaction confirmed after waiting!");
+                // Only show error if we truly have an error with no hash (tx wasn't submitted)
+                if (result?.error) {
+                    toast.error(`Transaction failed: ${result.error}`);
+                    return;
+                }
+            } else {
+                // Use Compound's supplyAndBorrow (via Bulker) on Arbitrum
+                result = await compound.supplyAndBorrow(collateralAmount, borrowAmount);
+
+                // Handle AbortError for WBTC: check actual on-chain status
+                if (result?.error && result?.txHash && isAbortError(new Error(result.error))) {
+                    console.log("[NEW LOAN] AbortError detected with hash, checking actual status...");
+                    setIsConfirming(true);
+
+                    const statusResult = await checkTransactionStatus(publicClient, result.txHash as Hash);
+
+                    setIsConfirming(false);
+
+                    if (statusResult.status === "success") {
+                        console.log("[NEW LOAN] Transaction actually succeeded despite AbortError!");
                         toast.success("Loan created successfully!");
 
                         await Promise.all([
                             refetchBalances(),
-                            isXaut ? fluid.refetch() : compound.refetch(),
+                            compound.refetch(),
                         ]);
 
                         setShowConfirmModal(false);
                         onComplete?.();
                         onClose();
                         return;
+                    } else if (statusResult.status === "pending") {
+                        // Transaction is still pending, wait for confirmation
+                        console.log("[NEW LOAN] Transaction still pending, waiting for confirmation...");
+                        const confirmResult = await confirmTransaction(publicClient, result.txHash as Hash, { timeout: 60000 });
+
+                        if (confirmResult.status === "success") {
+                            console.log("[NEW LOAN] Transaction confirmed after waiting!");
+                            toast.success("Loan created successfully!");
+
+                            await Promise.all([
+                                refetchBalances(),
+                                compound.refetch(),
+                            ]);
+
+                            setShowConfirmModal(false);
+                            onComplete?.();
+                            onClose();
+                            return;
+                        }
                     }
+
+                    // If we get here, transaction truly failed
+                    toast.error("Transaction failed on-chain");
+                    return;
                 }
 
-                // If we get here, transaction truly failed
-                toast.error("Transaction failed on-chain");
-                return;
+                // Normal error handling (no hash or not an AbortError)
+                if (result?.error) {
+                    toast.error(`Transaction failed: ${result.error}`);
+                    return;
+                }
+
+                console.log("[NEW LOAN] WBTC transaction successful");
+                toast.success("Loan created successfully!");
+
+                await Promise.all([
+                    refetchBalances(),
+                    compound.refetch(),
+                ]);
+
+                setShowConfirmModal(false);
+                onComplete?.();
+                onClose();
             }
-
-            // Normal error handling (no hash or not an AbortError)
-            if (result?.error) {
-                toast.error(`Transaction failed: ${result.error}`);
-                return; // Don't throw - avoids duplicate toast from catch block
-            }
-
-            console.log("[NEW LOAN] Transaction successful");
-            toast.success("Loan created successfully!");
-
-            // Refetch all data
-            await Promise.all([
-                refetchBalances(),
-                isXaut ? fluid.refetch() : compound.refetch(),
-            ]);
-
-            setShowConfirmModal(false);
-            onComplete?.();
-            onClose();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Unknown error";
             console.error("[NEW LOAN] Transaction failed:", err);
@@ -407,7 +443,7 @@ export default function NewLoanSimulatorModal({
             setIsProcessing(false);
             setIsConfirming(false);
         }
-    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol, publicClient, ethereumPublicClient]);
+    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol, publicClient]);
 
     // Reset state when modal closes
     useEffect(() => {
