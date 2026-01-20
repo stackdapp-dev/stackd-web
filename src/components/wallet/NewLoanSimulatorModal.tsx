@@ -20,6 +20,7 @@ import { formatAmount, formatCurrency, cn } from "@/lib/utils";
 import { X, AlertTriangle, CheckCircle } from "lucide-react";
 import { parseUnits } from "viem";
 import type { Address } from "viem";
+import { toast } from "react-toastify";
 
 export type CollateralType = "WBTC" | "XAUT";
 
@@ -185,28 +186,39 @@ export default function NewLoanSimulatorModal({
 
         setIsApproving(true);
         try {
+            console.log("[NEW LOAN] Starting approval for", collateralSymbol);
             const maxAmount = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
             if (isXaut) {
                 // Approve XAUT for Fluid vault
                 const result = await fluid.approve(ETHEREUM_TOKEN_ADDRESSES.XAUT as Address, maxAmount);
-                if (result.error) throw new Error(result.error);
+                if (result.error) {
+                    toast.error(`Approval failed: ${result.error}`);
+                    throw new Error(result.error);
+                }
             } else {
                 // Approve WBTC for Bulker
                 const tokenMeta = getTokenMetadata("WBTC");
                 if (!tokenMeta) throw new Error("WBTC metadata not found");
                 const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
                 const result = await compound.approve(tokenMeta.address as Address, maxAmount, BULKER_ADDRESS as Address);
-                if (result.error) throw new Error(result.error);
+                if (result.error) {
+                    toast.error(`Approval failed: ${result.error}`);
+                    throw new Error(result.error);
+                }
             }
 
+            console.log("[NEW LOAN] Approval successful");
+            toast.success("Token approved! Click 'Create Loan' to continue.");
             setNeedsApproval(false);
         } catch (err) {
-            console.error("Approval failed:", err);
+            const errorMessage = err instanceof Error ? err.message : "Unknown error";
+            console.error("[NEW LOAN] Approval failed:", err);
+            toast.error(`Approval failed: ${errorMessage}`);
         } finally {
             setIsApproving(false);
         }
-    }, [isApproving, isXaut, fluid, compound]);
+    }, [isApproving, isXaut, fluid, compound, collateralSymbol]);
 
     // Execute transaction
     const handleConfirm = useCallback(async () => {
@@ -214,6 +226,7 @@ export default function NewLoanSimulatorModal({
 
         setIsProcessing(true);
         try {
+            console.log("[NEW LOAN] Starting transaction for", collateralSymbol);
             const collateralAmount = parseUnits(String(parsedCollateral), collateralDecimals);
             const borrowAmount = parseUnits(String(parsedBorrow), 6); // USDT has 6 decimals
 
@@ -226,7 +239,13 @@ export default function NewLoanSimulatorModal({
                 result = await compound.supplyAndBorrow(collateralAmount, borrowAmount);
             }
 
-            if (result?.error) throw new Error(result.error);
+            if (result?.error) {
+                toast.error(`Transaction failed: ${result.error}`);
+                throw new Error(result.error);
+            }
+
+            console.log("[NEW LOAN] Transaction successful");
+            toast.success("Loan created successfully!");
 
             // Refetch all data
             await Promise.all([
@@ -238,11 +257,13 @@ export default function NewLoanSimulatorModal({
             onComplete?.();
             onClose();
         } catch (err) {
-            console.error("Transaction failed:", err);
+            const errorMessage = err instanceof Error ? err.message : "Unknown error";
+            console.error("[NEW LOAN] Transaction failed:", err);
+            toast.error(`Transaction failed: ${errorMessage}`);
         } finally {
             setIsProcessing(false);
         }
-    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose]);
+    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol]);
 
     // Reset state when modal closes
     useEffect(() => {

@@ -2,6 +2,11 @@
 
 import { createContext, useContext } from "react";
 
+export interface ChainBalances {
+    arbitrum: Record<string, number>;
+    ethereum: Record<string, number>;
+}
+
 export interface WalletBalanceContextType {
     assets: any[];
     totalBalance: number;
@@ -10,6 +15,7 @@ export interface WalletBalanceContextType {
     refetchBalances: () => Promise<void>;
     wbtcBalance: number;
     usdtBalance: number;
+    chainBalances: ChainBalances;
 }
 
 export const WalletBalanceContext = createContext<WalletBalanceContextType | undefined>(undefined);

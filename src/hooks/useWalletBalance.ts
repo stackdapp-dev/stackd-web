@@ -1,5 +1,5 @@
 import { TOKEN_METADATA, getTokenMetadata } from "@/constants/Tokens";
-import { TOKEN_ADDRESSES } from "@/constants/addresses";
+import { TOKEN_ADDRESSES, ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
 import { formatAddress } from "@/lib/utils";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useQuery, QueryClient } from "@tanstack/react-query";
@@ -20,9 +20,15 @@ interface Asset {
   icon?: string;
 }
 
+interface ChainBalances {
+  arbitrum: Record<string, number>;
+  ethereum: Record<string, number>;
+}
+
 interface WalletBalance {
   ethBalance: number;
   tokenBalances: Record<string, TokenBalance>;
+  chainBalances: ChainBalances;
   assets: Asset[];
   totalBalance: number;
   isLoading: boolean;
@@ -90,28 +96,95 @@ async function fetchWalletBalances(
 }
 
 export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = {}): WalletBalance {
-  const { publicClient, walletClient, isExternalWallet } = useWeb3();
+  const { publicClient, ethereumPublicClient, walletClient, isExternalWallet } = useWeb3();
 
   const walletAddress = walletClient?.account?.address
     ? formatAddress(walletClient.account.address) as Address
     : undefined;
 
-  const tokenEntries = useMemo(
+  const arbitrumTokenEntries = useMemo(
     () => Object.entries(TOKEN_ADDRESSES) as [string, Address][],
     []
   );
 
-  // Use TanStack Query for data fetching with caching
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: walletBalanceKeys.byAddress(walletAddress || ''),
-    queryFn: () => fetchWalletBalances(publicClient!, walletAddress!, tokenEntries),
+  const ethereumTokenEntries = useMemo(
+    () => Object.entries(ETHEREUM_TOKEN_ADDRESSES).filter(([symbol]) => symbol === "XAUT" || symbol === "USDT") as [string, Address][],
+    []
+  );
+
+  // Use TanStack Query for Arbitrum token balances
+  const { data: arbitrumData, isLoading: arbitrumLoading, error: arbitrumError, refetch: refetchArbitrum } = useQuery({
+    queryKey: [...walletBalanceKeys.byAddress(walletAddress || ''), 'arbitrum'],
+    queryFn: () => fetchWalletBalances(publicClient!, walletAddress!, arbitrumTokenEntries),
     enabled: !!publicClient && !!walletAddress,
     staleTime: 30_000, // 30 seconds
     gcTime: 5 * 60_000, // 5 minutes
   });
 
-  const ethBalance = data?.ethBalance ?? 0;
-  const tokenBalances = data?.tokenBalances ?? {};
+  // Use TanStack Query for Ethereum token balances (XAUT)
+  const { data: ethereumData, isLoading: ethereumLoading, error: ethereumError, refetch: refetchEthereum } = useQuery({
+    queryKey: [...walletBalanceKeys.byAddress(walletAddress || ''), 'ethereum'],
+    queryFn: () => fetchWalletBalances(ethereumPublicClient!, walletAddress!, ethereumTokenEntries),
+    enabled: !!ethereumPublicClient && !!walletAddress,
+    staleTime: 30_000, // 30 seconds
+    gcTime: 5 * 60_000, // 5 minutes
+  });
+
+  const ethBalance = arbitrumData?.ethBalance ?? 0;
+
+  // Track chain-specific balances for multi-chain tokens
+  const chainBalances = useMemo((): ChainBalances => {
+    const arbitrum: Record<string, number> = {};
+    const ethereum: Record<string, number> = {};
+
+    // Arbitrum balances
+    if (arbitrumData?.tokenBalances) {
+      Object.entries(arbitrumData.tokenBalances).forEach(([symbol, data]) => {
+        arbitrum[symbol] = data.balance;
+      });
+    }
+
+    // Ethereum balances
+    if (ethereumData?.tokenBalances) {
+      Object.entries(ethereumData.tokenBalances).forEach(([symbol, data]) => {
+        ethereum[symbol] = data.balance;
+      });
+    }
+
+    return { arbitrum, ethereum };
+  }, [arbitrumData?.tokenBalances, ethereumData?.tokenBalances]);
+
+  // Merge token balances from both chains (for tokens that exist on both, sum them)
+  const tokenBalances = useMemo(() => {
+    const merged: Record<string, TokenBalance> = {};
+
+    // Add Arbitrum balances
+    if (arbitrumData?.tokenBalances) {
+      Object.entries(arbitrumData.tokenBalances).forEach(([symbol, data]) => {
+        merged[symbol] = { ...data };
+      });
+    }
+
+    // Add/merge Ethereum balances
+    if (ethereumData?.tokenBalances) {
+      Object.entries(ethereumData.tokenBalances).forEach(([symbol, data]) => {
+        if (merged[symbol]) {
+          // Token exists on both chains - sum the balances
+          merged[symbol] = {
+            ...merged[symbol],
+            balance: merged[symbol].balance + data.balance,
+          };
+        } else {
+          merged[symbol] = { ...data };
+        }
+      });
+    }
+
+    return merged;
+  }, [arbitrumData?.tokenBalances, ethereumData?.tokenBalances]);
+
+  const isLoading = arbitrumLoading || ethereumLoading;
+  const error = arbitrumError || ethereumError;
 
   const assets: Asset[] = useMemo(() => {
     return Object.entries(TOKEN_METADATA)
@@ -135,12 +208,13 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
   }, [assets]);
 
   const refetchBalances = async () => {
-    await refetch();
+    await Promise.all([refetchArbitrum(), refetchEthereum()]);
   };
 
   return {
     ethBalance,
     tokenBalances,
+    chainBalances,
     assets,
     totalBalance,
     isLoading,

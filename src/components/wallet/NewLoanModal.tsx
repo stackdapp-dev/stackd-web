@@ -9,6 +9,8 @@ import { COLLATERAL_OPTIONS, CollateralOption } from "@/types/loans";
 import { showInfoToast } from "@/components/ui/custom-toast";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { useXautBalance } from "@/hooks/useXautBalance";
+import { useCompound } from "@/hooks/useCompound";
+import { useFluid } from "@/hooks/useFluid";
 import NewLoanSimulatorModal, { type CollateralType } from "@/components/wallet/NewLoanSimulatorModal";
 
 // Token logo paths
@@ -26,6 +28,8 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
   const router = useRouter();
   const { assets, wbtcBalance } = useWalletBalanceContext();
   const { xautBalance } = useXautBalance();
+  const { collateralRaw: wbtcCollateralRaw, borrowRaw: wbtcBorrowRaw } = useCompound();
+  const { hasPosition: hasFluidPosition } = useFluid();
   const [selectedCollateral, setSelectedCollateral] = useState<CollateralOption | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
@@ -53,6 +57,28 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
 
   const handleContinue = () => {
     if (!selectedCollateral) return;
+
+    // Check if user has an existing position for the selected collateral type
+    const hasExistingWbtcPosition = wbtcCollateralRaw > BigInt(0) || wbtcBorrowRaw > BigInt(0);
+    const hasExistingXautPosition = hasFluidPosition;
+    const hasExistingPosition = selectedCollateral.type === "WBTC"
+      ? hasExistingWbtcPosition
+      : hasExistingXautPosition;
+
+    if (hasExistingPosition) {
+      // User already has an open position - redirect to Add Collateral instead
+      showInfoToast(
+        "You already have an open loan position using this collateral type. Please use the Add Collateral, then Borrow functions instead. Redirecting now."
+      );
+      setTimeout(() => {
+        const loanPath = selectedCollateral.type === "WBTC"
+          ? "/wallet/loan/wbtc"
+          : "/wallet/loan/xaut";
+        router.push(loanPath);
+        onClose();
+      }, 2000);
+      return;
+    }
 
     // Get the collateral balance based on type
     const collateralBalance = selectedCollateral.type === "WBTC" ? wbtcBalance : xautBalance;

@@ -8,27 +8,35 @@ import { useWeb3 } from "@/providers/Web3Provider";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { formatAmount } from "@/lib/utils";
 import { TOKEN_METADATA } from "@/constants/Tokens";
-import { ChevronDown, ScanLine } from "lucide-react";
+import { ChevronDown, ScanLine, AlertTriangle } from "lucide-react";
 import { QRScannerModal } from "@/components/wallet";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
 import { parseUnits, isAddress, encodeFunctionData } from "viem";
-import { arbitrum } from "viem/chains";
+import { arbitrum, mainnet } from "viem/chains";
 import { toast } from "react-toastify";
 
 // Available tokens for sending
-const SENDABLE_TOKENS = ["WBTC", "USDT"] as const;
+const SENDABLE_TOKENS = ["WBTC", "USDT", "XAUT"] as const;
 type SendableToken = (typeof SENDABLE_TOKENS)[number];
 
 // Token display names
 const TOKEN_NAMES: Record<SendableToken, string> = {
     WBTC: "Wrapped Bitcoin",
     USDT: "Tether USD",
+    XAUT: "Tether Gold",
+};
+
+// Token chain mapping - which chain each token lives on
+const TOKEN_CHAINS: Record<SendableToken, typeof arbitrum | typeof mainnet> = {
+    WBTC: arbitrum,
+    USDT: arbitrum,
+    XAUT: mainnet,
 };
 
 export default function SendPage() {
     const router = useRouter();
-    const { sendSponsoredTransaction, isSendingTransaction } = useWeb3();
+    const { sendSponsoredTransaction, isSendingTransaction, switchToNetwork, isExternalWallet } = useWeb3();
     const { assets, refetchBalances } = useWalletBalanceContext();
 
     const [selectedToken, setSelectedToken] = useState<SendableToken>("USDT");
@@ -37,22 +45,66 @@ export default function SendPage() {
     const [showTokenDropdown, setShowTokenDropdown] = useState(false);
     const [hasInitialized, setHasInitialized] = useState(false);
     const [showQRScanner, setShowQRScanner] = useState(false);
+    const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false);
+    const [networkSwitchError, setNetworkSwitchError] = useState<string | null>(null);
 
-    // Auto-select token with balance (prefer USDT if both have balance)
+    // Auto-select token with balance (prefer USDT, then WBTC, then XAUT)
     useEffect(() => {
         if (hasInitialized || assets.length === 0) return;
 
         const usdtBalance = assets.find((a) => a.symbol === "USDT")?.amount || 0;
         const wbtcBalance = assets.find((a) => a.symbol === "WBTC")?.amount || 0;
+        const xautBalance = assets.find((a) => a.symbol === "XAUT")?.amount || 0;
 
         if (usdtBalance > 0) {
             setSelectedToken("USDT");
         } else if (wbtcBalance > 0) {
             setSelectedToken("WBTC");
+        } else if (xautBalance > 0) {
+            setSelectedToken("XAUT");
         }
         // Default is already USDT
         setHasInitialized(true);
     }, [assets, hasInitialized]);
+
+    // Auto-switch network when selected token changes
+    useEffect(() => {
+        const targetChain = TOKEN_CHAINS[selectedToken];
+
+        const switchNetwork = async () => {
+            setIsSwitchingNetwork(true);
+            setNetworkSwitchError(null);
+            try {
+                await switchToNetwork(targetChain.id);
+            } catch (error) {
+                // Network switch failed or was rejected
+                const errorMessage = error instanceof Error ? error.message : "Network switch failed";
+                console.log("[SEND] Network switch failed:", error);
+                setNetworkSwitchError(errorMessage);
+            } finally {
+                setIsSwitchingNetwork(false);
+            }
+        };
+
+        switchNetwork();
+    }, [selectedToken, switchToNetwork]);
+
+    // Manual network switch handler for retry button
+    const handleManualNetworkSwitch = async () => {
+        const targetChain = TOKEN_CHAINS[selectedToken];
+        setIsSwitchingNetwork(true);
+        setNetworkSwitchError(null);
+        try {
+            await switchToNetwork(targetChain.id);
+            toast.success(`Switched to ${targetChain.name}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Network switch failed";
+            console.log("[SEND] Manual network switch failed:", error);
+            setNetworkSwitchError(errorMessage);
+        } finally {
+            setIsSwitchingNetwork(false);
+        }
+    };
 
     // Get token balance
     const tokenBalance = useMemo(() => {
@@ -67,7 +119,9 @@ export default function SendPage() {
     const isValidAddress = recipientAddress ? isAddress(recipientAddress) : false;
     const parsedAmount = parseFloat(amount) || 0;
     const isValidAmount = parsedAmount > 0 && parsedAmount <= tokenBalance;
-    const canSend = isValidAddress && isValidAmount && !isSendingTransaction;
+    // For external wallets, block send if there's a network switch error
+    const hasNetworkIssue = isExternalWallet && networkSwitchError;
+    const canSend = isValidAddress && isValidAmount && !isSendingTransaction && !isSwitchingNetwork && !hasNetworkIssue;
 
     // ERC20 transfer function ABI
     const ERC20_TRANSFER_ABI = [
@@ -100,9 +154,11 @@ export default function SendPage() {
                 args: [recipientAddress as `0x${string}`, amountInWei],
             });
 
+            const targetChain = TOKEN_CHAINS[selectedToken];
             const result = await sendSponsoredTransaction({
                 to: tokenMeta.address as `0x${string}`,
                 data,
+                chainId: targetChain.id,
             });
 
             if (result.error) {
@@ -245,7 +301,7 @@ export default function SendPage() {
                 <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
                         <span className="text-white/60">Network</span>
-                        <span className="text-white font-medium">{arbitrum.name}</span>
+                        <span className="text-white font-medium">{TOKEN_CHAINS[selectedToken].name}</span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-white/60">Estimated Fee</span>
@@ -257,6 +313,30 @@ export default function SendPage() {
                 </div>
             </Card>
 
+            {/* Network Switch Warning for External Wallets */}
+            {networkSwitchError && isExternalWallet && (
+                <Card appearance="glassDark" padding="default" className="border border-amber-500/30 bg-amber-500/5">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-amber-500 font-medium text-sm">Network Switch Required</p>
+                            <p className="text-white/60 text-sm mt-1">
+                                Please switch your wallet to {TOKEN_CHAINS[selectedToken].name} to send {selectedToken}.
+                            </p>
+                            <Button
+                                onClick={handleManualNetworkSwitch}
+                                disabled={isSwitchingNetwork}
+                                size="sm"
+                                variant="outline"
+                                className="mt-3 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                            >
+                                {isSwitchingNetwork ? "Switching..." : `Switch to ${TOKEN_CHAINS[selectedToken].name}`}
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
             {/* Send Button */}
             <Button
                 onClick={handleSend}
@@ -264,7 +344,11 @@ export default function SendPage() {
                 size="lg"
                 className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                {isSendingTransaction ? "Sending..." : `Send ${selectedToken}`}
+                {isSwitchingNetwork
+                    ? "Switching Network..."
+                    : isSendingTransaction
+                        ? "Sending..."
+                        : `Send ${selectedToken}`}
             </Button>
 
             {/* QR Scanner Modal */}
