@@ -9,6 +9,7 @@ import {
   encodeFluidBorrow,
   encodeFluidRepay,
   encodeFluidSupplyAndBorrow,
+  getXautVaultConfig,
   XAUT_USDT_VAULT,
   type FluidUserPosition,
   type FluidVaultData,
@@ -144,17 +145,19 @@ async function fetchFluidData(
       }
     }
 
-    // If no XAUT position with supported borrow token found, return zeros
+    // If no XAUT position with supported borrow token found, return vault config (not zeros!)
+    // This is critical for NEW loan creation - we need maxLtv to calculate max borrow amounts
     if (!matchingPosition || !matchingVaultData || !matchedBorrowToken) {
-      console.log("[FLUID] No XAUT position with USDT found for account:", account);
+      console.log("[FLUID] No XAUT position found, fetching vault config for new loan creation");
+      const vaultConfig = await getXautVaultConfig(publicClient);
       return {
         collateralRaw: BigInt(0),
         borrowRaw: BigInt(0),
-        maxLtv: 0,
-        liquidationRatio: 0,
-        borrowApr: 0,
+        maxLtv: vaultConfig.maxLtv,
+        liquidationRatio: vaultConfig.liquidationRatio,
+        borrowApr: vaultConfig.borrowApr,
         nftId: undefined,
-        borrowToken: "USDT", // Default, won't be used since no position
+        borrowToken: "USDT",
       };
     }
 
@@ -180,15 +183,16 @@ async function fetchFluidData(
     return result;
   } catch (error) {
     console.error("[FLUID] Error fetching positions:", error);
-    // Return zeros on error
+    // Return vault config on error (not zeros!) so new loans can still be created
+    const vaultConfig = await getXautVaultConfig(publicClient);
     return {
       collateralRaw: BigInt(0),
       borrowRaw: BigInt(0),
-      maxLtv: 0,
-      liquidationRatio: 0,
-      borrowApr: 0,
+      maxLtv: vaultConfig.maxLtv,
+      liquidationRatio: vaultConfig.liquidationRatio,
+      borrowApr: vaultConfig.borrowApr,
       nftId: undefined,
-      borrowToken: "USDT", // Default, won't be used since error
+      borrowToken: "USDT",
     };
   }
 }
