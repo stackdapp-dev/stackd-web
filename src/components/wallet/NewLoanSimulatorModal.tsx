@@ -126,11 +126,19 @@ export default function NewLoanSimulatorModal({
 
             try {
                 const amountBigInt = parseUnits(String(parsedCollateral), collateralDecimals);
+                console.log(`[NEW LOAN] Checking allowance for ${collateralSymbol}, amount:`, amountBigInt.toString());
 
                 if (isXaut) {
                     // Check XAUT allowance for Fluid vault
                     const currentAllowance = await fluid.allowance(ETHEREUM_TOKEN_ADDRESSES.XAUT as Address);
-                    setNeedsApproval(currentAllowance !== null && currentAllowance < amountBigInt);
+                    console.log("[NEW LOAN] XAUT allowance:", currentAllowance?.toString() ?? "null");
+                    // If allowance check returns null (error/no client), assume we need approval (safer default)
+                    if (currentAllowance === null) {
+                        console.log("[NEW LOAN] XAUT allowance check returned null, assuming approval needed");
+                        setNeedsApproval(true);
+                    } else {
+                        setNeedsApproval(currentAllowance < amountBigInt);
+                    }
                 } else {
                     // For Compound/Bulker, check WBTC allowance for Bulker
                     // The Bulker uses supplyFrom which needs token approval to Bulker
@@ -139,17 +147,29 @@ export default function NewLoanSimulatorModal({
                         // Note: Bulker calls supplyFrom, so user needs to approve Bulker for WBTC
                         const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
                         const currentAllowance = await compound.allowance(tokenMeta.address as Address, BULKER_ADDRESS as Address);
-                        setNeedsApproval(currentAllowance !== null && currentAllowance < amountBigInt);
+                        console.log("[NEW LOAN] WBTC allowance for Bulker:", currentAllowance?.toString() ?? "null");
+                        // If allowance check returns null (error/no client), assume we need approval (safer default)
+                        if (currentAllowance === null) {
+                            console.log("[NEW LOAN] WBTC allowance check returned null, assuming approval needed");
+                            setNeedsApproval(true);
+                        } else {
+                            setNeedsApproval(currentAllowance < amountBigInt);
+                        }
+                    } else {
+                        // If we can't check allowance, assume we need it
+                        console.log("[NEW LOAN] Cannot check WBTC allowance (no tokenMeta or allowance fn), assuming approval needed");
+                        setNeedsApproval(true);
                     }
                 }
             } catch (err) {
-                console.error("Error checking allowance:", err);
-                setNeedsApproval(false);
+                console.error("[NEW LOAN] Error checking allowance:", err);
+                // On error, assume we need approval (safer default)
+                setNeedsApproval(true);
             }
         };
 
         void checkAllowance();
-    }, [parsedCollateral, collateralDecimals, isXaut, fluid.allowance, compound.allowance]);
+    }, [parsedCollateral, collateralDecimals, isXaut, collateralSymbol, fluid.allowance, compound.allowance]);
 
     // Handle collateral input change
     const handleCollateralChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,10 +195,44 @@ export default function NewLoanSimulatorModal({
         setBorrowInput(String(maxBorrow));
     }, [maxBorrow]);
 
-    // Show confirmation modal
-    const handleContinue = useCallback(() => {
+    // Show confirmation modal - re-check allowance before showing
+    const handleContinue = useCallback(async () => {
+        if (parsedCollateral <= 0) return;
+
+        try {
+            const amountBigInt = parseUnits(String(parsedCollateral), collateralDecimals);
+            console.log(`[NEW LOAN] Re-checking allowance before confirmation for ${collateralSymbol}`);
+
+            if (isXaut) {
+                const currentAllowance = await fluid.allowance(ETHEREUM_TOKEN_ADDRESSES.XAUT as Address);
+                console.log("[NEW LOAN] XAUT allowance (re-check):", currentAllowance?.toString() ?? "null");
+                if (currentAllowance === null) {
+                    setNeedsApproval(true);
+                } else {
+                    setNeedsApproval(currentAllowance < amountBigInt);
+                }
+            } else {
+                const tokenMeta = getTokenMetadata("WBTC");
+                if (tokenMeta && compound.allowance) {
+                    const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
+                    const currentAllowance = await compound.allowance(tokenMeta.address as Address, BULKER_ADDRESS as Address);
+                    console.log("[NEW LOAN] WBTC allowance (re-check):", currentAllowance?.toString() ?? "null");
+                    if (currentAllowance === null) {
+                        setNeedsApproval(true);
+                    } else {
+                        setNeedsApproval(currentAllowance < amountBigInt);
+                    }
+                } else {
+                    setNeedsApproval(true);
+                }
+            }
+        } catch (err) {
+            console.error("[NEW LOAN] Error re-checking allowance:", err);
+            setNeedsApproval(true);
+        }
+
         setShowConfirmModal(true);
-    }, []);
+    }, [parsedCollateral, collateralDecimals, isXaut, collateralSymbol, fluid.allowance, compound.allowance]);
 
     // Handle approval
     const handleApprove = useCallback(async () => {
