@@ -9,8 +9,9 @@ import { useXautBalance } from "@/hooks/useXautBalance";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { formatAmount, formatCurrency, MASK_LONG, MASK_SHORT, maskString } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
-import { Lock, Unlock, AlertTriangle, ChevronDown } from "lucide-react";
+import { Lock, Unlock, Wallet, AlertTriangle, ChevronDown } from "lucide-react";
 import TokenIcon from "../common/TokenIcon";
+import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 
 interface AssetItem {
     symbol: string;
@@ -47,9 +48,11 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
     const { breakdown, hasLockedCollateral } = useCollateralBreakdown();
     const fluid = useFluid();
     const { xautBalance: walletXautBalance } = useXautBalance();
+    const { chainBalances } = useWalletBalanceContext();
     const getTokenPrice = useGetTokenPrice();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isXautExpanded, setIsXautExpanded] = useState(false);
+    const [isUsdtExpanded, setIsUsdtExpanded] = useState(false);
 
     // XAUT price for calculations
     const xautPrice = getTokenPrice("XAUT");
@@ -74,9 +77,12 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
             : 0;
         const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
 
+        // Withdrawable from deposited = deposited collateral - locked (not including wallet)
+        const withdrawableFromDeposited = Math.max(0, collateralXaut - lockedXaut);
+        const withdrawableFromDepositedUsd = withdrawableFromDeposited * xautPrice;
+
         // Available = idle wallet XAUT + excess collateral not backing loans
-        const excessCollateral = Math.max(0, collateralXaut - lockedXaut);
-        const availableXaut = idleXaut + excessCollateral;
+        const availableXaut = idleXaut + withdrawableFromDeposited;
         const availableXautUsd = availableXaut * xautPrice;
 
         return {
@@ -88,9 +94,33 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
             availableXautUsd,
             hasLocked: lockedXaut > 0,
             idleXaut,
+            idleXautUsd: idleXaut * xautPrice,
             collateralXaut,
+            withdrawableFromDeposited,
+            withdrawableFromDepositedUsd,
         };
     }, [fluid.suppliedAssets, fluid.borrowedAssets, fluid.maxLtv, xautPrice, walletXautBalance]);
+
+    // Calculate USDT multi-chain balances
+    const usdtBreakdown = useMemo(() => {
+        const usdtPrice = getTokenPrice("USDT");
+        const arbitrumUsdt = chainBalances?.arbitrum?.USDT || 0;
+        const ethereumUsdt = chainBalances?.ethereum?.USDT || 0;
+        const totalUsdt = arbitrumUsdt + ethereumUsdt;
+        const hasMultipleChains = arbitrumUsdt > 0 && ethereumUsdt > 0;
+        const hasAnyBalance = totalUsdt > 0;
+
+        return {
+            arbitrumUsdt,
+            arbitrumUsdtUsd: arbitrumUsdt * usdtPrice,
+            ethereumUsdt,
+            ethereumUsdtUsd: ethereumUsdt * usdtPrice,
+            totalUsdt,
+            totalUsdtUsd: totalUsdt * usdtPrice,
+            hasMultipleChains,
+            hasAnyBalance,
+        };
+    }, [chainBalances, getTokenPrice]);
 
     // Calculate health indicator color
     const getHealthColor = () => {
@@ -161,8 +191,8 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
             </div>
 
             <div className="flex flex-col gap-2">
-                {/* Other Assets (USDT, ETH, etc.) */}
-                {otherAssets.map((asset) => (
+                {/* Other Assets (ETH, etc.) - USDT handled separately */}
+                {otherAssets.filter(a => a.symbol !== "USDT").map((asset) => (
                     <Card key={asset.symbol} appearance="glassDark" padding="compact">
                         <div className="flex items-center justify-between py-1">
                             <div className="flex items-center gap-3">
@@ -184,6 +214,95 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         </div>
                     </Card>
                 ))}
+
+                {/* USDT with multi-chain breakdown */}
+                {usdtBreakdown.hasAnyBalance && (
+                    <Card appearance="glassDark" padding="compact">
+                        {/* USDT Header Row - Clickable when has balances on multiple chains */}
+                        <button
+                            type="button"
+                            onClick={() => usdtBreakdown.hasMultipleChains && setIsUsdtExpanded(!isUsdtExpanded)}
+                            className={`flex items-center justify-between w-full py-1 ${usdtBreakdown.hasMultipleChains ? 'cursor-pointer' : 'cursor-default'}`}
+                            disabled={!usdtBreakdown.hasMultipleChains}
+                        >
+                            <div className="flex items-center gap-3">
+                                <TokenIcon symbol="USDT" width={36} height={36} />
+                                <div className="flex flex-col text-left">
+                                    <span className="text-white font-semibold">USDT</span>
+                                    <span className="text-white/50 text-xs">
+                                        {maskString(formatAmount(usdtBreakdown.totalUsdt, 4), visibility.visible, MASK_SHORT)} USDT
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-white font-medium">
+                                    {maskString(formatCurrency(usdtBreakdown.totalUsdtUsd), visibility.visible, MASK_SHORT)}
+                                </span>
+                                {usdtBreakdown.hasMultipleChains && (
+                                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                                        <ChevronDown
+                                            className={`w-4 h-4 text-white/50 transition-transform duration-200 ${isUsdtExpanded ? 'rotate-180' : ''}`}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </button>
+
+                        {/* Collapsible Arbitrum/Ethereum Breakdown */}
+                        {usdtBreakdown.hasMultipleChains && (
+                            <div
+                                className={`overflow-hidden transition-all duration-200 ease-in-out ${isUsdtExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                                    }`}
+                            >
+                                <div className="mt-3 ml-5 pl-5 border-l border-white/10 space-y-2 pb-1">
+                                    {/* Arbitrum Balance */}
+                                    {usdtBreakdown.arbitrumUsdt > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                                    <span className="text-[10px] font-bold text-blue-400">A</span>
+                                                </div>
+                                                <div>
+                                                    <Text className="text-white text-xs">Arbitrum</Text>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <Text weight="semibold" className="text-white text-xs">
+                                                    {maskString(formatAmount(usdtBreakdown.arbitrumUsdt, 4), visibility.visible, MASK_SHORT)} USDT
+                                                </Text>
+                                                <span className="text-white/40 text-[10px]">
+                                                    {maskString(formatCurrency(usdtBreakdown.arbitrumUsdtUsd), visibility.visible, MASK_LONG)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Ethereum Balance */}
+                                    {usdtBreakdown.ethereumUsdt > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                                    <span className="text-[10px] font-bold text-purple-400">E</span>
+                                                </div>
+                                                <div>
+                                                    <Text className="text-white text-xs">Ethereum</Text>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <Text weight="semibold" className="text-white text-xs">
+                                                    {maskString(formatAmount(usdtBreakdown.ethereumUsdt, 4), visibility.visible, MASK_SHORT)} USDT
+                                                </Text>
+                                                <span className="text-white/40 text-[10px]">
+                                                    {maskString(formatCurrency(usdtBreakdown.ethereumUsdtUsd), visibility.visible, MASK_LONG)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </Card>
+                )}
 
                 {/* WBTC Collateral Card - Always shown since WBTC is filtered from otherAssets */}
                 <Card appearance="glassDark" padding="compact">
@@ -218,10 +337,10 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         </div>
                     </button>
 
-                    {/* Collapsible Locked/Available Breakdown */}
+                    {/* Collapsible Locked/Withdrawable/In Wallet Breakdown */}
                     {hasLockedCollateral && (
                         <div
-                            className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                            className={`overflow-hidden transition-all duration-200 ease-in-out ${isExpanded ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'
                                 }`}
                         >
                             <div className="mt-3 ml-5 pl-5 border-l border-white/10 space-y-2 pb-1">
@@ -238,7 +357,7 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                                     </div>
                                     <div className="text-right">
                                         <Text weight="semibold" className="text-amber-400 text-xs">
-                                            {maskString(formatAmount(breakdown.lockedCollateralBtc, 4), visibility.visible, MASK_SHORT)} BTC
+                                            {maskString(formatAmount(breakdown.lockedCollateralBtc, 4), visibility.visible, MASK_SHORT)} WBTC
                                         </Text>
                                         <span className="text-white/40 text-[10px]">
                                             {maskString(formatCurrency(breakdown.lockedCollateralUsd), visibility.visible, MASK_LONG)}
@@ -246,26 +365,49 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                                     </div>
                                 </div>
 
-                                {/* Available to Withdraw */}
+                                {/* Withdrawable (from deposited collateral) */}
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
                                             <Unlock className="w-3 h-3 text-emerald-400" />
                                         </div>
                                         <div>
-                                            <Text className="text-white text-xs">Available</Text>
+                                            <Text className="text-white text-xs">Withdrawable</Text>
                                             <span className="text-white/40 text-[10px]">Can withdraw</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <Text weight="semibold" className="text-emerald-400 text-xs">
-                                            {maskString(formatAmount(breakdown.availableToWithdrawBtc, 4), visibility.visible, MASK_SHORT)} BTC
+                                            {maskString(formatAmount(breakdown.withdrawableFromDepositedBtc, 4), visibility.visible, MASK_SHORT)} WBTC
                                         </Text>
                                         <span className="text-white/40 text-[10px]">
-                                            {maskString(formatCurrency(breakdown.availableToWithdrawUsd), visibility.visible, MASK_LONG)}
+                                            {maskString(formatCurrency(breakdown.withdrawableFromDepositedUsd), visibility.visible, MASK_LONG)}
                                         </span>
                                     </div>
                                 </div>
+
+                                {/* In Wallet (idle, not deposited) */}
+                                {breakdown.walletBtc > 0 && (
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                                <Wallet className="w-3 h-3 text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <Text className="text-white text-xs">In Wallet</Text>
+                                                <span className="text-white/40 text-[10px]">Not deposited</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <Text weight="semibold" className="text-blue-400 text-xs">
+                                                {maskString(formatAmount(breakdown.walletBtc, 4), visibility.visible, MASK_SHORT)} WBTC
+                                            </Text>
+                                            <span className="text-white/40 text-[10px]">
+                                                {maskString(formatCurrency(breakdown.walletUsd), visibility.visible, MASK_LONG)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Warning for at-risk positions */}
@@ -317,10 +459,10 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         </div>
                     </button>
 
-                    {/* Collapsible Locked/Available Breakdown */}
+                    {/* Collapsible Locked/Withdrawable/In Wallet Breakdown */}
                     {xautBreakdown.hasLocked && (
                         <div
-                            className={`overflow-hidden transition-all duration-200 ease-in-out ${isXautExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                            className={`overflow-hidden transition-all duration-200 ease-in-out ${isXautExpanded ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'
                                 }`}
                         >
                             <div className="mt-3 ml-5 pl-5 border-l border-white/10 space-y-2 pb-1">
@@ -345,26 +487,49 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                                     </div>
                                 </div>
 
-                                {/* Available to Withdraw */}
+                                {/* Withdrawable (from deposited collateral) */}
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
                                             <Unlock className="w-3 h-3 text-emerald-400" />
                                         </div>
                                         <div>
-                                            <Text className="text-white text-xs">Available</Text>
+                                            <Text className="text-white text-xs">Withdrawable</Text>
                                             <span className="text-white/40 text-[10px]">Can withdraw</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <Text weight="semibold" className="text-emerald-400 text-xs">
-                                            {maskString(formatAmount(xautBreakdown.availableXaut, 4), visibility.visible, MASK_SHORT)} XAUT
+                                            {maskString(formatAmount(xautBreakdown.withdrawableFromDeposited, 4), visibility.visible, MASK_SHORT)} XAUT
                                         </Text>
                                         <span className="text-white/40 text-[10px]">
-                                            {maskString(formatCurrency(xautBreakdown.availableXautUsd), visibility.visible, MASK_LONG)}
+                                            {maskString(formatCurrency(xautBreakdown.withdrawableFromDepositedUsd), visibility.visible, MASK_LONG)}
                                         </span>
                                     </div>
                                 </div>
+
+                                {/* In Wallet (idle, not deposited) */}
+                                {xautBreakdown.idleXaut > 0 && (
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                                <Wallet className="w-3 h-3 text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <Text className="text-white text-xs">In Wallet</Text>
+                                                <span className="text-white/40 text-[10px]">Not deposited</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <Text weight="semibold" className="text-blue-400 text-xs">
+                                                {maskString(formatAmount(xautBreakdown.idleXaut, 4), visibility.visible, MASK_SHORT)} XAUT
+                                            </Text>
+                                            <span className="text-white/40 text-[10px]">
+                                                {maskString(formatCurrency(xautBreakdown.idleXautUsd), visibility.visible, MASK_LONG)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { COLLATERAL_OPTIONS, CollateralOption } from "@/types/loans";
 import { showInfoToast } from "@/components/ui/custom-toast";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
+import { useXautBalance } from "@/hooks/useXautBalance";
+import { useCompound } from "@/hooks/useCompound";
+import { useFluid } from "@/hooks/useFluid";
+import NewLoanSimulatorModal, { type CollateralType } from "@/components/wallet/NewLoanSimulatorModal";
 
 // Token logo paths
 const TOKEN_LOGOS: Record<string, string> = {
@@ -22,9 +26,13 @@ interface NewLoanModalProps {
 
 export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
   const router = useRouter();
-  const { assets } = useWalletBalanceContext();
+  const { assets, wbtcBalance } = useWalletBalanceContext();
+  const { xautBalance } = useXautBalance();
+  const { collateralRaw: wbtcCollateralRaw, borrowRaw: wbtcBorrowRaw } = useCompound();
+  const { hasPosition: hasFluidPosition } = useFluid();
   const [selectedCollateral, setSelectedCollateral] = useState<CollateralOption | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showSimulator, setShowSimulator] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -43,20 +51,42 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
     if (!isOpen) {
       setSelectedCollateral(null);
       setIsDropdownOpen(false);
+      setShowSimulator(false);
     }
   }, [isOpen]);
 
   const handleContinue = () => {
     if (!selectedCollateral) return;
 
-    // Check if user has balance of selected collateral
-    const collateralAsset = assets.find((a) => a.symbol === selectedCollateral.symbol);
-    const hasBalance = (collateralAsset?.amount || 0) > 0;
+    // Check if user has an existing position for the selected collateral type
+    const hasExistingWbtcPosition = wbtcCollateralRaw > BigInt(0) || wbtcBorrowRaw > BigInt(0);
+    const hasExistingXautPosition = hasFluidPosition;
+    const hasExistingPosition = selectedCollateral.type === "WBTC"
+      ? hasExistingWbtcPosition
+      : hasExistingXautPosition;
+
+    if (hasExistingPosition) {
+      // User already has an open position - redirect to Add Collateral instead
+      showInfoToast(
+        "You already have an open loan position using this collateral type. Please use the Add Collateral, then Borrow functions instead. Redirecting now."
+      );
+      setTimeout(() => {
+        const loanPath = selectedCollateral.type === "WBTC"
+          ? "/wallet/loan/wbtc"
+          : "/wallet/loan/xaut";
+        router.push(loanPath);
+        onClose();
+      }, 2000);
+      return;
+    }
+
+    // Get the collateral balance based on type
+    const collateralBalance = selectedCollateral.type === "WBTC" ? wbtcBalance : xautBalance;
+    const hasBalance = collateralBalance > 0;
 
     if (hasBalance) {
-      // Navigate to loan page for that collateral
-      router.push(`/wallet/loan/${selectedCollateral.type.toLowerCase()}`);
-      onClose();
+      // Open the new loan simulator modal
+      setShowSimulator(true);
     } else {
       // Show toast and redirect to deposit page
       const depositSymbol = selectedCollateral.type === "WBTC" ? "BTC" : "XAUT";
@@ -66,6 +96,18 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
         onClose();
       }, 2000);
     }
+  };
+
+  // Handle simulator completion
+  const handleSimulatorComplete = () => {
+    setShowSimulator(false);
+    onClose();
+  };
+
+  // Get max collateral for simulator
+  const getMaxCollateral = (): number => {
+    if (!selectedCollateral) return 0;
+    return selectedCollateral.type === "WBTC" ? wbtcBalance : xautBalance;
   };
 
   // Render token logo image
@@ -196,14 +238,25 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
             onClick={handleContinue}
             disabled={!selectedCollateral}
             className={`flex-1 ${selectedCollateral
-                ? "bg-amber-500 hover:bg-amber-600 text-black"
-                : "bg-white/10 text-white/40"
+              ? "bg-amber-500 hover:bg-amber-600 text-black"
+              : "bg-white/10 text-white/40"
               }`}
           >
             Continue
           </Button>
         </div>
       </div>
+
+      {/* New Loan Simulator Modal */}
+      {selectedCollateral && showSimulator && (
+        <NewLoanSimulatorModal
+          isOpen={showSimulator}
+          onClose={() => setShowSimulator(false)}
+          collateralType={selectedCollateral.type as CollateralType}
+          maxCollateral={getMaxCollateral()}
+          onComplete={handleSimulatorComplete}
+        />
+      )}
     </div>
   );
 }

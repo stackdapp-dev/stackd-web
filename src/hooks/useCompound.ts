@@ -13,6 +13,12 @@ import {
   encodeApproveData,
 } from "@/lib/web3/compound";
 import {
+  BULKER_ADDRESS,
+  encodeBulkerSupplyAndBorrow,
+  encodeAllowAction,
+  hasAllowance,
+} from "@/lib/web3/bulker";
+import {
   allowance as compoundAllowance,
 } from "@/lib/web3/erc20";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
@@ -65,7 +71,12 @@ type UseCompoundResult = {
     token: Address,
     amount: bigint
   ) => Promise<{ txHash: Hex | null; error: string | null }>;
+  supplyAndBorrow: (
+    collateralAmount: bigint,
+    borrowAmount: bigint
+  ) => Promise<{ txHash: Hex | null; error: string | null }>;
   allowance?: (token: Address, spender?: Address) => Promise<bigint | null>;
+  hasBulkerPermission: () => Promise<boolean>;
   maxLtv: number;
   liquidationRatio: number;
   borrowApr: number;
@@ -302,6 +313,93 @@ export function useCompound(): UseCompoundResult {
     [acct, ensureCorrectNetwork, sendSponsoredTransaction]
   );
 
+  /**
+   * Check if user has granted Bulker permission to manage their Compound account
+   */
+  const hasBulkerPermission = useCallback(async (): Promise<boolean> => {
+    if (!publicClient || !acct) return false;
+    try {
+      return await hasAllowance(
+        publicClient,
+        C_COMPOUND_ADDR as Address,
+        acct as Address
+      );
+    } catch (err) {
+      console.error("[COMPOUND] Error checking Bulker permission:", err);
+      return false;
+    }
+  }, [publicClient, acct]);
+
+  /**
+   * Combined supply collateral + borrow operation using Bulker
+   * Automatically grants Bulker permission if not already granted
+   */
+  const supplyAndBorrow = useCallback(
+    async (
+      collateralAmount: bigint,
+      borrowAmount: bigint
+    ): Promise<{ txHash: Hex | null; error: string | null }> => {
+      if (!acct) {
+        return { txHash: null, error: "Account not available" };
+      }
+
+      try {
+        await ensureCorrectNetwork();
+
+        // Check if user has granted Bulker permission
+        const hasPermission = await hasBulkerPermission();
+
+        if (!hasPermission) {
+          console.log("[COMPOUND] Granting Bulker permission first...");
+          // Send allow transaction to Comet to grant Bulker permission
+          const allowData = encodeAllowAction(
+            C_COMPOUND_ADDR as Address,
+            BULKER_ADDRESS as Address,
+            true
+          );
+          const allowResult = await sendSponsoredTransaction({
+            to: C_COMPOUND_ADDR as `0x${string}`,
+            data: allowData,
+          });
+
+          if (allowResult.error) {
+            return { txHash: null, error: `Failed to grant Bulker permission: ${allowResult.error}` };
+          }
+          console.log("[COMPOUND] Bulker permission granted:", allowResult.hash);
+        }
+
+        // Encode the Bulker invoke call with supply + withdraw actions
+        const wbtcAddress = TOKEN_METADATA.WBTC.address as Address;
+        const usdtAddress = TOKEN_METADATA.USDT.address as Address;
+
+        const bulkerData = encodeBulkerSupplyAndBorrow(
+          C_COMPOUND_ADDR as Address,
+          acct as Address,
+          wbtcAddress,
+          collateralAmount,
+          usdtAddress,
+          borrowAmount
+        );
+
+        const result = await sendSponsoredTransaction({
+          to: BULKER_ADDRESS as `0x${string}`,
+          data: bulkerData,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        console.error("[COMPOUND] Supply and borrow failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [acct, ensureCorrectNetwork, sendSponsoredTransaction, hasBulkerPermission]
+  );
+
   const handleRefetch = async () => {
     await refetch();
   };
@@ -317,7 +415,9 @@ export function useCompound(): UseCompoundResult {
     approve,
     supply,
     withdraw,
+    supplyAndBorrow,
     allowance,
+    hasBulkerPermission,
     maxLtv,
     liquidationRatio,
     borrowApr,

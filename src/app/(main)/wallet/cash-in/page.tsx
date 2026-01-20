@@ -78,8 +78,7 @@ export default function CashInPage() {
                     <div className="flex gap-3 p-4 rounded-xl bg-white/5">
                         <span className="text-amber-500 text-lg">●</span>
                         <p className="text-white/60 text-sm">
-                            Send only WBTC and USDT to this address. Sending any other asset may
-                            result in permanent loss.
+                            Send only WBTC, ETH, XAUT and USDT to this address. Sending any other asset may result in permanent loss.
                         </p>
                     </div>
 

@@ -8,6 +8,8 @@ import {
   encodeFluidWithdraw,
   encodeFluidBorrow,
   encodeFluidRepay,
+  encodeFluidSupplyAndBorrow,
+  getXautVaultConfig,
   XAUT_USDT_VAULT,
   type FluidUserPosition,
   type FluidVaultData,
@@ -80,6 +82,7 @@ type UseFluidResult = {
   withdraw: (amount: bigint) => Promise<TransactionResult>;
   borrow: (amount: bigint) => Promise<TransactionResult>;
   repay: (amount: bigint) => Promise<TransactionResult>;
+  supplyAndBorrow: (collateralAmount: bigint, borrowAmount: bigint) => Promise<TransactionResult>;
   approve: (token: Address, amount: bigint, spender?: Address) => Promise<TransactionResult>;
   allowance: (token: Address, spender?: Address) => Promise<bigint | null>;
 };
@@ -142,17 +145,19 @@ async function fetchFluidData(
       }
     }
 
-    // If no XAUT position with supported borrow token found, return zeros
+    // If no XAUT position with supported borrow token found, return vault config (not zeros!)
+    // This is critical for NEW loan creation - we need maxLtv to calculate max borrow amounts
     if (!matchingPosition || !matchingVaultData || !matchedBorrowToken) {
-      console.log("[FLUID] No XAUT position with USDT found for account:", account);
+      console.log("[FLUID] No XAUT position found, fetching vault config for new loan creation");
+      const vaultConfig = await getXautVaultConfig(publicClient);
       return {
         collateralRaw: BigInt(0),
         borrowRaw: BigInt(0),
-        maxLtv: 0,
-        liquidationRatio: 0,
-        borrowApr: 0,
+        maxLtv: vaultConfig.maxLtv,
+        liquidationRatio: vaultConfig.liquidationRatio,
+        borrowApr: vaultConfig.borrowApr,
         nftId: undefined,
-        borrowToken: "USDT", // Default, won't be used since no position
+        borrowToken: "USDT",
       };
     }
 
@@ -178,15 +183,16 @@ async function fetchFluidData(
     return result;
   } catch (error) {
     console.error("[FLUID] Error fetching positions:", error);
-    // Return zeros on error
+    // Return vault config on error (not zeros!) so new loans can still be created
+    const vaultConfig = await getXautVaultConfig(publicClient);
     return {
       collateralRaw: BigInt(0),
       borrowRaw: BigInt(0),
-      maxLtv: 0,
-      liquidationRatio: 0,
-      borrowApr: 0,
+      maxLtv: vaultConfig.maxLtv,
+      liquidationRatio: vaultConfig.liquidationRatio,
+      borrowApr: vaultConfig.borrowApr,
       nftId: undefined,
-      borrowToken: "USDT", // Default, won't be used since error
+      borrowToken: "USDT",
     };
   }
 }
@@ -449,6 +455,56 @@ export function useFluid(): UseFluidResult {
     [ethereumPublicClient, acct]
   );
 
+  /**
+   * Combined supply collateral + borrow operation
+   * Can create a new position (nftId = 0) or add to existing
+   */
+  const supplyAndBorrow = useCallback(
+    async (
+      collateralAmount: bigint,
+      borrowAmount: bigint
+    ): Promise<TransactionResult> => {
+      if (!acct) {
+        return { txHash: null, error: "No account connected" };
+      }
+
+      try {
+        // Use existing nftId or 0 to create new position
+        const positionNftId = nftId ?? BigInt(0);
+
+        console.log("[FLUID] SupplyAndBorrow:", {
+          nftId: positionNftId.toString(),
+          collateralAmount: collateralAmount.toString(),
+          borrowAmount: borrowAmount.toString(),
+          isNewPosition: positionNftId === BigInt(0),
+        });
+
+        const data = encodeFluidSupplyAndBorrow(
+          positionNftId,
+          collateralAmount,
+          borrowAmount,
+          acct as Address
+        );
+
+        const result = await sendSponsoredTransaction({
+          to: XAUT_USDT_VAULT as Address,
+          data,
+          chainId: mainnet.id,
+        });
+
+        if (result.error) {
+          return { txHash: null, error: result.error };
+        }
+        return { txHash: result.hash as Hex, error: null };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        console.error("[FLUID] Supply and borrow failed:", err);
+        return { txHash: null, error: errorMessage };
+      }
+    },
+    [nftId, acct, sendSponsoredTransaction]
+  );
+
   return {
     collateralRaw,
     borrowRaw,
@@ -474,6 +530,7 @@ export function useFluid(): UseFluidResult {
     withdraw,
     borrow,
     repay,
+    supplyAndBorrow,
     approve,
     allowance,
   };

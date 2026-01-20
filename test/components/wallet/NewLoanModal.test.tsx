@@ -37,9 +37,35 @@ vi.mock("@/hooks/useWalletBalanceContext", () => ({
     })),
 }));
 
+// Mock useXautBalance
+vi.mock("@/hooks/useXautBalance", () => ({
+    useXautBalance: vi.fn(() => ({
+        xautBalance: 0,
+        isLoading: false,
+        error: null,
+    })),
+}));
+
 // Mock showInfoToast
 vi.mock("@/components/ui/custom-toast", () => ({
     showInfoToast: vi.fn(),
+}));
+
+// Mock useCompound - no existing position by default
+vi.mock("@/hooks/useCompound", () => ({
+    useCompound: vi.fn(() => ({
+        collateralRaw: BigInt(0),
+        borrowRaw: BigInt(0),
+        isLoading: false,
+    })),
+}));
+
+// Mock useFluid - no existing position by default
+vi.mock("@/hooks/useFluid", () => ({
+    useFluid: vi.fn(() => ({
+        hasPosition: false,
+        isLoading: false,
+    })),
 }));
 
 describe("NewLoanModal", () => {
