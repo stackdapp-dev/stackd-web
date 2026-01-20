@@ -14,12 +14,18 @@ import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useCompound } from "@/hooks/useCompound";
 import { useFluid } from "@/hooks/useFluid";
 import { useXautBalance } from "@/hooks/useXautBalance";
+import { useWeb3 } from "@/providers/Web3Provider";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
+import {
+    confirmTransaction,
+    checkTransactionStatus,
+    isAbortError,
+} from "@/lib/web3/transactionConfirmation";
 import { X, AlertTriangle, CheckCircle } from "lucide-react";
 import { parseUnits } from "viem";
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import { toast } from "react-toastify";
 
 export type CollateralType = "WBTC" | "XAUT";
@@ -51,6 +57,7 @@ export default function NewLoanSimulatorModal({
     const getPrice = useGetTokenPrice();
     const compound = useCompound();
     const fluid = useFluid();
+    const { publicClient, ethereumPublicClient } = useWeb3();
 
     // Determine which protocol to use
     const isXaut = collateralType === "XAUT";
@@ -69,6 +76,7 @@ export default function NewLoanSimulatorModal({
     // Modal and processing state
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isConfirming, setIsConfirming] = useState(false);
     const [needsApproval, setNeedsApproval] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
 
@@ -243,36 +251,65 @@ export default function NewLoanSimulatorModal({
             console.log("[NEW LOAN] Starting approval for", collateralSymbol);
             const maxAmount = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
+            let txHash: string | null = null;
+
             if (isXaut) {
                 // Approve XAUT for Fluid vault
                 const result = await fluid.approve(ETHEREUM_TOKEN_ADDRESSES.XAUT as Address, maxAmount);
                 if (result.error) {
                     toast.error(`Approval failed: ${result.error}`);
-                    throw new Error(result.error);
+                    return;
                 }
+                txHash = result.txHash;
             } else {
                 // Approve WBTC for Bulker
                 const tokenMeta = getTokenMetadata("WBTC");
-                if (!tokenMeta) throw new Error("WBTC metadata not found");
+                if (!tokenMeta) {
+                    toast.error("WBTC metadata not found");
+                    return;
+                }
                 const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
                 const result = await compound.approve(tokenMeta.address as Address, maxAmount, BULKER_ADDRESS as Address);
                 if (result.error) {
                     toast.error(`Approval failed: ${result.error}`);
-                    throw new Error(result.error);
+                    return;
                 }
+                txHash = result.txHash;
             }
 
-            console.log("[NEW LOAN] Approval successful");
-            toast.success("Token approved! Click 'Create Loan' to continue.");
-            setNeedsApproval(false);
+            // Wait for transaction confirmation before declaring success
+            if (txHash) {
+                console.log("[NEW LOAN] Approval tx sent, waiting for confirmation:", txHash);
+                setIsConfirming(true);
+
+                // Use the appropriate public client based on the chain
+                const client = isXaut ? ethereumPublicClient : publicClient;
+                const confirmResult = await confirmTransaction(client, txHash as Hash, { timeout: 60000 });
+
+                setIsConfirming(false);
+
+                if (confirmResult.status === "success") {
+                    console.log("[NEW LOAN] Approval confirmed on-chain");
+                    toast.success("Token approved! Click 'Create Loan' to continue.");
+                    setNeedsApproval(false);
+                } else if (confirmResult.status === "reverted") {
+                    console.error("[NEW LOAN] Approval transaction reverted");
+                    toast.error("Approval transaction failed on-chain");
+                } else {
+                    // Could not confirm - might still be pending
+                    console.warn("[NEW LOAN] Could not confirm approval:", confirmResult.error);
+                    toast.warning("Approval sent but confirmation timed out. Please check your wallet.");
+                }
+            }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Unknown error";
             console.error("[NEW LOAN] Approval failed:", err);
             toast.error(`Approval failed: ${errorMessage}`);
         } finally {
             setIsApproving(false);
+            setIsConfirming(false);
         }
-    }, [isApproving, isXaut, fluid, compound, collateralSymbol]);
+    }, [isApproving, isXaut, fluid, compound, collateralSymbol, publicClient, ethereumPublicClient]);
 
     // Execute transaction
     const handleConfirm = useCallback(async () => {
@@ -293,9 +330,61 @@ export default function NewLoanSimulatorModal({
                 result = await compound.supplyAndBorrow(collateralAmount, borrowAmount);
             }
 
+            // Handle AbortError: Privy sometimes throws abort even when tx succeeds
+            // If we have a hash but got an error, check the actual on-chain status
+            if (result?.error && result?.txHash && isAbortError(new Error(result.error))) {
+                console.log("[NEW LOAN] AbortError detected with hash, checking actual status...");
+                setIsConfirming(true);
+
+                const client = isXaut ? ethereumPublicClient : publicClient;
+                const statusResult = await checkTransactionStatus(client, result.txHash as Hash);
+
+                setIsConfirming(false);
+
+                if (statusResult.status === "success") {
+                    console.log("[NEW LOAN] Transaction actually succeeded despite AbortError!");
+                    toast.success("Loan created successfully!");
+
+                    // Refetch all data
+                    await Promise.all([
+                        refetchBalances(),
+                        isXaut ? fluid.refetch() : compound.refetch(),
+                    ]);
+
+                    setShowConfirmModal(false);
+                    onComplete?.();
+                    onClose();
+                    return;
+                } else if (statusResult.status === "pending") {
+                    // Transaction is still pending, wait for confirmation
+                    console.log("[NEW LOAN] Transaction still pending, waiting for confirmation...");
+                    const confirmResult = await confirmTransaction(client, result.txHash as Hash, { timeout: 60000 });
+
+                    if (confirmResult.status === "success") {
+                        console.log("[NEW LOAN] Transaction confirmed after waiting!");
+                        toast.success("Loan created successfully!");
+
+                        await Promise.all([
+                            refetchBalances(),
+                            isXaut ? fluid.refetch() : compound.refetch(),
+                        ]);
+
+                        setShowConfirmModal(false);
+                        onComplete?.();
+                        onClose();
+                        return;
+                    }
+                }
+
+                // If we get here, transaction truly failed
+                toast.error("Transaction failed on-chain");
+                return;
+            }
+
+            // Normal error handling (no hash or not an AbortError)
             if (result?.error) {
                 toast.error(`Transaction failed: ${result.error}`);
-                throw new Error(result.error);
+                return; // Don't throw - avoids duplicate toast from catch block
             }
 
             console.log("[NEW LOAN] Transaction successful");
@@ -316,8 +405,9 @@ export default function NewLoanSimulatorModal({
             toast.error(`Transaction failed: ${errorMessage}`);
         } finally {
             setIsProcessing(false);
+            setIsConfirming(false);
         }
-    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol]);
+    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol, publicClient, ethereumPublicClient]);
 
     // Reset state when modal closes
     useEffect(() => {
@@ -326,6 +416,7 @@ export default function NewLoanSimulatorModal({
             setBorrowInput("0");
             setShowConfirmModal(false);
             setIsProcessing(false);
+            setIsConfirming(false);
             setNeedsApproval(false);
             setIsApproving(false);
         }
@@ -515,10 +606,16 @@ export default function NewLoanSimulatorModal({
                 {/* Confirmation Modal */}
                 <Modal
                     isOpen={showConfirmModal}
-                    onClose={() => !isProcessing && !isApproving && setShowConfirmModal(false)}
-                    title={isProcessing || isApproving ? "Processing" : "Confirm New Loan"}
+                    onClose={() => !isProcessing && !isApproving && !isConfirming && setShowConfirmModal(false)}
+                    title={
+                        isConfirming
+                            ? "Confirming transaction..."
+                            : isProcessing || isApproving
+                                ? "Processing"
+                                : "Confirm New Loan"
+                    }
                     icon={
-                        isProcessing || isApproving ? (
+                        isProcessing || isApproving || isConfirming ? (
                             <Loading />
                         ) : (
                             <div className="rounded-full p-4 bg-amber-500/20">
@@ -527,7 +624,11 @@ export default function NewLoanSimulatorModal({
                         )
                     }
                     message={
-                        isProcessing ? (
+                        isConfirming ? (
+                            <Text tone="muted">
+                                Waiting for blockchain confirmation. This may take a moment.
+                            </Text>
+                        ) : isProcessing ? (
                             <Text tone="muted">
                                 Please confirm the transaction in your wallet.
                             </Text>
@@ -584,19 +685,21 @@ export default function NewLoanSimulatorModal({
                         )
                     }
                     primaryButtonText={
-                        isProcessing
-                            ? "Processing..."
-                            : isApproving
-                                ? "Approving..."
-                                : needsApproval
-                                    ? "Approve & Create Loan"
-                                    : "Create Loan"
+                        isConfirming
+                            ? "Confirming..."
+                            : isProcessing
+                                ? "Processing..."
+                                : isApproving
+                                    ? "Approving..."
+                                    : needsApproval
+                                        ? "Approve & Create Loan"
+                                        : "Create Loan"
                     }
                     primaryButtonAction={needsApproval ? handleApprove : handleConfirm}
                     secondaryButtonText="Cancel"
                     secondaryButtonAction={() => setShowConfirmModal(false)}
-                    showCloseButton={!isProcessing && !isApproving}
-                    showActionButtons={!isProcessing && !isApproving}
+                    showCloseButton={!isProcessing && !isApproving && !isConfirming}
+                    showActionButtons={!isProcessing && !isApproving && !isConfirming}
                 />
             </div>
         </div>
