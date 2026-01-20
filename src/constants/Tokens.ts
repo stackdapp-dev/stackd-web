@@ -38,6 +38,28 @@ export const TOKEN_METADATA = {
   },
 } as const;
 
+/**
+ * Token metadata for Ethereum Mainnet tokens
+ */
+export const ETHEREUM_TOKEN_METADATA = {
+  USDT: {
+    symbol: "USDT",
+    name: "Tether USD",
+    decimals: 6,
+    address: ETHEREUM_TOKEN_ADDRESSES.USDT,
+    coingeckoSymbol: "usdt",
+    icon: "/assets/tokens/usdt.png",
+  },
+  XAUT: {
+    symbol: "XAUT",
+    name: "Tether Gold",
+    decimals: 6,
+    address: ETHEREUM_TOKEN_ADDRESSES.XAUT,
+    coingeckoSymbol: "tether-gold",
+    icon: "/assets/tokens/xaut.png",
+  },
+} as const;
+
 export type TokenSymbol = keyof typeof TOKEN_ADDRESSES;
 
 /**

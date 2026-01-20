@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { formatAmount } from "@/lib/utils";
-import { TOKEN_METADATA } from "@/constants/Tokens";
+import { TOKEN_METADATA, ETHEREUM_TOKEN_METADATA } from "@/constants/Tokens";
 import { ChevronDown, ScanLine, AlertTriangle } from "lucide-react";
 import { QRScannerModal } from "@/components/wallet";
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { parseUnits, isAddress, encodeFunctionData } from "viem";
 import { arbitrum, mainnet } from "viem/chains";
 import { toast } from "react-toastify";
@@ -20,6 +20,9 @@ import { toast } from "react-toastify";
 const SENDABLE_TOKENS = ["WBTC", "USDT", "XAUT"] as const;
 type SendableToken = (typeof SENDABLE_TOKENS)[number];
 
+// Network types for USDT multi-chain support
+type UsdtNetwork = "arbitrum" | "ethereum";
+
 // Token display names
 const TOKEN_NAMES: Record<SendableToken, string> = {
     WBTC: "Wrapped Bitcoin",
@@ -27,17 +30,29 @@ const TOKEN_NAMES: Record<SendableToken, string> = {
     XAUT: "Tether Gold",
 };
 
-// Token chain mapping - which chain each token lives on
+// Network display names
+const NETWORK_NAMES: Record<UsdtNetwork, string> = {
+    arbitrum: "Arbitrum One",
+    ethereum: "Ethereum",
+};
+
+// Token chain mapping - which chain each token lives on (default for non-USDT)
 const TOKEN_CHAINS: Record<SendableToken, typeof arbitrum | typeof mainnet> = {
     WBTC: arbitrum,
-    USDT: arbitrum,
+    USDT: arbitrum, // Default, but can be overridden for multi-chain
     XAUT: mainnet,
+};
+
+// Chain mapping for USDT network selection
+const USDT_CHAIN_MAP: Record<UsdtNetwork, typeof arbitrum | typeof mainnet> = {
+    arbitrum: arbitrum,
+    ethereum: mainnet,
 };
 
 export default function SendPage() {
     const router = useRouter();
     const { sendSponsoredTransaction, isSendingTransaction, switchToNetwork, isExternalWallet } = useWeb3();
-    const { assets, refetchBalances } = useWalletBalanceContext();
+    const { assets, refetchBalances, chainBalances } = useWalletBalanceContext();
 
     const [selectedToken, setSelectedToken] = useState<SendableToken>("USDT");
     const [recipientAddress, setRecipientAddress] = useState("");
@@ -47,6 +62,50 @@ export default function SendPage() {
     const [showQRScanner, setShowQRScanner] = useState(false);
     const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false);
     const [networkSwitchError, setNetworkSwitchError] = useState<string | null>(null);
+    const [selectedUsdtNetwork, setSelectedUsdtNetwork] = useState<UsdtNetwork>("arbitrum");
+    const [showNetworkDropdown, setShowNetworkDropdown] = useState(false);
+    const networkDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close network dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (networkDropdownRef.current && !networkDropdownRef.current.contains(event.target as Node)) {
+                setShowNetworkDropdown(false);
+            }
+        }
+
+        if (showNetworkDropdown) {
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }
+    }, [showNetworkDropdown]);
+
+    // Calculate USDT balances per chain
+    const usdtBalances = useMemo(() => {
+        const arbitrumBalance = chainBalances?.arbitrum?.USDT || 0;
+        const ethereumBalance = chainBalances?.ethereum?.USDT || 0;
+        const hasMultipleChains = arbitrumBalance > 0 && ethereumBalance > 0;
+
+        return {
+            arbitrum: arbitrumBalance,
+            ethereum: ethereumBalance,
+            total: arbitrumBalance + ethereumBalance,
+            hasMultipleChains,
+        };
+    }, [chainBalances]);
+
+    // Auto-select USDT network based on which chain has balance
+    useEffect(() => {
+        if (selectedToken !== "USDT") return;
+
+        // If only one chain has balance, select that chain
+        if (usdtBalances.arbitrum > 0 && usdtBalances.ethereum === 0) {
+            setSelectedUsdtNetwork("arbitrum");
+        } else if (usdtBalances.ethereum > 0 && usdtBalances.arbitrum === 0) {
+            setSelectedUsdtNetwork("ethereum");
+        }
+        // If both have balance, keep current selection (default arbitrum)
+    }, [selectedToken, usdtBalances]);
 
     // Auto-select token with balance (prefer USDT, then WBTC, then XAUT)
     useEffect(() => {
@@ -67,15 +126,21 @@ export default function SendPage() {
         setHasInitialized(true);
     }, [assets, hasInitialized]);
 
-    // Auto-switch network when selected token changes
-    useEffect(() => {
-        const targetChain = TOKEN_CHAINS[selectedToken];
+    // Get the active chain based on token and USDT network selection
+    const activeChain = useMemo(() => {
+        if (selectedToken === "USDT") {
+            return USDT_CHAIN_MAP[selectedUsdtNetwork];
+        }
+        return TOKEN_CHAINS[selectedToken];
+    }, [selectedToken, selectedUsdtNetwork]);
 
+    // Auto-switch network when selected token or USDT network changes
+    useEffect(() => {
         const switchNetwork = async () => {
             setIsSwitchingNetwork(true);
             setNetworkSwitchError(null);
             try {
-                await switchToNetwork(targetChain.id);
+                await switchToNetwork(activeChain.id);
             } catch (error) {
                 // Network switch failed or was rejected
                 const errorMessage = error instanceof Error ? error.message : "Network switch failed";
@@ -87,16 +152,15 @@ export default function SendPage() {
         };
 
         switchNetwork();
-    }, [selectedToken, switchToNetwork]);
+    }, [activeChain, switchToNetwork]);
 
     // Manual network switch handler for retry button
     const handleManualNetworkSwitch = async () => {
-        const targetChain = TOKEN_CHAINS[selectedToken];
         setIsSwitchingNetwork(true);
         setNetworkSwitchError(null);
         try {
-            await switchToNetwork(targetChain.id);
-            toast.success(`Switched to ${targetChain.name}`);
+            await switchToNetwork(activeChain.id);
+            toast.success(`Switched to ${activeChain.name}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Network switch failed";
             console.log("[SEND] Manual network switch failed:", error);
@@ -106,14 +170,22 @@ export default function SendPage() {
         }
     };
 
-    // Get token balance
+    // Get token balance - for USDT, use per-chain balance based on selected network
     const tokenBalance = useMemo(() => {
+        if (selectedToken === "USDT") {
+            return usdtBalances[selectedUsdtNetwork];
+        }
         const asset = assets.find((a) => a.symbol === selectedToken);
         return asset?.amount || 0;
-    }, [assets, selectedToken]);
+    }, [assets, selectedToken, selectedUsdtNetwork, usdtBalances]);
 
-    // Get token metadata
-    const tokenMeta = TOKEN_METADATA[selectedToken];
+    // Get token metadata - for USDT on Ethereum, use Ethereum token metadata
+    const tokenMeta = useMemo(() => {
+        if (selectedToken === "USDT" && selectedUsdtNetwork === "ethereum") {
+            return ETHEREUM_TOKEN_METADATA.USDT;
+        }
+        return TOKEN_METADATA[selectedToken];
+    }, [selectedToken, selectedUsdtNetwork]);
 
     // Validation
     const isValidAddress = recipientAddress ? isAddress(recipientAddress) : false;
@@ -154,11 +226,10 @@ export default function SendPage() {
                 args: [recipientAddress as `0x${string}`, amountInWei],
             });
 
-            const targetChain = TOKEN_CHAINS[selectedToken];
             const result = await sendSponsoredTransaction({
                 to: tokenMeta.address as `0x${string}`,
                 data,
-                chainId: targetChain.id,
+                chainId: activeChain.id,
             });
 
             if (result.error) {
@@ -301,7 +372,64 @@ export default function SendPage() {
                 <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-center">
                         <span className="text-white/60">Network</span>
-                        <span className="text-white font-medium">{TOKEN_CHAINS[selectedToken].name}</span>
+                        {/* Show dropdown for USDT when multi-chain balances exist */}
+                        {selectedToken === "USDT" && usdtBalances.hasMultipleChains ? (
+                            <div className="relative" ref={networkDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNetworkDropdown(!showNetworkDropdown)}
+                                    className="flex items-center gap-2 text-white font-medium hover:text-amber-400 transition-colors"
+                                >
+                                    <span>{NETWORK_NAMES[selectedUsdtNetwork]}</span>
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${showNetworkDropdown ? "rotate-180" : ""}`} />
+                                </button>
+
+                                {/* Network Dropdown */}
+                                {showNetworkDropdown && (
+                                    <div className="absolute top-full right-0 mt-2 z-20 min-w-[180px]">
+                                        <Card appearance="glassDark" padding="none" className="border border-white/10">
+                                            {(["arbitrum", "ethereum"] as const).map((network) => {
+                                                const balance = usdtBalances[network];
+                                                if (balance === 0) return null;
+                                                return (
+                                                    <button
+                                                        key={network}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedUsdtNetwork(network);
+                                                            setShowNetworkDropdown(false);
+                                                            setAmount(""); // Clear amount when switching networks
+                                                        }}
+                                                        className={`w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors text-left ${network === selectedUsdtNetwork ? "bg-white/5" : ""
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${network === "arbitrum"
+                                                                ? "bg-blue-500/20"
+                                                                : "bg-purple-500/20"
+                                                                }`}>
+                                                                <span className={`text-[10px] font-bold ${network === "arbitrum"
+                                                                    ? "text-blue-400"
+                                                                    : "text-purple-400"
+                                                                    }`}>
+                                                                    {network === "arbitrum" ? "A" : "E"}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-white text-sm">{NETWORK_NAMES[network]}</span>
+                                                        </div>
+                                                        <span className="text-white/60 text-xs">
+                                                            {formatAmount(balance)} USDT
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </Card>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <span className="text-white font-medium">{activeChain.name}</span>
+                        )}
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-white/60">Estimated Fee</span>
@@ -321,7 +449,7 @@ export default function SendPage() {
                         <div className="flex-1">
                             <p className="text-amber-500 font-medium text-sm">Network Switch Required</p>
                             <p className="text-white/60 text-sm mt-1">
-                                Please switch your wallet to {TOKEN_CHAINS[selectedToken].name} to send {selectedToken}.
+                                Please switch your wallet to {activeChain.name} to send {selectedToken}.
                             </p>
                             <Button
                                 onClick={handleManualNetworkSwitch}
@@ -330,7 +458,7 @@ export default function SendPage() {
                                 variant="outline"
                                 className="mt-3 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
                             >
-                                {isSwitchingNetwork ? "Switching..." : `Switch to ${TOKEN_CHAINS[selectedToken].name}`}
+                                {isSwitchingNetwork ? "Switching..." : `Switch to ${activeChain.name}`}
                             </Button>
                         </div>
                     </div>
