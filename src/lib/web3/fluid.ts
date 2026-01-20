@@ -498,4 +498,58 @@ export function encodeFluidSupplyAndBorrow(
   return encodeFluidOperateData(nftId, collateralAmount, borrowAmount, recipient);
 }
 
+/**
+ * Get XAUT vault configuration without requiring an existing position
+ * Used by NewLoanSimulatorModal to calculate max borrow amounts for new positions
+ *
+ * @param publicClient - The viem PublicClient instance (optional, uses fallback if not provided)
+ * @returns Vault config with maxLtv, liquidationRatio, and borrowApr
+ */
+export async function getXautVaultConfig(
+  publicClient?: PublicClient
+): Promise<{
+  maxLtv: number;
+  liquidationRatio: number;
+  borrowApr: number;
+}> {
+  const knownVault = KNOWN_VAULTS[XAUT_USDT_VAULT.toLowerCase()];
+
+  // Fallback values from KNOWN_VAULTS (75% LTV, 80% liquidation, ~2% APR)
+  const fallbackConfig = {
+    maxLtv: Number(knownVault.collateralFactor) / 100, // 7500 -> 75
+    liquidationRatio: Number(knownVault.liquidationThreshold) / 100, // 8000 -> 80
+    borrowApr: 2.0, // ~2% APR fallback
+  };
+
+  if (!publicClient) {
+    console.log("[FLUID] No publicClient, using fallback vault config");
+    return fallbackConfig;
+  }
+
+  try {
+    // Fetch live rates from the vault resolver
+    const vaultData = await publicClient.readContract({
+      address: VAULT_RESOLVER_ADDRESS,
+      abi: FLUID_VAULT_RESOLVER_ABI,
+      functionName: "getVaultEntireData",
+      args: [XAUT_USDT_VAULT as Address],
+    });
+
+    // Extract live borrow rate
+    const liveBorrowRateBps = vaultData.exchangePricesAndRates.borrowRateVault;
+    const borrowApr = bpsRateToAprPercentage(liveBorrowRateBps);
+
+    console.log(`[FLUID] getXautVaultConfig live borrow rate: ${borrowApr.toFixed(2)}% APR`);
+
+    return {
+      maxLtv: Number(knownVault.collateralFactor) / 100,
+      liquidationRatio: Number(knownVault.liquidationThreshold) / 100,
+      borrowApr,
+    };
+  } catch (error) {
+    console.error("[FLUID] Error fetching vault config, using fallback:", error);
+    return fallbackConfig;
+  }
+}
+
 export { VAULT_RESOLVER_ADDRESS, XAUT_USDT_VAULT, KNOWN_VAULTS };

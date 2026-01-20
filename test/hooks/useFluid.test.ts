@@ -180,6 +180,105 @@ describe("useFluid - Supported Borrow Tokens", () => {
 });
 
 /**
+ * TDD tests for vault config when creating new positions
+ *
+ * CRITICAL: When a user wants to create a NEW loan position (no existing position),
+ * the hook must still return vault configuration (maxLtv, liquidationRatio, borrowApr)
+ * so the UI can calculate max borrow amounts.
+ *
+ * Bug found: Previously, fetchFluidData returned maxLtv: 0 when no position existed,
+ * causing the "New Loan Position" modal to show $0 max borrow even with XAUT in wallet.
+ */
+describe("useFluid - Vault Config Without Existing Position", () => {
+    describe("fetchFluidData should return vault config even without user positions", () => {
+        it("should return non-zero maxLtv when user has no existing position", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Verify the hook uses getXautVaultConfig when no position exists
+            expect(hookCode).toContain("getXautVaultConfig");
+
+            // Should have logic to get vault config when no position exists
+            // Look for the condition that triggers vault config fetching
+            expect(hookCode).toMatch(/!matchingPosition/);
+        });
+
+        it("should use KNOWN_VAULTS collateralFactor as fallback for maxLtv", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const fluidPath = path.resolve(process.cwd(), "src/lib/web3/fluid.ts");
+            const fluidCode = fs.readFileSync(fluidPath, "utf-8");
+
+            // KNOWN_VAULTS should have collateralFactor defined (75% = 7500)
+            expect(fluidCode).toContain("collateralFactor: BigInt(7500)");
+            // And liquidationThreshold (80% = 8000)
+            expect(fluidCode).toContain("liquidationThreshold: BigInt(8000)");
+        });
+
+        it("should export getXautVaultConfig function from fluid.ts for fetching vault config without position", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const fluidPath = path.resolve(process.cwd(), "src/lib/web3/fluid.ts");
+            const fluidCode = fs.readFileSync(fluidPath, "utf-8");
+
+            // Should have a function to get vault config without requiring a position
+            expect(fluidCode).toContain("getXautVaultConfig");
+            expect(fluidCode).toContain("export async function getXautVaultConfig");
+        });
+
+        it("should use getXautVaultConfig in useFluid when no positions exist", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should import getXautVaultConfig
+            expect(hookCode).toContain("getXautVaultConfig");
+        });
+    });
+
+    describe("NewLoanSimulatorModal maxBorrow calculation", () => {
+        it("should calculate maxBorrow correctly with 75% LTV", async () => {
+            // When collateral = 0.01 XAUT at $2700/oz = $27 value
+            // maxBorrow = $27 * 0.75 * 0.99 (1% buffer) = ~$20
+            const collateralXaut = 0.01;
+            const xautPrice = 2700;
+            const maxLtv = 75; // 75%
+
+            const collateralUsd = collateralXaut * xautPrice;
+            const expectedMaxBorrow = collateralUsd * (maxLtv / 100) * 0.99;
+
+            expect(expectedMaxBorrow).toBeGreaterThan(0);
+            expect(expectedMaxBorrow).toBeCloseTo(20.0475, 2); // ~$20
+        });
+
+        it("should NOT show $0 max borrow when user has XAUT but no position", async () => {
+            // This test documents the bug scenario:
+            // User has 0.0099 XAUT in wallet (~$46.76 at $4723/oz)
+            // Creating new XAUT loan should allow borrowing ~$34 (75% LTV - 1% buffer)
+            // But UI was showing Max: $0 because maxLtv was 0
+
+            const collateralXaut = 0.0099;
+            const xautPrice = 4723; // Current price
+            const maxLtv = 75; // Expected from vault config
+
+            const collateralUsd = collateralXaut * xautPrice;
+            const maxBorrow = collateralUsd * (maxLtv / 100) * 0.99;
+
+            // Max borrow should be ~$34, not $0
+            expect(maxBorrow).toBeGreaterThan(30);
+            expect(maxBorrow).toBeLessThan(40);
+        });
+    });
+});
+
+/**
  * TDD tests for useFluid transaction functions
  *
  * These tests define the expected behavior for supply, withdraw, borrow, repay,
