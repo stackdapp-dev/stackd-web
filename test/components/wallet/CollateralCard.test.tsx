@@ -25,6 +25,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CollateralCard from "@/components/wallet/CollateralCard";
 
+// Mock useWalletBalanceContext
+vi.mock("@/hooks/useWalletBalanceContext", () => ({
+    useWalletBalanceContext: () => ({
+        assets: [],
+        totalBalance: 0,
+        isLoading: false,
+        error: null,
+        refetchBalances: vi.fn(),
+        wbtcBalance: 0,
+        usdtBalance: 0,
+        chainBalances: { arbitrum: { USDT: 0 }, ethereum: { USDT: 0 } },
+    }),
+}));
+
 // Mock the hooks
 const mockBreakdown = {
     totalCollateralBtc: 0,
@@ -34,6 +48,13 @@ const mockBreakdown = {
     availableToWithdrawBtc: 0,
     availableToWithdrawUsd: 0,
     healthFactor: 0,
+    // New breakdown fields
+    walletBtc: 0,
+    walletUsd: 0,
+    depositedBtc: 0,
+    depositedUsd: 0,
+    withdrawableFromDepositedBtc: 0,
+    withdrawableFromDepositedUsd: 0,
 };
 
 const mockUseCollateralBreakdown = vi.fn(() => ({
@@ -89,6 +110,7 @@ vi.mock("@/providers/TokenPriceProvider", () => ({
 vi.mock("lucide-react", () => ({
     Lock: () => <span data-testid="lock-icon">Lock</span>,
     Unlock: () => <span data-testid="unlock-icon">Unlock</span>,
+    Wallet: () => <span data-testid="wallet-icon">Wallet</span>,
     AlertTriangle: () => <span data-testid="alert-icon">Alert</span>,
     ChevronDown: () => <span data-testid="chevron-icon">Chevron</span>,
 }));
@@ -146,6 +168,12 @@ describe("CollateralCard Component", () => {
                     availableToWithdrawBtc: 0,
                     availableToWithdrawUsd: 0,
                     healthFactor: 0,
+                    walletBtc: 0,
+                    walletUsd: 0,
+                    depositedBtc: 0,
+                    depositedUsd: 0,
+                    withdrawableFromDepositedBtc: 0,
+                    withdrawableFromDepositedUsd: 0,
                 },
                 hasCollateral: false, // NO collateral
                 hasLockedCollateral: false,
@@ -170,6 +198,12 @@ describe("CollateralCard Component", () => {
                     availableToWithdrawBtc: 0.5,
                     availableToWithdrawUsd: 50000,
                     healthFactor: 1000,
+                    walletBtc: 0.5,
+                    walletUsd: 50000,
+                    depositedBtc: 0,
+                    depositedUsd: 0,
+                    withdrawableFromDepositedBtc: 0,
+                    withdrawableFromDepositedUsd: 0,
                 },
                 hasCollateral: true,
                 hasLockedCollateral: false,
@@ -193,6 +227,12 @@ describe("CollateralCard Component", () => {
                     availableToWithdrawBtc: 0.1,
                     availableToWithdrawUsd: 10000,
                     healthFactor: 1000,
+                    walletBtc: 0.1,
+                    walletUsd: 10000,
+                    depositedBtc: 0,
+                    depositedUsd: 0,
+                    withdrawableFromDepositedBtc: 0,
+                    withdrawableFromDepositedUsd: 0,
                 },
                 hasCollateral: true,
                 hasLockedCollateral: false,
@@ -201,39 +241,39 @@ describe("CollateralCard Component", () => {
             });
 
             const otherAssets = [
-                { symbol: "USDT", name: "USDT", amount: 1000, usdValue: 1000 },
                 { symbol: "ETH", name: "Ethereum", amount: 0.5, usdValue: 1500 },
             ];
 
             render(<CollateralCard otherAssets={otherAssets} />);
 
-            // All assets should be visible
+            // WBTC and ETH should be visible
+            // Note: USDT is now rendered separately via chainBalances and only shows when balance > 0
             expect(screen.getByTestId("token-icon-WBTC")).toBeInTheDocument();
-            expect(screen.getByTestId("token-icon-USDT")).toBeInTheDocument();
             expect(screen.getByTestId("token-icon-ETH")).toBeInTheDocument();
         });
     });
 
     describe("Other Assets Display", () => {
         it("should render other assets passed via props", () => {
+            // Note: USDT is now rendered separately via chainBalances, use ETH for testing
             const otherAssets = [
-                { symbol: "USDT", name: "USDT", amount: 500, usdValue: 500 },
+                { symbol: "ETH", name: "Ethereum", amount: 0.5, usdValue: 1500 },
             ];
 
             render(<CollateralCard otherAssets={otherAssets} />);
 
-            expect(screen.getByTestId("token-icon-USDT")).toBeInTheDocument();
+            expect(screen.getByTestId("token-icon-ETH")).toBeInTheDocument();
         });
 
         it("should display asset amounts and USD values", () => {
             const otherAssets = [
-                { symbol: "USDT", name: "USDT", amount: 1000, usdValue: 1000 },
+                { symbol: "ETH", name: "Ethereum", amount: 1.0, usdValue: 3000 },
             ];
 
             render(<CollateralCard otherAssets={otherAssets} />);
 
-            // Component should render the USDT asset
-            expect(screen.getByTestId("token-icon-USDT")).toBeInTheDocument();
+            // Component should render the ETH asset
+            expect(screen.getByTestId("token-icon-ETH")).toBeInTheDocument();
         });
     });
 
@@ -248,6 +288,12 @@ describe("CollateralCard Component", () => {
                     availableToWithdrawBtc: 0.5,
                     availableToWithdrawUsd: 50000,
                     healthFactor: 2.0,
+                    walletBtc: 0,
+                    walletUsd: 0,
+                    depositedBtc: 1.0,
+                    depositedUsd: 100000,
+                    withdrawableFromDepositedBtc: 0.5,
+                    withdrawableFromDepositedUsd: 50000,
                 },
                 hasCollateral: true,
                 hasLockedCollateral: true,
@@ -271,6 +317,12 @@ describe("CollateralCard Component", () => {
                     availableToWithdrawBtc: 0.5,
                     availableToWithdrawUsd: 50000,
                     healthFactor: 1000,
+                    walletBtc: 0.5,
+                    walletUsd: 50000,
+                    depositedBtc: 0,
+                    depositedUsd: 0,
+                    withdrawableFromDepositedBtc: 0,
+                    withdrawableFromDepositedUsd: 0,
                 },
                 hasCollateral: true,
                 hasLockedCollateral: false,
@@ -296,6 +348,12 @@ describe("CollateralCard Component", () => {
                     availableToWithdrawBtc: 0.5,
                     availableToWithdrawUsd: 50000,
                     healthFactor: 2.5,
+                    walletBtc: 0,
+                    walletUsd: 0,
+                    depositedBtc: 1.0,
+                    depositedUsd: 100000,
+                    withdrawableFromDepositedBtc: 0.5,
+                    withdrawableFromDepositedUsd: 50000,
                 },
                 hasCollateral: true,
                 hasLockedCollateral: true,

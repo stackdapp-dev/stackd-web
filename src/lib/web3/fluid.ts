@@ -479,4 +479,23 @@ export function encodeFluidRepay(
   return encodeFluidOperateData(nftId, BigInt(0), -amount, recipient);
 }
 
+/**
+ * Encode a combined supply collateral + borrow operation
+ * Used for creating new positions or adding to existing positions in a single transaction
+ * 
+ * @param nftId - Position NFT ID (use 0 to create new position)
+ * @param collateralAmount - Amount of collateral to add (positive value)
+ * @param borrowAmount - Amount to borrow (positive value)
+ * @param recipient - Address to receive borrowed tokens
+ * @returns Encoded function data as hex string
+ */
+export function encodeFluidSupplyAndBorrow(
+  nftId: bigint,
+  collateralAmount: bigint,
+  borrowAmount: bigint,
+  recipient: Address
+): Hex {
+  return encodeFluidOperateData(nftId, collateralAmount, borrowAmount, recipient);
+}
+
 export { VAULT_RESOLVER_ADDRESS, XAUT_USDT_VAULT, KNOWN_VAULTS };

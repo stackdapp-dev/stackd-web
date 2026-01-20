@@ -9,7 +9,7 @@ test.describe('Card Page', () => {
         // Navigate to the app
         await page.goto('/');
         // Wait for app to load
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test.describe('Navigation', () => {

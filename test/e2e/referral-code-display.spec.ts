@@ -42,7 +42,7 @@ test.describe('Referral Code Display - Unauthenticated Flow', () => {
     test('Rewards page displays referral code element', async ({ page }) => {
         // Navigate to rewards page (uses unauthenticated flow in test)
         await page.goto('/referrals');
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         // Wait for page to fully hydrate
         await page.waitForTimeout(3000);

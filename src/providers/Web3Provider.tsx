@@ -48,6 +48,7 @@ type Web3ProviderValue = {
   activeWalletAddress: Address;
   setActiveWalletAddress: (address: Address) => void;
   ensureCorrectNetwork: () => Promise<void>;
+  switchToNetwork: (chainId: number) => Promise<void>;
   clearWalletState: () => void;
   sendSponsoredTransaction: (params: SendTransactionParams) => Promise<{ hash: string | null; error: string | null }>;
   isSendingTransaction: boolean;
@@ -278,31 +279,96 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error(`Unsupported chain ID: ${targetChainId}`);
     }
 
-    try {
-      const provider = await activeWallet.getEthereumProvider();
-      const walletChainId = await provider.request({
-        method: "eth_chainId",
-      });
+    const provider = await activeWallet.getEthereumProvider();
+    const walletChainId = await provider.request({
+      method: "eth_chainId",
+    });
 
-      const currentChainId = parseInt(walletChainId as string, 16);
+    const currentChainId = parseInt(walletChainId as string, 16);
 
-      if (currentChainId === targetChainId) {
-        console.log(`[NETWORK] Already on ${targetChain.name} network`);
+    if (currentChainId === targetChainId) {
+      console.log(`[NETWORK] Already on ${targetChain.name} network`);
+      return;
+    }
+
+    console.log(
+      `[NETWORK] Switching from chain ${currentChainId} to ${targetChainId} (${targetChain.name})`
+    );
+
+    const isEmbeddedWallet = activeWallet.walletClientType === "privy";
+
+    // For embedded wallets, use Privy's switchChain directly
+    if (isEmbeddedWallet) {
+      try {
+        await activeWallet.switchChain(targetChainId);
+        console.log(`[NETWORK] Successfully switched to ${targetChain.name}`);
         return;
+      } catch (error) {
+        console.error("[NETWORK] Failed to switch network:", error);
+        throw new Error(
+          `Please switch your wallet to the ${targetChain.name} network to continue`
+        );
       }
+    }
 
-      console.log(
-        `[NETWORK] Switching from chain ${currentChainId} to ${targetChainId} (${targetChain.name})`
-      );
-
-      await activeWallet.switchChain(targetChainId);
-
+    // For external wallets (Rabby, MetaMask, etc.), use EIP-3326 wallet_switchEthereumChain
+    // and fall back to wallet_addEthereumChain if the chain isn't configured
+    try {
+      // First, try to switch to the chain
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+      });
       console.log(`[NETWORK] Successfully switched to ${targetChain.name}`);
-    } catch (error) {
-      console.error("[NETWORK] Failed to switch network:", error);
-      throw new Error(
-        `Please switch your wallet to the ${targetChain.name} network to continue`
-      );
+    } catch (switchError: unknown) {
+      // Error code 4902 means the chain hasn't been added to the wallet yet
+      // Some wallets may use different error codes or structures
+      const errorCode = (switchError as { code?: number })?.code;
+      const errorMessage = (switchError as { message?: string })?.message?.toLowerCase() || "";
+
+      const isChainNotAdded =
+        errorCode === 4902 ||
+        errorMessage.includes("unrecognized chain") ||
+        errorMessage.includes("chain not added") ||
+        errorMessage.includes("unknown chain");
+
+      if (isChainNotAdded) {
+        console.log(`[NETWORK] Chain ${targetChainId} not configured in wallet, attempting to add it...`);
+
+        try {
+          // Add the chain to the wallet using wallet_addEthereumChain (EIP-3085)
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: `0x${targetChainId.toString(16)}`,
+                chainName: targetChain.name,
+                nativeCurrency: {
+                  name: targetChain.nativeCurrency.name,
+                  symbol: targetChain.nativeCurrency.symbol,
+                  decimals: targetChain.nativeCurrency.decimals,
+                },
+                rpcUrls: [targetChain.rpcUrls.default.http[0]],
+                blockExplorerUrls: targetChain.blockExplorers?.default
+                  ? [targetChain.blockExplorers.default.url]
+                  : undefined,
+              },
+            ],
+          });
+          console.log(`[NETWORK] Successfully added and switched to ${targetChain.name}`);
+        } catch (addError) {
+          console.error("[NETWORK] Failed to add chain:", addError);
+          throw new Error(
+            `Please add the ${targetChain.name} network to your wallet and try again`
+          );
+        }
+      } else {
+        // User rejected the switch or other error
+        console.error("[NETWORK] Failed to switch network:", switchError);
+        throw new Error(
+          `Please switch your wallet to the ${targetChain.name} network to continue`
+        );
+      }
     }
   };
 
@@ -400,6 +466,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
         activeWalletAddress: activeWallet?.address as `0x${string}`,
         setActiveWalletAddress,
         ensureCorrectNetwork,
+        switchToNetwork: ensureNetworkForTransaction,
         clearWalletState,
         sendSponsoredTransaction,
         isSendingTransaction: isSending,

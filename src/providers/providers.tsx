@@ -8,7 +8,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { arbitrum } from "viem/chains";
+import { arbitrum, mainnet } from "viem/chains";
 import { TokenPriceProvider } from "./TokenPriceProvider";
 import { UserProvider } from "./UserProvider";
 import { Web3Provider } from "./Web3Provider";
@@ -37,7 +37,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             },
           },
           defaultChain: arbitrum,
-          supportedChains: [arbitrum],
+          supportedChains: [arbitrum, mainnet],
           appearance: { walletChainType: "ethereum-only", theme: "#171717" },
           walletConnectCloudProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,
           loginMethods: ["email", "wallet", "passkey"],

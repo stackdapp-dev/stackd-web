@@ -20,6 +20,18 @@ export interface CollateralBreakdown {
     availableToWithdrawUsd: number;
     /** Health factor: >1 is safe, <1 is at liquidation risk */
     healthFactor: number;
+    /** WBTC idle in wallet (not deposited as collateral) */
+    walletBtc: number;
+    /** Wallet balance in USD */
+    walletUsd: number;
+    /** WBTC deposited to Compound as collateral */
+    depositedBtc: number;
+    /** Deposited balance in USD */
+    depositedUsd: number;
+    /** Withdrawable from deposited collateral (deposited - locked) */
+    withdrawableFromDepositedBtc: number;
+    /** Withdrawable from deposited in USD */
+    withdrawableFromDepositedUsd: number;
 }
 
 /**
@@ -133,6 +145,10 @@ export function calculateCollateralBreakdown(
         healthFactor = (totalCollateralUsd * safeLtv) / safeBorrowed;
     }
 
+    // Calculate withdrawable from deposited collateral only (not including wallet)
+    const withdrawableFromDepositedBtc = Math.max(0, safeCompound - lockedCollateralBtc);
+    const withdrawableFromDepositedUsd = withdrawableFromDepositedBtc * safePrice;
+
     return {
         totalCollateralBtc,
         totalCollateralUsd,
@@ -141,6 +157,13 @@ export function calculateCollateralBreakdown(
         availableToWithdrawBtc,
         availableToWithdrawUsd,
         healthFactor,
+        // New fields for breakdown display
+        walletBtc: safeWallet,
+        walletUsd: safeWallet * safePrice,
+        depositedBtc: safeCompound,
+        depositedUsd: safeCompound * safePrice,
+        withdrawableFromDepositedBtc,
+        withdrawableFromDepositedUsd,
     };
 }
 
