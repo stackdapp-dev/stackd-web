@@ -27,8 +27,10 @@ const COMET_ADDRESS = formatAddress(C_COMPOUND_ADDR);
 
 // Action constants as bytes32 - these match the Bulker contract's constants
 // The Bulker uses string-encoded bytes32 values
-export const ACTION_SUPPLY_ASSET = padHex(stringToHex("ACTION_SUPPLY_ASSET"), { size: 32 }) as Hex;
-export const ACTION_WITHDRAW_ASSET = padHex(stringToHex("ACTION_WITHDRAW_ASSET"), { size: 32 }) as Hex;
+// IMPORTANT: Solidity's bytes32("string") uses RIGHT-padding (string bytes on left, zeros on right)
+// viem's padHex defaults to LEFT-padding, so we must specify dir: "right"
+export const ACTION_SUPPLY_ASSET = padHex(stringToHex("ACTION_SUPPLY_ASSET"), { size: 32, dir: "right" }) as Hex;
+export const ACTION_WITHDRAW_ASSET = padHex(stringToHex("ACTION_WITHDRAW_ASSET"), { size: 32, dir: "right" }) as Hex;
 
 // Bulker ABI - only the invoke function we need
 export const BULKER_ABI = [

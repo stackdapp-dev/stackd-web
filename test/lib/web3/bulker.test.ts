@@ -1,9 +1,14 @@
 /**
  * Unit tests for lib/web3/bulker.ts
  * Tests encode functions for Compound Bulker contract
+ *
+ * TDD tests for bug fix: Action constants must be RIGHT-padded (dir: "right")
+ * to match Solidity's bytes32 encoding. Left-padding causes the Bulker to fail
+ * with error 0xfb90de71 (unrecognized action).
  */
 import { describe, it, expect } from "vitest";
 import type { Address } from "viem";
+import { padHex, stringToHex } from "viem";
 
 // Test addresses
 const USER = "0x1234567890abcdef1234567890abcdef12345678" as Address;
@@ -26,6 +31,33 @@ describe("ACTION_SUPPLY_ASSET", () => {
         // Should be 66 characters (0x + 64 hex chars for bytes32)
         expect(ACTION_SUPPLY_ASSET.length).toBe(66);
     });
+
+    /**
+     * TDD test for bug fix: Solidity bytes32 encoding uses RIGHT-padding.
+     * When you write `bytes32 x = "ACTION_SUPPLY_ASSET"` in Solidity,
+     * the string bytes are placed at the LEFT, padded with zeros on the RIGHT.
+     *
+     * Previous (buggy) code used padHex default (left-padding), causing:
+     * 0x00000000000000000000000000414354494f4e5f535550504c595f4153534554 (WRONG)
+     *
+     * Correct encoding should be:
+     * 0x414354494f4e5f535550504c595f415353455400000000000000000000000000 (RIGHT)
+     */
+    it("should use RIGHT-padding to match Solidity bytes32 encoding", async () => {
+        const { ACTION_SUPPLY_ASSET } = await import("@/lib/web3/bulker");
+
+        // Solidity's bytes32("ACTION_SUPPLY_ASSET") right-pads with zeros
+        const expectedRightPadded = padHex(stringToHex("ACTION_SUPPLY_ASSET"), { size: 32, dir: "right" });
+
+        // Buggy left-padded version (what viem's default produces)
+        const wrongLeftPadded = padHex(stringToHex("ACTION_SUPPLY_ASSET"), { size: 32 }); // default is "left"
+
+        // ACTION_SUPPLY_ASSET should match the right-padded Solidity encoding
+        expect(ACTION_SUPPLY_ASSET.toLowerCase()).toBe(expectedRightPadded.toLowerCase());
+
+        // Should NOT match left-padded encoding
+        expect(ACTION_SUPPLY_ASSET.toLowerCase()).not.toBe(wrongLeftPadded.toLowerCase());
+    });
 });
 
 describe("ACTION_WITHDRAW_ASSET", () => {
@@ -34,6 +66,19 @@ describe("ACTION_WITHDRAW_ASSET", () => {
         expect(ACTION_WITHDRAW_ASSET).toMatch(/^0x/);
         // Should be 66 characters (0x + 64 hex chars for bytes32)
         expect(ACTION_WITHDRAW_ASSET.length).toBe(66);
+    });
+
+    /**
+     * TDD test for bug fix: ACTION_WITHDRAW_ASSET must also be RIGHT-padded.
+     */
+    it("should use RIGHT-padding to match Solidity bytes32 encoding", async () => {
+        const { ACTION_WITHDRAW_ASSET } = await import("@/lib/web3/bulker");
+
+        // Solidity's bytes32("ACTION_WITHDRAW_ASSET") right-pads with zeros
+        const expectedRightPadded = padHex(stringToHex("ACTION_WITHDRAW_ASSET"), { size: 32, dir: "right" });
+
+        // ACTION_WITHDRAW_ASSET should match the right-padded Solidity encoding
+        expect(ACTION_WITHDRAW_ASSET.toLowerCase()).toBe(expectedRightPadded.toLowerCase());
     });
 });
 
