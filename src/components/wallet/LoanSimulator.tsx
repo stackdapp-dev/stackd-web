@@ -656,7 +656,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                       data-testid="simulator-input"
                     />
                     <p className="text-white/40 text-sm mt-1 text-center">
-                      ≈ {formatCurrency(parsedInput * collateralPrice)} • {collateralSymbol}
+                      {mode === "repay" || mode === "borrow"
+                        ? `≈ ${formatCurrency(parsedInput)} • USDT`
+                        : `≈ ${formatCurrency(parsedInput * collateralPrice)} • ${collateralSymbol}`}
                     </p>
                   </div>
 
