@@ -100,7 +100,7 @@ export default function CardPage() {
         <div className="min-h-screen pb-24">
             <div className="max-w-md mx-auto px-4 pt-6">
                 {/* BETA Badge */}
-                <div className="flex justify-center mb-4">
+                <div className="flex justify-start mb-4">
                     <BetaBadge />
                 </div>
 
