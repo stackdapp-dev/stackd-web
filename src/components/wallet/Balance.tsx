@@ -1,6 +1,7 @@
 "use client";
 
 import MaskedValue from "@/components/ui/maskedValue";
+import BetaBadge from "@/components/ui/BetaBadge";
 import { Eye, EyeOff, ArrowDownToLine, Copy, Check, MoreVertical } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { showSuccessToast } from "@/components/ui/custom-toast";
@@ -56,6 +57,11 @@ export default function Balance({
 
   return (
     <div className="px-4 pt-6">
+      {/* BETA Badge */}
+      <div className="flex justify-center mb-4">
+        <BetaBadge />
+      </div>
+
       {/* WALLET Header with Menu Button */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-white text-xl font-semibold">Wallet</h1>
