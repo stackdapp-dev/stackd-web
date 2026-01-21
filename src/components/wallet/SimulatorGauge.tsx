@@ -101,38 +101,44 @@ export default function SimulatorGauge({
 
         {/* Max LTV threshold marker */}
         <div
-          className="absolute top-0 h-full flex flex-col items-center"
+          className="absolute top-0 h-full"
           style={{ left: `${maxLtvPosition}%` }}
         >
           <div className="w-0.5 h-full bg-amber-500/60" />
-          <div className="absolute -bottom-5 transform -translate-x-1/2">
-            <span className="text-xs text-amber-500" data-testid="ltv-max">
+          {/* Percentage label - inside bar, to the left of marker */}
+          <div className="absolute top-1/2 -translate-y-1/2 right-1 pr-1">
+            <span className="text-xs text-amber-500 font-medium" data-testid="ltv-max">
               {maxLtv}%
             </span>
+          </div>
+          {/* "Max LTV" label - below bar, to the left of marker */}
+          <div className="absolute -bottom-5 right-0 pr-1">
+            <span className="text-xs text-amber-500/70 whitespace-nowrap">Max LTV</span>
           </div>
         </div>
 
         {/* Liquidation threshold marker */}
         <div
-          className="absolute top-0 h-full flex flex-col items-center"
+          className="absolute top-0 h-full"
           style={{ left: `${liquidationPosition}%` }}
         >
           <div className="w-0.5 h-full bg-red-500/60" />
-          <div className="absolute -bottom-5 transform -translate-x-1/2">
-            <span className="text-xs text-red-500" data-testid="ltv-liquidation">
+          {/* Percentage label - inside bar, to the right of marker */}
+          <div className="absolute top-1/2 -translate-y-1/2 left-1 pl-1">
+            <span className="text-xs text-red-500 font-medium" data-testid="ltv-liquidation">
               {liquidationRatio}%
             </span>
+          </div>
+          {/* "Liquidation" label - below bar, to the right of marker */}
+          <div className="absolute -bottom-5 left-0 pl-1">
+            <span className="text-xs text-red-500/70">Liquidation</span>
           </div>
         </div>
       </div>
 
-      {/* Threshold Labels */}
-      <div className="flex justify-between items-center mt-6 text-xs">
+      {/* 0% Label */}
+      <div className="flex justify-start mt-6 text-xs">
         <span className="text-white/40">0%</span>
-        <div className="flex gap-4">
-          <span className="text-amber-500/70">Max LTV</span>
-          <span className="text-red-500/70">Liquidation</span>
-        </div>
       </div>
 
       {/* Risk Warning */}

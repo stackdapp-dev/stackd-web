@@ -5,7 +5,7 @@ export default function ReferralsPage() {
     return (
         <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 pb-24 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
             {/* BETA Badge */}
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-start mb-4">
                 <BetaBadge />
             </div>
 

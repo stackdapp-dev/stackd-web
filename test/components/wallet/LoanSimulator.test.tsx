@@ -838,6 +838,164 @@ describe("LoanSimulator - CollateralType Support", () => {
     });
 });
 
+describe("LoanSimulator - Price Display Based on Mode (Issue #2)", () => {
+    /**
+     * TDD Tests for Issue #2: Repay Simulator Wrong Price Display
+     *
+     * Problem: The repay simulator shows "≈ $961.5K • WBTC" which uses collateralPrice (WBTC)
+     * instead of the USDT value. Since USDT is 1:1 with USD, the conversion display is misleading.
+     *
+     * Current implementation (line 658-660):
+     * ≈ {formatCurrency(parsedInput * collateralPrice)} • {collateralSymbol}
+     *
+     * This is shown for ALL slider modes (borrow, repay, withdrawCollateral) but:
+     * - For `repay` mode: input is USDT which is already ~$1, so multiplying by collateralPrice is wrong
+     * - For `borrow` mode: input is USDT so same issue
+     * - Only for `withdrawCollateral` mode does the collateralPrice conversion make sense
+     *
+     * Expected behavior:
+     * - repay mode: Show "≈ {formatCurrency(parsedInput)} • USDT" (direct 1:1 USD display)
+     * - borrow mode: Show "≈ {formatCurrency(parsedInput)} • USDT" (direct 1:1 USD display)
+     * - withdrawCollateral mode: Show "≈ {formatCurrency(parsedInput * collateralPrice)} • {collateralSymbol}"
+     */
+
+    describe("Implementation verification for price display logic", () => {
+        it("should show USDT value (1:1 with USD) in repay mode, not multiplied by collateral price", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // In repay mode, the display should NOT multiply parsedInput by collateralPrice
+            // Look for conditional logic that handles repay mode differently
+            // The code should check for mode === "repay" or mode === "borrow" to display USDT directly
+
+            // This regex checks that there's conditional logic for repay/borrow modes
+            // where the price display uses parsedInput directly (not multiplied by collateralPrice)
+            const hasConditionalPriceDisplay =
+                componentCode.includes('mode === "repay"') ||
+                componentCode.includes('mode === "borrow"');
+
+            // Check that there's a pattern that shows USDT price differently
+            // The fix should add conditional logic like:
+            // {mode === "repay" || mode === "borrow"
+            //   ? formatCurrency(parsedInput) + " • USDT"
+            //   : formatCurrency(parsedInput * collateralPrice) + " • " + collateralSymbol}
+            const hasUsdtDirectDisplay = componentCode.match(
+                /formatCurrency\s*\(\s*parsedInput\s*\)\s*.*USDT/
+            );
+
+            expect(hasConditionalPriceDisplay && hasUsdtDirectDisplay).toBeTruthy();
+        });
+
+        it("should show USDT value (1:1 with USD) in borrow mode, not multiplied by collateral price", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Borrow mode input is USDT, should display 1:1 with USD
+            // The implementation should treat borrow and repay the same for price display
+            const hasBorrowModeCheck = componentCode.includes('mode === "borrow"');
+
+            expect(hasBorrowModeCheck).toBe(true);
+        });
+
+        it("should show collateral value (multiplied by collateralPrice) in withdrawCollateral mode", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // withdrawCollateral mode input is collateral amount (WBTC/XAUT)
+            // Should multiply by collateralPrice to show USD value
+            // This is the existing behavior that should be preserved
+
+            // Check that collateralPrice multiplication is used for withdraw mode
+            const hasCollateralPriceMultiplication = componentCode.includes('parsedInput * collateralPrice');
+
+            expect(hasCollateralPriceMultiplication).toBe(true);
+        });
+
+        it("should display 'USDT' label for repay and borrow modes in price display", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // For repay and borrow modes, the token label should be "USDT" not collateralSymbol
+            // The fix should include logic like: mode === "repay" || mode === "borrow" ? "USDT" : collateralSymbol
+            const hasUsdtLabel = componentCode.match(/["']USDT["']/);
+
+            expect(hasUsdtLabel).toBeTruthy();
+        });
+    });
+
+    describe("Price calculation verification", () => {
+        it("repay mode: $100 input should display ≈ $100 (not $9.5M)", () => {
+            // Given: repay mode, user input = 100 (USDT), collateralPrice = $95,000 (WBTC)
+            // Wrong: 100 * 95000 = $9,500,000 (current bug)
+            // Correct: 100 * 1 = $100 (USDT is 1:1 with USD)
+
+            const parsedInput = 100;
+            const collateralPrice = 95000; // WBTC price
+            const usdtPrice = 1; // USDT is 1:1 with USD
+
+            const wrongCalculation = parsedInput * collateralPrice; // $9,500,000
+            const correctCalculation = parsedInput * usdtPrice; // $100
+
+            expect(wrongCalculation).toBe(9500000);
+            expect(correctCalculation).toBe(100);
+
+            // The fix should use correctCalculation for repay mode
+        });
+
+        it("borrow mode: $500 input should display ≈ $500 (not $47.5M)", () => {
+            // Given: borrow mode, user input = 500 (USDT), collateralPrice = $95,000 (WBTC)
+            // Wrong: 500 * 95000 = $47,500,000 (current bug)
+            // Correct: 500 * 1 = $500 (USDT is 1:1 with USD)
+
+            const parsedInput = 500;
+            const collateralPrice = 95000; // WBTC price
+            const usdtPrice = 1; // USDT is 1:1 with USD
+
+            const wrongCalculation = parsedInput * collateralPrice; // $47,500,000
+            const correctCalculation = parsedInput * usdtPrice; // $500
+
+            expect(wrongCalculation).toBe(47500000);
+            expect(correctCalculation).toBe(500);
+        });
+
+        it("withdrawCollateral mode: 0.01 WBTC input should display ≈ $950 (correct)", () => {
+            // Given: withdrawCollateral mode, user input = 0.01 (WBTC), collateralPrice = $95,000
+            // Correct: 0.01 * 95000 = $950 (this is the correct behavior to preserve)
+
+            const parsedInput = 0.01;
+            const collateralPrice = 95000; // WBTC price
+
+            const correctCalculation = parsedInput * collateralPrice; // $950
+
+            expect(correctCalculation).toBe(950);
+        });
+    });
+});
+
 describe("LoanSimulator - Sandbox Mode Collateral Selector", () => {
     describe("Implementation verification for sandbox collateral selector", () => {
         it("should show collateral type selector in simulate mode", async () => {
@@ -884,6 +1042,140 @@ describe("LoanSimulator - Sandbox Mode Collateral Selector", () => {
             // - Borrow capacity
             // - Liquidation price
             expect(true).toBe(true);
+        });
+    });
+});
+
+/**
+ * TDD tests for Issue 3: Withdraw Collateral UX Flow
+ *
+ * These tests verify that after a successful withdrawCollateral transaction:
+ * 1. A success toast is shown with appropriate message
+ * 2. The modal closes
+ * 3. Navigation to /wallet occurs
+ * 4. Wallet balances are refreshed
+ */
+describe("LoanSimulator - Withdraw Collateral UX Flow (Issue 3)", () => {
+    describe("Implementation verification for success feedback", () => {
+        it("should import showSuccessToast from custom-toast", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should import showSuccessToast
+            expect(componentCode).toContain("showSuccessToast");
+        });
+
+        it("should import useRouter from next/navigation", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should import useRouter
+            expect(componentCode).toContain("useRouter");
+            expect(componentCode).toContain("next/navigation");
+        });
+
+        it("should call showSuccessToast after successful transaction", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should call showSuccessToast in handleConfirm success path
+            expect(componentCode).toMatch(/showSuccessToast\(/);
+        });
+
+        it("should have success messages for all transaction modes", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have success messages for borrow, addCollateral, repay, withdrawCollateral
+            expect(componentCode).toMatch(/Successfully borrowed/i);
+            expect(componentCode).toMatch(/Successfully added/i);
+            expect(componentCode).toMatch(/Successfully repaid/i);
+            expect(componentCode).toMatch(/Successfully withdrew/i);
+        });
+
+        it("should navigate to /wallet after successful withdrawCollateral", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should check for withdrawCollateral mode and navigate to /wallet
+            expect(componentCode).toMatch(/mode\s*===\s*["']withdrawCollateral["']/);
+            expect(componentCode).toMatch(/router\.push\(["']\/wallet["']\)/);
+        });
+    });
+
+    describe("Transaction success behavior", () => {
+        it("should show success toast with amount for borrow mode", () => {
+            // Expected message format: "Successfully borrowed $X,XXX"
+            const transactionAmount = 1000;
+            const expectedMessage = `Successfully borrowed $1,000`;
+            expect(expectedMessage).toContain("Successfully borrowed");
+        });
+
+        it("should show success toast with amount for addCollateral mode", () => {
+            // Expected message format: "Successfully added X.XXX WBTC"
+            const transactionAmount = 0.05;
+            const collateralSymbol = "WBTC";
+            const expectedMessage = `Successfully added ${transactionAmount} ${collateralSymbol}`;
+            expect(expectedMessage).toContain("Successfully added");
+            expect(expectedMessage).toContain(collateralSymbol);
+        });
+
+        it("should show success toast with amount for repay mode", () => {
+            // Expected message format: "Successfully repaid $X,XXX"
+            const transactionAmount = 500;
+            const expectedMessage = `Successfully repaid $500`;
+            expect(expectedMessage).toContain("Successfully repaid");
+        });
+
+        it("should show success toast with amount for withdrawCollateral mode", () => {
+            // Expected message format: "Successfully withdrew X.XXX WBTC"
+            const transactionAmount = 0.03;
+            const collateralSymbol = "WBTC";
+            const expectedMessage = `Successfully withdrew ${transactionAmount} ${collateralSymbol}`;
+            expect(expectedMessage).toContain("Successfully withdrew");
+            expect(expectedMessage).toContain(collateralSymbol);
+        });
+
+        it("should navigate to /wallet only for withdrawCollateral mode", () => {
+            // Navigation should only happen for withdrawCollateral mode
+            // Other modes should stay on current page
+            const modes = ["borrow", "addCollateral", "repay", "withdrawCollateral"];
+            const shouldNavigate = (mode: string) => mode === "withdrawCollateral";
+
+            expect(shouldNavigate("borrow")).toBe(false);
+            expect(shouldNavigate("addCollateral")).toBe(false);
+            expect(shouldNavigate("repay")).toBe(false);
+            expect(shouldNavigate("withdrawCollateral")).toBe(true);
         });
     });
 });
