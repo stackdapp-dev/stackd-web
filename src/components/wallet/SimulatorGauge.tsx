@@ -113,7 +113,7 @@ export default function SimulatorGauge({
           </div>
           {/* "Max LTV" label - below bar, to the left of marker */}
           <div className="absolute -bottom-5 right-0 pr-1">
-            <span className="text-xs text-amber-500/70">Max LTV</span>
+            <span className="text-xs text-amber-500/70 whitespace-nowrap">Max LTV</span>
           </div>
         </div>
 
