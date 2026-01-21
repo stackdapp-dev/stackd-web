@@ -17,6 +17,7 @@ import { useXautBalance } from "@/hooks/useXautBalance";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
+import { C_COMPOUND_ADDR } from "@/lib/config/abis";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
 import {
     confirmTransaction,
@@ -148,14 +149,15 @@ export default function NewLoanSimulatorModal({
                         setNeedsApproval(currentAllowance < amountBigInt);
                     }
                 } else {
-                    // For Compound/Bulker, check WBTC allowance for Bulker
-                    // The Bulker uses supplyFrom which needs token approval to Bulker
+                    // For Compound/Bulker, check WBTC allowance for Comet (not Bulker!)
+                    // The Bulker's supplyTo calls comet.supplyFrom() which triggers:
+                    //   WBTC.transferFrom(user, comet, amount)
+                    // So the user must approve COMET (C_COMPOUND_ADDR), not the Bulker.
                     const tokenMeta = getTokenMetadata("WBTC");
                     if (tokenMeta && compound.allowance) {
-                        // Note: Bulker calls supplyFrom, so user needs to approve Bulker for WBTC
-                        const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
-                        const currentAllowance = await compound.allowance(tokenMeta.address as Address, BULKER_ADDRESS as Address);
-                        console.log("[NEW LOAN] WBTC allowance for Bulker:", currentAllowance?.toString() ?? "null");
+                        // Note: Comet calls transferFrom, so user needs to approve Comet for WBTC
+                        const currentAllowance = await compound.allowance(tokenMeta.address as Address, C_COMPOUND_ADDR as Address);
+                        console.log("[NEW LOAN] WBTC allowance for Comet:", currentAllowance?.toString() ?? "null");
                         // If allowance check returns null (error/no client), assume we need approval (safer default)
                         if (currentAllowance === null) {
                             console.log("[NEW LOAN] WBTC allowance check returned null, assuming approval needed");
@@ -222,9 +224,9 @@ export default function NewLoanSimulatorModal({
             } else {
                 const tokenMeta = getTokenMetadata("WBTC");
                 if (tokenMeta && compound.allowance) {
-                    const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
-                    const currentAllowance = await compound.allowance(tokenMeta.address as Address, BULKER_ADDRESS as Address);
-                    console.log("[NEW LOAN] WBTC allowance (re-check):", currentAllowance?.toString() ?? "null");
+                    // Check allowance for Comet (transferFrom caller), not Bulker
+                    const currentAllowance = await compound.allowance(tokenMeta.address as Address, C_COMPOUND_ADDR as Address);
+                    console.log("[NEW LOAN] WBTC allowance for Comet (re-check):", currentAllowance?.toString() ?? "null");
                     if (currentAllowance === null) {
                         setNeedsApproval(true);
                     } else {
@@ -276,14 +278,16 @@ export default function NewLoanSimulatorModal({
                 }
                 txHash = result.txHash;
             } else {
-                // Approve WBTC for Bulker (Arbitrum)
+                // Approve WBTC for Comet (Arbitrum)
+                // The Bulker's supplyTo calls comet.supplyFrom() which triggers:
+                //   WBTC.transferFrom(user, comet, amount)
+                // So we must approve COMET, not the Bulker.
                 const tokenMeta = getTokenMetadata("WBTC");
                 if (!tokenMeta) {
                     toast.error("WBTC metadata not found");
                     return;
                 }
-                const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
-                const result = await compound.approve(tokenMeta.address as Address, maxAmount, BULKER_ADDRESS as Address);
+                const result = await compound.approve(tokenMeta.address as Address, maxAmount, C_COMPOUND_ADDR as Address);
                 if (result.error) {
                     toast.error(`Approval failed: ${result.error}`);
                     return;
