@@ -12,7 +12,7 @@ import {
     AddToWalletButton,
 } from "@/components/card";
 import BetaBadge from "@/components/ui/BetaBadge";
-import type { CardDetails, CardTransaction } from "@/types/card";
+import type { CardDetails } from "@/types/card";
 
 // Mock data for frontend-only display
 const mockCard: CardDetails = {
@@ -27,44 +27,6 @@ const mockCard: CardDetails = {
     cardholderName: "JOHN DOE",
 };
 
-const mockTransactions: CardTransaction[] = [
-    {
-        id: "tx_001",
-        merchantName: "SMART APP",
-        merchantCategory: "Telecommunication Services",
-        amount: -34.48,
-        cashbackAmount: 34.48,
-        date: "2026-01-18T10:30:00Z",
-        status: "completed",
-    },
-    {
-        id: "tx_002",
-        merchantName: "SPOTTED PIG CAFE",
-        merchantCategory: "Eating Places, Restaurants",
-        amount: -4.12,
-        cashbackAmount: 4.12,
-        date: "2026-01-17T14:22:00Z",
-        status: "completed",
-    },
-    {
-        id: "tx_003",
-        merchantName: "Shangrila Canton Road",
-        merchantCategory: "Hotels, Motels, and Resorts",
-        amount: 0,
-        cashbackAmount: 0,
-        date: "2026-01-16T09:00:00Z",
-        status: "pending",
-    },
-    {
-        id: "tx_004",
-        merchantName: "Spotted Pig Proscenium",
-        merchantCategory: "Eating Places, Restaurants",
-        amount: -4.12,
-        cashbackAmount: 4.12,
-        date: "2026-01-15T18:45:00Z",
-        status: "completed",
-    },
-];
 
 export default function CardPage() {
     // Placeholder handlers (no functionality)
@@ -138,7 +100,7 @@ export default function CardPage() {
                 {/* Recent Transactions */}
                 <div className="mb-6">
                     <CardTransactionList
-                        transactions={mockTransactions}
+                        transactions={[]}
                         onViewAll={handleViewAllTransactions}
                     />
                 </div>
