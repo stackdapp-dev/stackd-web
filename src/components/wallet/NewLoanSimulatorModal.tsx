@@ -441,7 +441,24 @@ export default function NewLoanSimulatorModal({
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Unknown error";
-            console.error("[NEW LOAN] Transaction failed:", err);
+            console.error("[NEW LOAN] Transaction error:", err);
+
+            // Check if this is an AbortError (Privy sometimes throws this even when tx succeeds)
+            if (err instanceof Error && isAbortError(err)) {
+                // For XAUT transactions, AbortError likely means tx was submitted but confirmation timed out
+                if (isXaut) {
+                    toast.info(
+                        "XAUT position may have been created. Please refresh your wallet page to check.",
+                        { autoClose: 8000 }
+                    );
+                    void Promise.all([refetchBalances(), fluid.refetch()]);
+                    setShowConfirmModal(false);
+                    onComplete?.();
+                    onClose();
+                    return;
+                }
+            }
+
             toast.error(`Transaction failed: ${errorMessage}`);
         } finally {
             setIsProcessing(false);
