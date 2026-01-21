@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Menu Page', () => {
     test.beforeEach(async ({ page }) => {
+        // Dismiss the EarlyAccessModal by setting localStorage before navigation
+        await page.addInitScript(() => {
+            localStorage.setItem('stackd_early_access_shown', 'true');
+        });
         // Navigate to menu page
         await page.goto('/menu');
         // Wait for page to load
@@ -10,19 +14,19 @@ test.describe('Menu Page', () => {
 
     test('displays all menu items', async ({ page }) => {
         // Check Withdraw
-        await expect(page.getByText('Withdraw')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Withdraw' })).toBeVisible();
 
         // Check Contact Us
-        await expect(page.getByText('Contact Us')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Contact Us' })).toBeVisible();
 
         // Check Profile
-        await expect(page.getByText('Profile')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Profile' })).toBeVisible();
 
         // Check Terms of Service
-        await expect(page.getByText('Terms of Service')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Terms of Service' })).toBeVisible();
 
         // Check Privacy Policy
-        await expect(page.getByText('Privacy Policy')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Privacy Policy' })).toBeVisible();
     });
 
     test('Terms of Service opens external link in new tab', async ({ page }) => {
@@ -32,6 +36,8 @@ test.describe('Menu Page', () => {
             openedUrls.push(url);
         });
         await page.addInitScript(() => {
+            // Dismiss the EarlyAccessModal
+            localStorage.setItem('stackd_early_access_shown', 'true');
             window.open = (url?: string | URL) => {
                 if (url) (window as any).captureWindowOpen(url.toString());
                 return null;
@@ -43,7 +49,7 @@ test.describe('Menu Page', () => {
         await page.waitForSelector('h1:has-text("Menu")');
 
         // Click Terms of Service
-        await page.getByText('Terms of Service').click();
+        await page.getByRole('button', { name: 'Terms of Service' }).click();
 
         // Verify the correct URL was passed to window.open
         expect(openedUrls).toContain('https://www.stackdapp.co/terms');
@@ -56,6 +62,8 @@ test.describe('Menu Page', () => {
             openedUrls.push(url);
         });
         await page.addInitScript(() => {
+            // Dismiss the EarlyAccessModal
+            localStorage.setItem('stackd_early_access_shown', 'true');
             window.open = (url?: string | URL) => {
                 if (url) (window as any).captureWindowOpen(url.toString());
                 return null;
@@ -67,7 +75,7 @@ test.describe('Menu Page', () => {
         await page.waitForSelector('h1:has-text("Menu")');
 
         // Click Privacy Policy
-        await page.getByText('Privacy Policy').click();
+        await page.getByRole('button', { name: 'Privacy Policy' }).click();
 
         // Verify the correct URL was passed to window.open
         expect(openedUrls).toContain('https://www.stackdapp.co/privacy');
