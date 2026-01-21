@@ -178,6 +178,8 @@ describe('Token Price Handling', () => {
 describe('Live Token Price Fetching', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Reset modules to get fresh cache state for each test
+        vi.resetModules();
         // Reset fetch mock
         global.fetch = vi.fn();
     });
@@ -198,7 +200,7 @@ describe('Live Token Price Fetching', () => {
             json: () => Promise.resolve(mockPrices),
         });
 
-        // Import the function dynamically to get fresh module
+        // Import the function dynamically to get fresh module with clean cache
         const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
 
         const prices = await fetchLiveTokenPrices();
@@ -210,6 +212,7 @@ describe('Live Token Price Fetching', () => {
     it('should return fallback prices when API fails', async () => {
         (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
 
+        // Import fresh module after resetModules
         const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
 
         const prices = await fetchLiveTokenPrices();
@@ -230,6 +233,7 @@ describe('Live Token Price Fetching', () => {
             json: () => Promise.resolve(mockPrices),
         });
 
+        // Import fresh module after resetModules
         const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
 
         // First call - should fetch
