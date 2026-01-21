@@ -5,22 +5,21 @@
  * TDD Tests for SimulatorGauge Component - LTV Marker Spacing
  *
  * Issue #1: LTV percentage markers (75%/80% for XAUT, 70%/80% for WBTC) overlap
- * when markers are close together because they use fixed `-translate-x-1/2` centering.
+ * when markers are close together.
  *
  * Solution:
- * - When markers are close (< 12% distance), offset labels to prevent overlap:
- *   - Left marker (maxLtv): align right edge to marker
- *   - Right marker (liquidation): align left edge to marker
- * - When markers are far apart, continue using centered `-translate-x-1/2`
+ * - Both labels are always centered under their markers (-translate-x-1/2)
+ * - When markers are close (< 12% distance), the liquidation label drops down
+ *   vertically (-bottom-8) to prevent horizontal text overlap
+ * - When markers are far apart, both stay at the same vertical position (-bottom-5)
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import SimulatorGauge from "@/components/wallet/SimulatorGauge";
 
 describe("SimulatorGauge - LTV Marker Spacing", () => {
-  describe("Marker label positioning when thresholds are close", () => {
-    it("should offset maxLtv label to the left when markers are close (< 12% apart)", () => {
-      // XAUT scenario: maxLtv=75%, liquidation=80% (5% apart)
+  describe("Marker label centering", () => {
+    it("should center maxLtv label under its marker", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
@@ -33,12 +32,30 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       const maxLtvLabel = screen.getByTestId("ltv-max");
       const maxLtvContainer = maxLtvLabel.closest("div");
 
-      // When markers are close, the maxLtv label should NOT use -translate-x-1/2 (centered)
-      // Instead it should align right edge to marker (translate-x-0 or similar)
-      expect(maxLtvContainer).not.toHaveClass("-translate-x-1/2");
+      // maxLtv label should always be centered under its marker
+      expect(maxLtvContainer).toHaveClass("-translate-x-1/2");
     });
 
-    it("should offset liquidation label to the right when markers are close (< 12% apart)", () => {
+    it("should center liquidation label under its marker", () => {
+      render(
+        <SimulatorGauge
+          currentLtv={50}
+          simulatedLtv={50}
+          maxLtv={75}
+          liquidationRatio={80}
+        />
+      );
+
+      const liquidationLabel = screen.getByTestId("ltv-liquidation");
+      const liquidationContainer = liquidationLabel.closest("div");
+
+      // liquidation label should always be centered under its marker
+      expect(liquidationContainer).toHaveClass("-translate-x-1/2");
+    });
+  });
+
+  describe("Vertical offset when markers are close", () => {
+    it("should vertically offset liquidation label when markers are close (< 12% apart)", () => {
       // XAUT scenario: maxLtv=75%, liquidation=80% (5% apart)
       render(
         <SimulatorGauge
@@ -52,9 +69,27 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // When markers are close, the liquidation label should NOT use -translate-x-1/2 (centered)
-      // Instead it should align left edge to marker (-translate-x-full or similar)
-      expect(liquidationContainer).not.toHaveClass("-translate-x-1/2");
+      // When markers are close, liquidation label drops down to -bottom-8
+      expect(liquidationContainer).toHaveClass("-bottom-8");
+    });
+
+    it("should NOT vertically offset liquidation label when markers are far apart (>= 12%)", () => {
+      // Far apart scenario: maxLtv=50%, liquidation=80% (30% apart)
+      render(
+        <SimulatorGauge
+          currentLtv={30}
+          simulatedLtv={30}
+          maxLtv={50}
+          liquidationRatio={80}
+        />
+      );
+
+      const liquidationLabel = screen.getByTestId("ltv-liquidation");
+      const liquidationContainer = liquidationLabel.closest("div");
+
+      // When markers are far apart, liquidation label stays at -bottom-5
+      expect(liquidationContainer).toHaveClass("-bottom-5");
+      expect(liquidationContainer).not.toHaveClass("-bottom-8");
     });
 
     it("should handle WBTC scenario with close markers (70%/80%)", () => {
@@ -68,41 +103,15 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
         />
       );
 
-      const maxLtvLabel = screen.getByTestId("ltv-max");
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const maxLtvContainer = maxLtvLabel.closest("div");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // Both should not be centered when close together
-      expect(maxLtvContainer).not.toHaveClass("-translate-x-1/2");
-      expect(liquidationContainer).not.toHaveClass("-translate-x-1/2");
-    });
-  });
-
-  describe("Marker label positioning when thresholds are far apart", () => {
-    it("should center both labels when markers are far apart (>= 12%)", () => {
-      // Hypothetical scenario: maxLtv=50%, liquidation=80% (30% apart)
-      render(
-        <SimulatorGauge
-          currentLtv={30}
-          simulatedLtv={30}
-          maxLtv={50}
-          liquidationRatio={80}
-        />
-      );
-
-      const maxLtvLabel = screen.getByTestId("ltv-max");
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const maxLtvContainer = maxLtvLabel.closest("div");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // When markers are far apart, both should use centered positioning
-      expect(maxLtvContainer).toHaveClass("-translate-x-1/2");
-      expect(liquidationContainer).toHaveClass("-translate-x-1/2");
+      // 10% apart is still < 12%, so should drop down
+      expect(liquidationContainer).toHaveClass("-bottom-8");
     });
 
-    it("should center labels when markers are exactly 12% apart (boundary)", () => {
-      // Boundary case: exactly 12% apart should use centered positioning
+    it("should NOT vertically offset when markers are exactly 12% apart (boundary)", () => {
+      // Boundary case: exactly 12% apart should NOT drop down
       render(
         <SimulatorGauge
           currentLtv={30}
@@ -112,14 +121,11 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
         />
       );
 
-      const maxLtvLabel = screen.getByTestId("ltv-max");
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const maxLtvContainer = maxLtvLabel.closest("div");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // At exactly 12%, should use centered positioning
-      expect(maxLtvContainer).toHaveClass("-translate-x-1/2");
-      expect(liquidationContainer).toHaveClass("-translate-x-1/2");
+      // At exactly 12%, should stay at -bottom-5
+      expect(liquidationContainer).toHaveClass("-bottom-5");
     });
   });
 
@@ -171,7 +177,7 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       expect(liquidationLabel).toBeInTheDocument();
     });
 
-    it("should handle very close markers (1% apart)", () => {
+    it("should vertically offset when markers are very close (1% apart)", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
@@ -181,77 +187,11 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
         />
       );
 
-      const maxLtvLabel = screen.getByTestId("ltv-max");
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const maxLtvContainer = maxLtvLabel.closest("div");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // Very close markers should definitely use offset positioning
-      expect(maxLtvContainer).not.toHaveClass("-translate-x-1/2");
-      expect(liquidationContainer).not.toHaveClass("-translate-x-1/2");
-    });
-
-    it("should apply correct offset classes for close markers", () => {
-      // XAUT scenario: maxLtv=75%, liquidation=80%
-      render(
-        <SimulatorGauge
-          currentLtv={50}
-          simulatedLtv={50}
-          maxLtv={75}
-          liquidationRatio={80}
-        />
-      );
-
-      const maxLtvLabel = screen.getByTestId("ltv-max");
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const maxLtvContainer = maxLtvLabel.closest("div");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // maxLtv label should have right-aligned offset (translate-x-0 means no left shift)
-      // This aligns the right edge of the label with the marker
-      expect(maxLtvContainer).toHaveClass("translate-x-0");
-
-      // liquidation label should have left-aligned offset (-translate-x-full)
-      // This aligns the left edge of the label with the marker
-      expect(liquidationContainer).toHaveClass("-translate-x-full");
-    });
-
-    it("should vertically offset liquidation label when markers are close to prevent overlap", () => {
-      // XAUT scenario: maxLtv=75%, liquidation=80% (5% apart)
-      render(
-        <SimulatorGauge
-          currentLtv={50}
-          simulatedLtv={50}
-          maxLtv={75}
-          liquidationRatio={80}
-        />
-      );
-
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // When markers are close, liquidation label should be offset lower (-bottom-8 instead of -bottom-5)
-      // This stacks the labels vertically to prevent text overlap
+      // Very close markers should definitely drop down
       expect(liquidationContainer).toHaveClass("-bottom-8");
-    });
-
-    it("should NOT vertically offset liquidation label when markers are far apart", () => {
-      // Far apart scenario: maxLtv=50%, liquidation=80%
-      render(
-        <SimulatorGauge
-          currentLtv={30}
-          simulatedLtv={30}
-          maxLtv={50}
-          liquidationRatio={80}
-        />
-      );
-
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // When markers are far apart, both stay at same vertical position (-bottom-5)
-      expect(liquidationContainer).toHaveClass("-bottom-5");
-      expect(liquidationContainer).not.toHaveClass("-bottom-8");
     });
   });
 });

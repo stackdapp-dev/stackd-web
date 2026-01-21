@@ -110,12 +110,7 @@ export default function SimulatorGauge({
           style={{ left: `${maxLtvPosition}%` }}
         >
           <div className="w-0.5 h-full bg-amber-500/60" />
-          <div
-            className={cn(
-              "absolute -bottom-5 transform",
-              markersAreClose ? "translate-x-0" : "-translate-x-1/2"
-            )}
-          >
+          <div className="absolute -bottom-5 transform -translate-x-1/2">
             <span className="text-xs text-amber-500" data-testid="ltv-max">
               {maxLtv}%
             </span>
@@ -130,8 +125,8 @@ export default function SimulatorGauge({
           <div className="w-0.5 h-full bg-red-500/60" />
           <div
             className={cn(
-              "absolute transform",
-              markersAreClose ? "-bottom-8 -translate-x-full" : "-bottom-5 -translate-x-1/2"
+              "absolute transform -translate-x-1/2",
+              markersAreClose ? "-bottom-8" : "-bottom-5"
             )}
           >
             <span className="text-xs text-red-500" data-testid="ltv-liquidation">

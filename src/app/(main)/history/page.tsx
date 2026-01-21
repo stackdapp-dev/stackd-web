@@ -74,7 +74,7 @@ const History = () => {
   return (
     <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-6">
       {/* BETA Badge */}
-      <div className="flex justify-center">
+      <div className="flex justify-start">
         <BetaBadge />
       </div>
 
