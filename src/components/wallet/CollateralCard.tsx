@@ -11,6 +11,7 @@ import { formatAmount, formatCurrency, MASK_LONG, MASK_SHORT, maskString } from 
 import { useVisibility } from "@/providers/visibility";
 import { Lock, Unlock, Wallet, AlertTriangle, ChevronDown } from "lucide-react";
 import TokenIcon from "../common/TokenIcon";
+import NetworkIcon from "../common/NetworkIcon";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 
 interface AssetItem {
@@ -259,9 +260,7 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                                     {usdtBreakdown.arbitrumUsdt > 0 && (
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-                                                    <span className="text-[10px] font-bold text-blue-400">A</span>
-                                                </div>
+                                                <NetworkIcon network="arbitrum" width={24} height={24} />
                                                 <div>
                                                     <Text className="text-white text-xs">Arbitrum</Text>
                                                 </div>
@@ -281,9 +280,7 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                                     {usdtBreakdown.ethereumUsdt > 0 && (
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                                                    <span className="text-[10px] font-bold text-purple-400">E</span>
-                                                </div>
+                                                <NetworkIcon network="ethereum" width={24} height={24} />
                                                 <div>
                                                     <Text className="text-white text-xs">Ethereum</Text>
                                                 </div>
