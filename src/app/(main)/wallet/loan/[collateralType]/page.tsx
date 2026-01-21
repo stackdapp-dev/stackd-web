@@ -17,9 +17,11 @@ import { useFluid } from "@/hooks/useFluid";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useVisibility } from "@/providers/visibility";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
-import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw, ArrowUpFromLine, ExternalLink } from "lucide-react";
+import { Activity, AlertTriangle, DollarSign, TrendingDown, ArrowDownToLine, Plus, RotateCcw, ArrowUpFromLine, ExternalLink, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
+import SelfRepayConfirmModal from "@/components/wallet/SelfRepayConfirmModal";
+import { useSelfRepay } from "@/hooks/useSelfRepay";
 
 type CollateralType = "wbtc" | "xaut";
 
@@ -83,6 +85,7 @@ export default function LoanDetailsPage({
     const router = useRouter();
     const [showCollateralModal, setShowCollateralModal] = useState(false);
     const [activeModal, setActiveModal] = useState<SimulatorMode | null>(null);
+    const [showSelfRepayModal, setShowSelfRepayModal] = useState(false);
     const MIN_BORROWABLE_AMOUNT = 1;
 
     const { wbtcBalance, refetchBalances } = useWalletBalanceContext();
@@ -105,6 +108,17 @@ export default function LoanDetailsPage({
 
     // Get NFT ID for Fluid positions to construct direct link
     const fluidNftId = !isWbtc ? fluidData.nftId : undefined;
+
+    // Self-repay hook
+    const {
+        calculateSelfRepay,
+        executeSelfRepay,
+        isCalculating: isSelfRepayCalculating,
+        isExecuting: isSelfRepayExecuting,
+        estimate: selfRepayEstimate,
+        slippage,
+        setSlippage,
+    } = useSelfRepay({ collateralType });
 
     // Construct dynamic external URL for Fluid positions
     const externalUrl = useMemo(() => {
@@ -188,6 +202,19 @@ export default function LoanDetailsPage({
 
     const handleWithdrawCollateral = () => {
         setActiveModal("withdrawCollateral");
+    };
+
+    const handleSelfRepay = async () => {
+        await calculateSelfRepay();
+        setShowSelfRepayModal(true);
+    };
+
+    const handleConfirmSelfRepay = async () => {
+        const success = await executeSelfRepay();
+        if (success) {
+            setShowSelfRepayModal(false);
+            await Promise.all([refetchBalances(), refetchLoanData()]);
+        }
     };
 
     // Simulator is now available for both WBTC (Compound) and XAUT (Fluid)
@@ -339,6 +366,21 @@ export default function LoanDetailsPage({
                 </button>
             </div>
 
+            {/* Self Repay Button - Full Width */}
+            <button
+                onClick={handleSelfRepay}
+                disabled={!hasBorrowed || isSelfRepayCalculating}
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:hover:bg-emerald-500/10"
+            >
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-500/20 border border-emerald-500/30">
+                    <Wallet className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="text-left">
+                    <span className="text-white font-medium">Self Repay</span>
+                    <p className="text-emerald-400/70 text-xs">Close position using collateral</p>
+                </div>
+            </button>
+
             {/* Loan Statistics */}
             <div>
                 <h2 className="text-white text-sm font-medium uppercase tracking-wider mb-3">
@@ -481,6 +523,19 @@ export default function LoanDetailsPage({
                     setShowCollateralModal(false);
                     router.push("/wallet");
                 }}
+            />
+
+            {/* Self Repay Confirmation Modal */}
+            <SelfRepayConfirmModal
+                isOpen={showSelfRepayModal}
+                onClose={() => setShowSelfRepayModal(false)}
+                onConfirm={handleConfirmSelfRepay}
+                collateralSymbol={config.collateralSymbol as "WBTC" | "XAUT"}
+                estimate={selfRepayEstimate}
+                isLoading={isSelfRepayExecuting}
+                isCalculating={isSelfRepayCalculating}
+                slippage={slippage}
+                onSlippageChange={setSlippage}
             />
         </div>
     );
