@@ -8,18 +8,17 @@
  * when markers are close together.
  *
  * Solution:
- * - Both labels are always centered under their markers (-translate-x-1/2)
- * - When markers are close (< 12% distance), the liquidation label drops down
- *   vertically (-bottom-8) to prevent horizontal text overlap
- * - When markers are far apart, both stay at the same vertical position (-bottom-5)
+ * - Orange maxLtv label: BELOW the progress bar, centered on marker (-bottom-5)
+ * - Red liquidation label: ABOVE the progress bar, centered on marker (-top-5)
+ * - This completely prevents any overlap regardless of marker distance
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import SimulatorGauge from "@/components/wallet/SimulatorGauge";
 
 describe("SimulatorGauge - LTV Marker Spacing", () => {
-  describe("Marker label centering", () => {
-    it("should center maxLtv label under its marker", () => {
+  describe("Marker label positioning", () => {
+    it("should position maxLtv label BELOW the progress bar, centered on marker", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
@@ -32,11 +31,12 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       const maxLtvLabel = screen.getByTestId("ltv-max");
       const maxLtvContainer = maxLtvLabel.closest("div");
 
-      // maxLtv label should always be centered under its marker
+      // maxLtv label should be below the bar and centered
+      expect(maxLtvContainer).toHaveClass("-bottom-5");
       expect(maxLtvContainer).toHaveClass("-translate-x-1/2");
     });
 
-    it("should center liquidation label under its marker", () => {
+    it("should position liquidation label ABOVE the progress bar, centered on marker", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
@@ -49,14 +49,12 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // liquidation label should always be centered under its marker
+      // liquidation label should be above the bar and centered
+      expect(liquidationContainer).toHaveClass("-top-5");
       expect(liquidationContainer).toHaveClass("-translate-x-1/2");
     });
-  });
 
-  describe("Vertical offset when markers are close", () => {
-    it("should vertically offset liquidation label when markers are close (< 12% apart)", () => {
-      // XAUT scenario: maxLtv=75%, liquidation=80% (5% apart)
+    it("should not overlap even when markers are very close (XAUT: 75%/80%)", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
@@ -66,66 +64,34 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
         />
       );
 
+      const maxLtvLabel = screen.getByTestId("ltv-max");
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
+      const maxLtvContainer = maxLtvLabel.closest("div");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // When markers are close, liquidation label drops down to -bottom-8
-      expect(liquidationContainer).toHaveClass("-bottom-8");
+      // Labels are on opposite sides of the bar, so no overlap possible
+      expect(maxLtvContainer).toHaveClass("-bottom-5");
+      expect(liquidationContainer).toHaveClass("-top-5");
     });
 
-    it("should NOT vertically offset liquidation label when markers are far apart (>= 12%)", () => {
-      // Far apart scenario: maxLtv=50%, liquidation=80% (30% apart)
-      render(
-        <SimulatorGauge
-          currentLtv={30}
-          simulatedLtv={30}
-          maxLtv={50}
-          liquidationRatio={80}
-        />
-      );
-
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // When markers are far apart, liquidation label stays at -bottom-5
-      expect(liquidationContainer).toHaveClass("-bottom-5");
-      expect(liquidationContainer).not.toHaveClass("-bottom-8");
-    });
-
-    it("should handle WBTC scenario with close markers (70%/80%)", () => {
-      // WBTC scenario: maxLtv=70%, liquidation=80% (10% apart, still < 12%)
+    it("should not overlap even when markers are at same position", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
           simulatedLtv={50}
-          maxLtv={70}
+          maxLtv={80}
           liquidationRatio={80}
         />
       );
 
+      const maxLtvLabel = screen.getByTestId("ltv-max");
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
+      const maxLtvContainer = maxLtvLabel.closest("div");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // 10% apart is still < 12%, so should drop down
-      expect(liquidationContainer).toHaveClass("-bottom-8");
-    });
-
-    it("should NOT vertically offset when markers are exactly 12% apart (boundary)", () => {
-      // Boundary case: exactly 12% apart should NOT drop down
-      render(
-        <SimulatorGauge
-          currentLtv={30}
-          simulatedLtv={30}
-          maxLtv={68}
-          liquidationRatio={80}
-        />
-      );
-
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // At exactly 12%, should stay at -bottom-5
-      expect(liquidationContainer).toHaveClass("-bottom-5");
+      // Even at same position, labels don't overlap (above vs below)
+      expect(maxLtvContainer).toHaveClass("-bottom-5");
+      expect(liquidationContainer).toHaveClass("-top-5");
     });
   });
 
@@ -158,40 +124,32 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
   });
 
   describe("Edge cases", () => {
-    it("should handle markers at same position gracefully", () => {
-      // Edge case: maxLtv equals liquidationRatio
+    it("should handle WBTC scenario (70%/80%)", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
           simulatedLtv={50}
-          maxLtv={80}
+          maxLtv={70}
           liquidationRatio={80}
         />
       );
 
-      const maxLtvLabel = screen.getByTestId("ltv-max");
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-
-      // Both should render without crashing
-      expect(maxLtvLabel).toBeInTheDocument();
-      expect(liquidationLabel).toBeInTheDocument();
+      expect(screen.getByTestId("ltv-max")).toHaveTextContent("70%");
+      expect(screen.getByTestId("ltv-liquidation")).toHaveTextContent("80%");
     });
 
-    it("should vertically offset when markers are very close (1% apart)", () => {
+    it("should render without crashing at extreme values", () => {
       render(
         <SimulatorGauge
-          currentLtv={50}
-          simulatedLtv={50}
-          maxLtv={79}
-          liquidationRatio={80}
+          currentLtv={0}
+          simulatedLtv={100}
+          maxLtv={50}
+          liquidationRatio={90}
         />
       );
 
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // Very close markers should definitely drop down
-      expect(liquidationContainer).toHaveClass("-bottom-8");
+      expect(screen.getByTestId("ltv-max")).toBeInTheDocument();
+      expect(screen.getByTestId("ltv-liquidation")).toBeInTheDocument();
     });
   });
 });
