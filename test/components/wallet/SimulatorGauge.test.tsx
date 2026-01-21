@@ -4,21 +4,21 @@
 /**
  * TDD Tests for SimulatorGauge Component - LTV Marker Spacing
  *
- * Issue #1: LTV percentage markers (75%/80% for XAUT, 70%/80% for WBTC) overlap
- * when markers are close together.
+ * Issue #1: LTV percentage markers overlap when close together.
  *
  * Solution:
- * - Orange maxLtv label: BELOW the progress bar, centered on marker (-bottom-5)
- * - Red liquidation label: ABOVE the progress bar, centered on marker (-top-5)
- * - This completely prevents any overlap regardless of marker distance
+ * - Orange % text (maxLtv): inside the bar, to the LEFT of the orange marker
+ * - Red % text (liquidation): inside the bar, to the RIGHT of the red marker
+ * - "Max LTV" label: below the bar, to the left of the orange marker
+ * - "Liquidation" label: below the bar, to the right of the red marker
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import SimulatorGauge from "@/components/wallet/SimulatorGauge";
 
 describe("SimulatorGauge - LTV Marker Spacing", () => {
-  describe("Marker label positioning", () => {
-    it("should position maxLtv label BELOW the progress bar, centered on marker", () => {
+  describe("Marker percentage labels", () => {
+    it("should display maxLtv percentage to the LEFT of the orange marker", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
@@ -31,12 +31,11 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       const maxLtvLabel = screen.getByTestId("ltv-max");
       const maxLtvContainer = maxLtvLabel.closest("div");
 
-      // maxLtv label should be below the bar and centered
-      expect(maxLtvContainer).toHaveClass("-bottom-5");
-      expect(maxLtvContainer).toHaveClass("-translate-x-1/2");
+      // maxLtv percentage should be positioned to the right (which puts text to LEFT of marker)
+      expect(maxLtvContainer).toHaveClass("right-1");
     });
 
-    it("should position liquidation label ABOVE the progress bar, centered on marker", () => {
+    it("should display liquidation percentage to the RIGHT of the red marker", () => {
       render(
         <SimulatorGauge
           currentLtv={50}
@@ -49,49 +48,8 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       const liquidationLabel = screen.getByTestId("ltv-liquidation");
       const liquidationContainer = liquidationLabel.closest("div");
 
-      // liquidation label should be above the bar and centered
-      expect(liquidationContainer).toHaveClass("-top-5");
-      expect(liquidationContainer).toHaveClass("-translate-x-1/2");
-    });
-
-    it("should not overlap even when markers are very close (XAUT: 75%/80%)", () => {
-      render(
-        <SimulatorGauge
-          currentLtv={50}
-          simulatedLtv={50}
-          maxLtv={75}
-          liquidationRatio={80}
-        />
-      );
-
-      const maxLtvLabel = screen.getByTestId("ltv-max");
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const maxLtvContainer = maxLtvLabel.closest("div");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // Labels are on opposite sides of the bar, so no overlap possible
-      expect(maxLtvContainer).toHaveClass("-bottom-5");
-      expect(liquidationContainer).toHaveClass("-top-5");
-    });
-
-    it("should not overlap even when markers are at same position", () => {
-      render(
-        <SimulatorGauge
-          currentLtv={50}
-          simulatedLtv={50}
-          maxLtv={80}
-          liquidationRatio={80}
-        />
-      );
-
-      const maxLtvLabel = screen.getByTestId("ltv-max");
-      const liquidationLabel = screen.getByTestId("ltv-liquidation");
-      const maxLtvContainer = maxLtvLabel.closest("div");
-      const liquidationContainer = liquidationLabel.closest("div");
-
-      // Even at same position, labels don't overlap (above vs below)
-      expect(maxLtvContainer).toHaveClass("-bottom-5");
-      expect(liquidationContainer).toHaveClass("-top-5");
+      // liquidation percentage should be positioned to the left (which puts text to RIGHT of marker)
+      expect(liquidationContainer).toHaveClass("left-1");
     });
   });
 
@@ -121,6 +79,32 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
 
       expect(screen.getByTestId("ltv-liquidation")).toHaveTextContent("80%");
     });
+
+    it("should display 'Max LTV' label text", () => {
+      render(
+        <SimulatorGauge
+          currentLtv={50}
+          simulatedLtv={50}
+          maxLtv={75}
+          liquidationRatio={80}
+        />
+      );
+
+      expect(screen.getByText("Max LTV")).toBeInTheDocument();
+    });
+
+    it("should display 'Liquidation' label text", () => {
+      render(
+        <SimulatorGauge
+          currentLtv={50}
+          simulatedLtv={50}
+          maxLtv={75}
+          liquidationRatio={80}
+        />
+      );
+
+      expect(screen.getByText("Liquidation")).toBeInTheDocument();
+    });
   });
 
   describe("Edge cases", () => {
@@ -138,13 +122,27 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       expect(screen.getByTestId("ltv-liquidation")).toHaveTextContent("80%");
     });
 
-    it("should render without crashing at extreme values", () => {
+    it("should handle XAUT scenario (75%/80%)", () => {
       render(
         <SimulatorGauge
-          currentLtv={0}
-          simulatedLtv={100}
-          maxLtv={50}
-          liquidationRatio={90}
+          currentLtv={50}
+          simulatedLtv={50}
+          maxLtv={75}
+          liquidationRatio={80}
+        />
+      );
+
+      expect(screen.getByTestId("ltv-max")).toHaveTextContent("75%");
+      expect(screen.getByTestId("ltv-liquidation")).toHaveTextContent("80%");
+    });
+
+    it("should render without crashing when markers are at same position", () => {
+      render(
+        <SimulatorGauge
+          currentLtv={50}
+          simulatedLtv={50}
+          maxLtv={80}
+          liquidationRatio={80}
         />
       );
 
