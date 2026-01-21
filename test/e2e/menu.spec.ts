@@ -22,6 +22,9 @@ test.describe('Menu Page', () => {
         // Check Profile
         await expect(page.getByRole('button', { name: 'Profile' })).toBeVisible();
 
+        // Check Website
+        await expect(page.getByRole('button', { name: 'Website' })).toBeVisible();
+
         // Check Terms of Service
         await expect(page.getByRole('button', { name: 'Terms of Service' })).toBeVisible();
 
@@ -85,7 +88,7 @@ test.describe('Menu Page', () => {
         // Each menu item should have an icon in a rounded container
         const menuItems = page.locator('li .w-10.h-10.rounded-full');
 
-        // Should have 5 menu items total
-        await expect(menuItems).toHaveCount(5);
+        // Should have 6 menu items total (Withdraw, Contact Us, Profile, Website, Terms of Service, Privacy Policy)
+        await expect(menuItems).toHaveCount(6);
     });
 });
