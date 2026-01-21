@@ -215,5 +215,43 @@ describe("SimulatorGauge - LTV Marker Spacing", () => {
       // This aligns the left edge of the label with the marker
       expect(liquidationContainer).toHaveClass("-translate-x-full");
     });
+
+    it("should vertically offset liquidation label when markers are close to prevent overlap", () => {
+      // XAUT scenario: maxLtv=75%, liquidation=80% (5% apart)
+      render(
+        <SimulatorGauge
+          currentLtv={50}
+          simulatedLtv={50}
+          maxLtv={75}
+          liquidationRatio={80}
+        />
+      );
+
+      const liquidationLabel = screen.getByTestId("ltv-liquidation");
+      const liquidationContainer = liquidationLabel.closest("div");
+
+      // When markers are close, liquidation label should be offset lower (-bottom-8 instead of -bottom-5)
+      // This stacks the labels vertically to prevent text overlap
+      expect(liquidationContainer).toHaveClass("-bottom-8");
+    });
+
+    it("should NOT vertically offset liquidation label when markers are far apart", () => {
+      // Far apart scenario: maxLtv=50%, liquidation=80%
+      render(
+        <SimulatorGauge
+          currentLtv={30}
+          simulatedLtv={30}
+          maxLtv={50}
+          liquidationRatio={80}
+        />
+      );
+
+      const liquidationLabel = screen.getByTestId("ltv-liquidation");
+      const liquidationContainer = liquidationLabel.closest("div");
+
+      // When markers are far apart, both stay at same vertical position (-bottom-5)
+      expect(liquidationContainer).toHaveClass("-bottom-5");
+      expect(liquidationContainer).not.toHaveClass("-bottom-8");
+    });
   });
 });

@@ -130,8 +130,8 @@ export default function SimulatorGauge({
           <div className="w-0.5 h-full bg-red-500/60" />
           <div
             className={cn(
-              "absolute -bottom-5 transform",
-              markersAreClose ? "-translate-x-full" : "-translate-x-1/2"
+              "absolute transform",
+              markersAreClose ? "-bottom-8 -translate-x-full" : "-bottom-5 -translate-x-1/2"
             )}
           >
             <span className="text-xs text-red-500" data-testid="ltv-liquidation">
