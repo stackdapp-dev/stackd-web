@@ -14,12 +14,19 @@ import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useCompound } from "@/hooks/useCompound";
 import { useFluid } from "@/hooks/useFluid";
 import { useXautBalance } from "@/hooks/useXautBalance";
+import { useWeb3 } from "@/providers/Web3Provider";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
+import { C_COMPOUND_ADDR } from "@/lib/config/abis";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
+import {
+    confirmTransaction,
+    checkTransactionStatus,
+    isAbortError,
+} from "@/lib/web3/transactionConfirmation";
 import { X, AlertTriangle, CheckCircle } from "lucide-react";
 import { parseUnits } from "viem";
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import { toast } from "react-toastify";
 
 export type CollateralType = "WBTC" | "XAUT";
@@ -51,6 +58,7 @@ export default function NewLoanSimulatorModal({
     const getPrice = useGetTokenPrice();
     const compound = useCompound();
     const fluid = useFluid();
+    const { publicClient, ethereumPublicClient } = useWeb3();
 
     // Determine which protocol to use
     const isXaut = collateralType === "XAUT";
@@ -69,6 +77,7 @@ export default function NewLoanSimulatorModal({
     // Modal and processing state
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isConfirming, setIsConfirming] = useState(false);
     const [needsApproval, setNeedsApproval] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
 
@@ -140,14 +149,15 @@ export default function NewLoanSimulatorModal({
                         setNeedsApproval(currentAllowance < amountBigInt);
                     }
                 } else {
-                    // For Compound/Bulker, check WBTC allowance for Bulker
-                    // The Bulker uses supplyFrom which needs token approval to Bulker
+                    // For Compound/Bulker, check WBTC allowance for Comet (not Bulker!)
+                    // The Bulker's supplyTo calls comet.supplyFrom() which triggers:
+                    //   WBTC.transferFrom(user, comet, amount)
+                    // So the user must approve COMET (C_COMPOUND_ADDR), not the Bulker.
                     const tokenMeta = getTokenMetadata("WBTC");
                     if (tokenMeta && compound.allowance) {
-                        // Note: Bulker calls supplyFrom, so user needs to approve Bulker for WBTC
-                        const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
-                        const currentAllowance = await compound.allowance(tokenMeta.address as Address, BULKER_ADDRESS as Address);
-                        console.log("[NEW LOAN] WBTC allowance for Bulker:", currentAllowance?.toString() ?? "null");
+                        // Note: Comet calls transferFrom, so user needs to approve Comet for WBTC
+                        const currentAllowance = await compound.allowance(tokenMeta.address as Address, C_COMPOUND_ADDR as Address);
+                        console.log("[NEW LOAN] WBTC allowance for Comet:", currentAllowance?.toString() ?? "null");
                         // If allowance check returns null (error/no client), assume we need approval (safer default)
                         if (currentAllowance === null) {
                             console.log("[NEW LOAN] WBTC allowance check returned null, assuming approval needed");
@@ -214,9 +224,9 @@ export default function NewLoanSimulatorModal({
             } else {
                 const tokenMeta = getTokenMetadata("WBTC");
                 if (tokenMeta && compound.allowance) {
-                    const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
-                    const currentAllowance = await compound.allowance(tokenMeta.address as Address, BULKER_ADDRESS as Address);
-                    console.log("[NEW LOAN] WBTC allowance (re-check):", currentAllowance?.toString() ?? "null");
+                    // Check allowance for Comet (transferFrom caller), not Bulker
+                    const currentAllowance = await compound.allowance(tokenMeta.address as Address, C_COMPOUND_ADDR as Address);
+                    console.log("[NEW LOAN] WBTC allowance for Comet (re-check):", currentAllowance?.toString() ?? "null");
                     if (currentAllowance === null) {
                         setNeedsApproval(true);
                     } else {
@@ -243,36 +253,79 @@ export default function NewLoanSimulatorModal({
             console.log("[NEW LOAN] Starting approval for", collateralSymbol);
             const maxAmount = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
+            let txHash: string | null = null;
+
             if (isXaut) {
-                // Approve XAUT for Fluid vault
+                // Approve XAUT for Fluid vault (Ethereum mainnet)
                 const result = await fluid.approve(ETHEREUM_TOKEN_ADDRESSES.XAUT as Address, maxAmount);
+
+                // For XAUT on Ethereum mainnet, show "submitted" message and allow proceeding
+                // Don't wait for confirmation - Ethereum txs take longer and Privy can throw AbortError
+                if (result.txHash || (result.error && isAbortError(new Error(result.error)))) {
+                    console.log("[NEW LOAN] XAUT approval submitted:", result.txHash || "hash unknown (AbortError)");
+                    toast.info(
+                        "Approval submitted. Click 'Create Loan' to continue. If the transaction fails, please try again.",
+                        { autoClose: 6000 }
+                    );
+                    setNeedsApproval(false);
+                    return;
+                }
+
+                // Only show error if we truly have an error with no hash
                 if (result.error) {
                     toast.error(`Approval failed: ${result.error}`);
-                    throw new Error(result.error);
+                    return;
                 }
+                txHash = result.txHash;
             } else {
-                // Approve WBTC for Bulker
+                // Approve WBTC for Comet (Arbitrum)
+                // The Bulker's supplyTo calls comet.supplyFrom() which triggers:
+                //   WBTC.transferFrom(user, comet, amount)
+                // So we must approve COMET, not the Bulker.
                 const tokenMeta = getTokenMetadata("WBTC");
-                if (!tokenMeta) throw new Error("WBTC metadata not found");
-                const { BULKER_ADDRESS } = await import("@/lib/web3/bulker");
-                const result = await compound.approve(tokenMeta.address as Address, maxAmount, BULKER_ADDRESS as Address);
+                if (!tokenMeta) {
+                    toast.error("WBTC metadata not found");
+                    return;
+                }
+                const result = await compound.approve(tokenMeta.address as Address, maxAmount, C_COMPOUND_ADDR as Address);
                 if (result.error) {
                     toast.error(`Approval failed: ${result.error}`);
-                    throw new Error(result.error);
+                    return;
                 }
+                txHash = result.txHash;
             }
 
-            console.log("[NEW LOAN] Approval successful");
-            toast.success("Token approved! Click 'Create Loan' to continue.");
-            setNeedsApproval(false);
+            // For WBTC on Arbitrum, wait for transaction confirmation before declaring success
+            if (txHash && !isXaut) {
+                console.log("[NEW LOAN] WBTC approval tx sent, waiting for confirmation:", txHash);
+                setIsConfirming(true);
+
+                const confirmResult = await confirmTransaction(publicClient, txHash as Hash, { timeout: 60000 });
+
+                setIsConfirming(false);
+
+                if (confirmResult.status === "success") {
+                    console.log("[NEW LOAN] Approval confirmed on-chain");
+                    toast.success("Token approved! Click 'Create Loan' to continue.");
+                    setNeedsApproval(false);
+                } else if (confirmResult.status === "reverted") {
+                    console.error("[NEW LOAN] Approval transaction reverted");
+                    toast.error("Approval transaction failed on-chain");
+                } else {
+                    // Could not confirm - might still be pending
+                    console.warn("[NEW LOAN] Could not confirm approval:", confirmResult.error);
+                    toast.warning("Approval sent but confirmation timed out. Please check your wallet.");
+                }
+            }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Unknown error";
             console.error("[NEW LOAN] Approval failed:", err);
             toast.error(`Approval failed: ${errorMessage}`);
         } finally {
             setIsApproving(false);
+            setIsConfirming(false);
         }
-    }, [isApproving, isXaut, fluid, compound, collateralSymbol]);
+    }, [isApproving, isXaut, fluid, compound, collateralSymbol, publicClient]);
 
     // Execute transaction
     const handleConfirm = useCallback(async () => {
@@ -286,38 +339,132 @@ export default function NewLoanSimulatorModal({
 
             let result;
             if (isXaut) {
-                // Use Fluid's supplyAndBorrow
+                // Use Fluid's supplyAndBorrow (Ethereum mainnet)
                 result = await fluid.supplyAndBorrow(collateralAmount, borrowAmount);
+
+                // For XAUT/Fluid on Ethereum mainnet, show "submitted" message regardless of result
+                // Privy sometimes throws AbortError even when tx succeeds, and Ethereum txs take longer
+                // Just inform the user the tx was submitted and let them refresh
+                if (result?.txHash || (result?.error && isAbortError(new Error(result.error)))) {
+                    console.log("[NEW LOAN] XAUT transaction submitted:", result?.txHash || "hash unknown (AbortError)");
+                    toast.info(
+                        "Transaction submitted. Your active loan position will be updated in a few seconds. Please refresh the wallet page if it doesn't show up right away.",
+                        { autoClose: 8000 }
+                    );
+
+                    // Refetch data in background
+                    void Promise.all([
+                        refetchBalances(),
+                        fluid.refetch(),
+                    ]);
+
+                    setShowConfirmModal(false);
+                    onComplete?.();
+                    onClose();
+                    return;
+                }
+
+                // Only show error if we truly have an error with no hash (tx wasn't submitted)
+                if (result?.error) {
+                    toast.error(`Transaction failed: ${result.error}`);
+                    return;
+                }
             } else {
-                // Use Compound's supplyAndBorrow (via Bulker)
+                // Use Compound's supplyAndBorrow (via Bulker) on Arbitrum
                 result = await compound.supplyAndBorrow(collateralAmount, borrowAmount);
+
+                // Handle AbortError for WBTC: check actual on-chain status
+                if (result?.error && result?.txHash && isAbortError(new Error(result.error))) {
+                    console.log("[NEW LOAN] AbortError detected with hash, checking actual status...");
+                    setIsConfirming(true);
+
+                    const statusResult = await checkTransactionStatus(publicClient, result.txHash as Hash);
+
+                    setIsConfirming(false);
+
+                    if (statusResult.status === "success") {
+                        console.log("[NEW LOAN] Transaction actually succeeded despite AbortError!");
+                        toast.success("Loan created successfully!");
+
+                        await Promise.all([
+                            refetchBalances(),
+                            compound.refetch(),
+                        ]);
+
+                        setShowConfirmModal(false);
+                        onComplete?.();
+                        onClose();
+                        return;
+                    } else if (statusResult.status === "pending") {
+                        // Transaction is still pending, wait for confirmation
+                        console.log("[NEW LOAN] Transaction still pending, waiting for confirmation...");
+                        const confirmResult = await confirmTransaction(publicClient, result.txHash as Hash, { timeout: 60000 });
+
+                        if (confirmResult.status === "success") {
+                            console.log("[NEW LOAN] Transaction confirmed after waiting!");
+                            toast.success("Loan created successfully!");
+
+                            await Promise.all([
+                                refetchBalances(),
+                                compound.refetch(),
+                            ]);
+
+                            setShowConfirmModal(false);
+                            onComplete?.();
+                            onClose();
+                            return;
+                        }
+                    }
+
+                    // If we get here, transaction truly failed
+                    toast.error("Transaction failed on-chain");
+                    return;
+                }
+
+                // Normal error handling (no hash or not an AbortError)
+                if (result?.error) {
+                    toast.error(`Transaction failed: ${result.error}`);
+                    return;
+                }
+
+                console.log("[NEW LOAN] WBTC transaction successful");
+                toast.success("Loan created successfully!");
+
+                await Promise.all([
+                    refetchBalances(),
+                    compound.refetch(),
+                ]);
+
+                setShowConfirmModal(false);
+                onComplete?.();
+                onClose();
             }
-
-            if (result?.error) {
-                toast.error(`Transaction failed: ${result.error}`);
-                throw new Error(result.error);
-            }
-
-            console.log("[NEW LOAN] Transaction successful");
-            toast.success("Loan created successfully!");
-
-            // Refetch all data
-            await Promise.all([
-                refetchBalances(),
-                isXaut ? fluid.refetch() : compound.refetch(),
-            ]);
-
-            setShowConfirmModal(false);
-            onComplete?.();
-            onClose();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Unknown error";
-            console.error("[NEW LOAN] Transaction failed:", err);
+            console.error("[NEW LOAN] Transaction error:", err);
+
+            // Check if this is an AbortError (Privy sometimes throws this even when tx succeeds)
+            if (err instanceof Error && isAbortError(err)) {
+                // For XAUT transactions, AbortError likely means tx was submitted but confirmation timed out
+                if (isXaut) {
+                    toast.info(
+                        "XAUT position may have been created. Please refresh your wallet page to check.",
+                        { autoClose: 8000 }
+                    );
+                    void Promise.all([refetchBalances(), fluid.refetch()]);
+                    setShowConfirmModal(false);
+                    onComplete?.();
+                    onClose();
+                    return;
+                }
+            }
+
             toast.error(`Transaction failed: ${errorMessage}`);
         } finally {
             setIsProcessing(false);
+            setIsConfirming(false);
         }
-    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol]);
+    }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol, publicClient]);
 
     // Reset state when modal closes
     useEffect(() => {
@@ -326,6 +473,7 @@ export default function NewLoanSimulatorModal({
             setBorrowInput("0");
             setShowConfirmModal(false);
             setIsProcessing(false);
+            setIsConfirming(false);
             setNeedsApproval(false);
             setIsApproving(false);
         }
@@ -515,10 +663,16 @@ export default function NewLoanSimulatorModal({
                 {/* Confirmation Modal */}
                 <Modal
                     isOpen={showConfirmModal}
-                    onClose={() => !isProcessing && !isApproving && setShowConfirmModal(false)}
-                    title={isProcessing || isApproving ? "Processing" : "Confirm New Loan"}
+                    onClose={() => !isProcessing && !isApproving && !isConfirming && setShowConfirmModal(false)}
+                    title={
+                        isConfirming
+                            ? "Confirming transaction..."
+                            : isProcessing || isApproving
+                                ? "Processing"
+                                : "Confirm New Loan"
+                    }
                     icon={
-                        isProcessing || isApproving ? (
+                        isProcessing || isApproving || isConfirming ? (
                             <Loading />
                         ) : (
                             <div className="rounded-full p-4 bg-amber-500/20">
@@ -527,7 +681,11 @@ export default function NewLoanSimulatorModal({
                         )
                     }
                     message={
-                        isProcessing ? (
+                        isConfirming ? (
+                            <Text tone="muted">
+                                Waiting for blockchain confirmation. This may take a moment.
+                            </Text>
+                        ) : isProcessing ? (
                             <Text tone="muted">
                                 Please confirm the transaction in your wallet.
                             </Text>
@@ -584,19 +742,21 @@ export default function NewLoanSimulatorModal({
                         )
                     }
                     primaryButtonText={
-                        isProcessing
-                            ? "Processing..."
-                            : isApproving
-                                ? "Approving..."
-                                : needsApproval
-                                    ? "Approve & Create Loan"
-                                    : "Create Loan"
+                        isConfirming
+                            ? "Confirming..."
+                            : isProcessing
+                                ? "Processing..."
+                                : isApproving
+                                    ? "Approving..."
+                                    : needsApproval
+                                        ? "Approve & Create Loan"
+                                        : "Create Loan"
                     }
                     primaryButtonAction={needsApproval ? handleApprove : handleConfirm}
                     secondaryButtonText="Cancel"
                     secondaryButtonAction={() => setShowConfirmModal(false)}
-                    showCloseButton={!isProcessing && !isApproving}
-                    showActionButtons={!isProcessing && !isApproving}
+                    showCloseButton={!isProcessing && !isApproving && !isConfirming}
+                    showActionButtons={!isProcessing && !isApproving && !isConfirming}
                 />
             </div>
         </div>

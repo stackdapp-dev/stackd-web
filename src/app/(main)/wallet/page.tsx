@@ -8,9 +8,12 @@ import CollateralCard from "@/components/wallet/CollateralCard";
 import NewLoanModal from "@/components/wallet/NewLoanModal";
 import { useCollateralBreakdown } from "@/hooks/useCollateralBreakdown";
 import { useFluid } from "@/hooks/useFluid";
+import { useXautBalance } from "@/hooks/useXautBalance";
+import { calculateTotalCollateralUsd } from "@/lib/calculations/totalCollateralUsd";
 import { prefetchTransactionHistory } from "@/hooks/useTransactionHistory";
 import { useVisibility } from "@/providers/visibility";
 import { useWeb3 } from "@/providers/Web3Provider";
+import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -19,6 +22,8 @@ function WalletContent() {
   const { assets, isLoading } = useWalletBalanceContext();
   const { breakdown, isLoading: collateralLoading } = useCollateralBreakdown();
   const fluid = useFluid();
+  const { xautBalance: walletXautBalance, isLoading: xautLoading } = useXautBalance();
+  const getTokenPrice = useGetTokenPrice();
   const visibility = useVisibility();
   const { activeWalletAddress } = useWeb3();
   const queryClient = useQueryClient();
@@ -63,12 +68,18 @@ function WalletContent() {
     return assets.filter(asset => asset.symbol !== "WBTC" && asset.symbol !== "XAUT");
   }, [assets]);
 
-  // Calculate total collateral USD from all sources (WBTC from Compound + XAUT from Fluid)
+  // Calculate total collateral USD from all sources:
+  // - WBTC: wallet + Compound (from breakdown)
+  // - XAUT: wallet + Fluid supplied
   const totalCollateralUsd = useMemo(() => {
-    const wbtcCollateralUsd = breakdown.totalCollateralUsd || 0;
-    const xautCollateralUsd = fluid.suppliedAssets.find(a => a.symbol === "XAUT")?.usdValue || 0;
-    return wbtcCollateralUsd + xautCollateralUsd;
-  }, [breakdown.totalCollateralUsd, fluid.suppliedAssets]);
+    const xautSupplied = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
+    return calculateTotalCollateralUsd({
+      wbtcTotalUsd: breakdown.totalCollateralUsd || 0,
+      xautWalletBalance: walletXautBalance || 0,
+      xautSuppliedUsd: xautSupplied?.usdValue || 0,
+      xautPrice: getTokenPrice("XAUT"),
+    });
+  }, [breakdown.totalCollateralUsd, fluid.suppliedAssets, walletXautBalance, getTokenPrice]);
 
   return (
     <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.5rem)]">
@@ -78,7 +89,7 @@ function WalletContent() {
         visible={visibility.visible}
         onToggleVisibility={visibility.toggle}
         walletAddress={activeWalletAddress || ""}
-        isLoading={isLoading || collateralLoading || fluid.isLoading}
+        isLoading={isLoading || collateralLoading || fluid.isLoading || xautLoading}
       />
 
 

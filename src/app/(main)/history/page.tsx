@@ -3,6 +3,7 @@
 import Card from "@/components/ui/card";
 import { SkeletonRow } from "@/components/ui/skeleton";
 import Text from "@/components/ui/text";
+import BetaBadge from "@/components/ui/BetaBadge";
 import { formatAmount } from "@/lib/utils";
 import { calculateTransactionUsdValue } from "@/lib/transactionUtils";
 import { useTransactionHistory } from "@/hooks/useTransactionHistory";
@@ -72,9 +73,14 @@ const History = () => {
 
   return (
     <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-6">
+      {/* BETA Badge */}
+      <div className="flex justify-center">
+        <BetaBadge />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-white text-xl font-semibold">Transaction History</h1>
+        <h1 className="text-white text-xl font-semibold">History</h1>
         <button
           onClick={refresh}
           disabled={isLoading}

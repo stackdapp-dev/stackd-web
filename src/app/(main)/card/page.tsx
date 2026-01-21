@@ -11,6 +11,7 @@ import {
     CardTransactionList,
     AddToWalletButton,
 } from "@/components/card";
+import BetaBadge from "@/components/ui/BetaBadge";
 import type { CardDetails, CardTransaction } from "@/types/card";
 
 // Mock data for frontend-only display
@@ -98,6 +99,11 @@ export default function CardPage() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black pb-24">
             <div className="max-w-md mx-auto px-4 pt-6">
+                {/* BETA Badge */}
+                <div className="flex justify-center mb-4">
+                    <BetaBadge />
+                </div>
+
                 {/* Header */}
                 <h1 className="text-2xl font-bold text-white mb-4">Card</h1>
 
