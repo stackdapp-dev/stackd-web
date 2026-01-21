@@ -19,20 +19,28 @@ import {
 } from '@/lib/web3/fluid';
 import { parseAbi } from 'viem';
 
-// Fallback prices when live API is unavailable
-const FALLBACK_PRICES: Record<string, number> = {
-    XAUT: 2700, // Gold price per troy oz (XAUT = 1 oz gold)
-    WBTC: 100000, // BTC price (approximate)
+// CoinGecko API for live token prices
+const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3/simple/price';
+const COINGECKO_IDS: Record<string, string> = {
+    XAUT: 'tether-gold',
+    WBTC: 'bitcoin',
 };
 
-// Cache for live token prices (60 second TTL to match /api/token-prices)
+// Fallback prices when CoinGecko API is unavailable
+// These are updated dynamically on each successful CoinGecko fetch to stay current
+let fallbackPrices: Record<string, number> = {
+    XAUT: 3200, // Gold price per troy oz (XAUT = 1 oz gold) - updated Jan 2026
+    WBTC: 105000, // BTC price - updated Jan 2026
+};
+
+// Cache for live token prices (60 second TTL)
 let priceCache: { prices: Record<string, number>; timestamp: number } | null = null;
 const PRICE_CACHE_TTL = 60_000; // 60 seconds
 
 /**
- * Fetch live token prices from the token-prices API
- * Uses caching to avoid excessive API calls
- * Falls back to hardcoded prices if API fails
+ * Fetch live token prices directly from CoinGecko API
+ * Uses caching to avoid rate limiting (60s TTL)
+ * Falls back to last known prices if API fails
  */
 export async function fetchLiveTokenPrices(): Promise<Record<string, number>> {
     // Check cache first
@@ -41,35 +49,62 @@ export async function fetchLiveTokenPrices(): Promise<Record<string, number>> {
     }
 
     try {
-        // Use internal API endpoint - works in both server and client contexts
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : 'http://localhost:3000';
+        // Fetch directly from CoinGecko API
+        const coinIds = Object.values(COINGECKO_IDS).join(',');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-        const res = await fetch(`${baseUrl}/api/token-prices`, {
-            next: { revalidate: 60 },
-        });
+        const res = await fetch(
+            `${COINGECKO_API_URL}?ids=${coinIds}&vs_currencies=usd`,
+            {
+                headers: { Accept: 'application/json' },
+                signal: controller.signal,
+            }
+        );
+        clearTimeout(timeoutId);
 
         if (!res.ok) {
-            throw new Error(`Price fetch failed: ${res.status}`);
+            throw new Error(`CoinGecko API error: ${res.status}`);
         }
 
-        const data = await res.json();
+        const coingeckoData = await res.json();
 
-        // Transform response format { XAUT: { usd: 2700 } } to { XAUT: 2700 }
+        // Map CoinGecko response to our token symbols
         const prices: Record<string, number> = {};
-        for (const [symbol, info] of Object.entries(data)) {
-            prices[symbol] = (info as { usd: number }).usd;
+        for (const [symbol, coinId] of Object.entries(COINGECKO_IDS)) {
+            if (coingeckoData[coinId]?.usd) {
+                prices[symbol] = coingeckoData[coinId].usd;
+            } else {
+                // Use fallback for missing tokens
+                prices[symbol] = fallbackPrices[symbol] || 0;
+            }
         }
 
         // Update cache
         priceCache = { prices, timestamp: Date.now() };
-        console.log('[MultiProtocol] Fetched live token prices:', prices);
+
+        // Update fallback prices with latest successful fetch (keeps fallback current)
+        fallbackPrices = { ...prices };
+
+        console.log('[MultiProtocol] Fetched live token prices from CoinGecko:', prices);
 
         return prices;
     } catch (error) {
-        console.warn('[MultiProtocol] Failed to fetch live prices, using fallback:', error);
-        return FALLBACK_PRICES;
+        // Handle timeout gracefully
+        const isTimeout = error instanceof Error && error.name === 'AbortError';
+        if (isTimeout) {
+            console.warn('[MultiProtocol] CoinGecko request timed out, using fallback prices');
+        } else {
+            console.warn('[MultiProtocol] Failed to fetch from CoinGecko, using fallback:', error);
+        }
+
+        // Return cached data if available (even if expired)
+        if (priceCache) {
+            console.log('[MultiProtocol] Using cached prices:', priceCache.prices);
+            return priceCache.prices;
+        }
+
+        return fallbackPrices;
     }
 }
 
@@ -177,7 +212,7 @@ async function getFluidCollateral(walletAddress: string): Promise<number> {
 
                     // Fetch live prices (cached for 60s)
                     const livePrices = await fetchLiveTokenPrices();
-                    const tokenPrice = livePrices[tokenSymbol] || FALLBACK_PRICES[tokenSymbol] || 0;
+                    const tokenPrice = livePrices[tokenSymbol] || fallbackPrices[tokenSymbol] || 0;
                     const positionValueUsd = supplyAmount * tokenPrice;
 
                     totalFluidUsd += positionValueUsd;
