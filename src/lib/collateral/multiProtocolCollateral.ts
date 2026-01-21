@@ -19,12 +19,59 @@ import {
 } from '@/lib/web3/fluid';
 import { parseAbi } from 'viem';
 
-// Token prices - these should ideally come from an oracle/price feed
-// For now, we use approximate values that can be updated
-const TOKEN_PRICES: Record<string, number> = {
+// Fallback prices when live API is unavailable
+const FALLBACK_PRICES: Record<string, number> = {
     XAUT: 2700, // Gold price per troy oz (XAUT = 1 oz gold)
     WBTC: 100000, // BTC price (approximate)
 };
+
+// Cache for live token prices (60 second TTL to match /api/token-prices)
+let priceCache: { prices: Record<string, number>; timestamp: number } | null = null;
+const PRICE_CACHE_TTL = 60_000; // 60 seconds
+
+/**
+ * Fetch live token prices from the token-prices API
+ * Uses caching to avoid excessive API calls
+ * Falls back to hardcoded prices if API fails
+ */
+export async function fetchLiveTokenPrices(): Promise<Record<string, number>> {
+    // Check cache first
+    if (priceCache && Date.now() - priceCache.timestamp < PRICE_CACHE_TTL) {
+        return priceCache.prices;
+    }
+
+    try {
+        // Use internal API endpoint - works in both server and client contexts
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : 'http://localhost:3000';
+
+        const res = await fetch(`${baseUrl}/api/token-prices`, {
+            next: { revalidate: 60 },
+        });
+
+        if (!res.ok) {
+            throw new Error(`Price fetch failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        // Transform response format { XAUT: { usd: 2700 } } to { XAUT: 2700 }
+        const prices: Record<string, number> = {};
+        for (const [symbol, info] of Object.entries(data)) {
+            prices[symbol] = (info as { usd: number }).usd;
+        }
+
+        // Update cache
+        priceCache = { prices, timestamp: Date.now() };
+        console.log('[MultiProtocol] Fetched live token prices:', prices);
+
+        return prices;
+    } catch (error) {
+        console.warn('[MultiProtocol] Failed to fetch live prices, using fallback:', error);
+        return FALLBACK_PRICES;
+    }
+}
 
 export interface MultiProtocolCollateral {
     walletAddress: string;
@@ -122,13 +169,15 @@ async function getFluidCollateral(walletAddress: string): Promise<number> {
                     const supplyDecimals = knownVault.supplyDecimals || 6;
                     const supplyAmount = Number(userPosition.supply) / Math.pow(10, supplyDecimals);
 
-                    // Get token price (XAUT = gold price)
+                    // Get token price (XAUT = gold price) - use live prices
                     const tokenSymbol = knownVault.supplyToken.toLowerCase() ===
                         '0x68749665ff8d2d112fa859aa293f07a622782f38'.toLowerCase()
                         ? 'XAUT'
                         : 'WBTC';
 
-                    const tokenPrice = TOKEN_PRICES[tokenSymbol] || 0;
+                    // Fetch live prices (cached for 60s)
+                    const livePrices = await fetchLiveTokenPrices();
+                    const tokenPrice = livePrices[tokenSymbol] || FALLBACK_PRICES[tokenSymbol] || 0;
                     const positionValueUsd = supplyAmount * tokenPrice;
 
                     totalFluidUsd += positionValueUsd;
