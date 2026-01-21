@@ -30,6 +30,11 @@ export default function SimulatorGauge({
   const maxLtvPosition = (maxLtv / gaugeMax) * 100;
   const liquidationPosition = (liquidationRatio / gaugeMax) * 100;
 
+  // Calculate if markers are close together (within 12% of gauge)
+  // When close, offset labels to prevent overlap
+  const markerDistance = liquidationRatio - maxLtv;
+  const markersAreClose = markerDistance < 12;
+
   const hasSimulatedChange = Math.abs(currentLtv - simulatedLtv) > 0.1;
 
   // Get color based on LTV risk level
@@ -105,7 +110,12 @@ export default function SimulatorGauge({
           style={{ left: `${maxLtvPosition}%` }}
         >
           <div className="w-0.5 h-full bg-amber-500/60" />
-          <div className="absolute -bottom-5 transform -translate-x-1/2">
+          <div
+            className={cn(
+              "absolute -bottom-5 transform",
+              markersAreClose ? "translate-x-0" : "-translate-x-1/2"
+            )}
+          >
             <span className="text-xs text-amber-500" data-testid="ltv-max">
               {maxLtv}%
             </span>
@@ -118,7 +128,12 @@ export default function SimulatorGauge({
           style={{ left: `${liquidationPosition}%` }}
         >
           <div className="w-0.5 h-full bg-red-500/60" />
-          <div className="absolute -bottom-5 transform -translate-x-1/2">
+          <div
+            className={cn(
+              "absolute -bottom-5 transform",
+              markersAreClose ? "-translate-x-full" : "-translate-x-1/2"
+            )}
+          >
             <span className="text-xs text-red-500" data-testid="ltv-liquidation">
               {liquidationRatio}%
             </span>

@@ -21,6 +21,8 @@ import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
 import { RotateCcw, AlertTriangle, CheckCircle } from "lucide-react";
 import { parseUnits } from "viem";
+import { showSuccessToast } from "@/components/ui/custom-toast";
+import { useRouter } from "next/navigation";
 
 export type SimulatorMode = "borrow" | "addCollateral" | "repay" | "withdrawCollateral" | "simulate";
 export type CollateralType = "WBTC" | "XAUT";
@@ -45,6 +47,7 @@ interface LoanSimulatorProps {
  * - XAUT: Uses Fluid protocol on Ethereum mainnet
  */
 export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC", onComplete }: LoanSimulatorProps) {
+  const router = useRouter();
   const { refetchBalances, wbtcBalance, usdtBalance } = useWalletBalanceContext();
   const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
   const getPrice = useGetTokenPrice();
@@ -450,6 +453,19 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       if (result?.error) throw new Error(result.error);
 
       await Promise.all([refetchBalances(), refetchLoanData(), isXaut ? fluid.refetch() : Promise.resolve()]);
+
+      // Show success toast based on mode
+      const successMessages: Record<SimulatorMode, string> = {
+        borrow: `Successfully borrowed ${formatCurrency(transactionAmount)}`,
+        addCollateral: `Successfully added ${formatAmount(transactionAmount, 6)} ${collateralSymbol}`,
+        repay: `Successfully repaid ${formatCurrency(transactionAmount)}`,
+        withdrawCollateral: `Successfully withdrew ${formatAmount(transactionAmount, 6)} ${collateralSymbol}`,
+        simulate: "",
+      };
+      if (successMessages[mode]) {
+        showSuccessToast(successMessages[mode]);
+      }
+
       setShowConfirmModal(false);
 
       // Reset input and call completion callback
@@ -460,12 +476,17 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       }
 
       onComplete?.();
+
+      // Navigate to wallet for withdrawCollateral mode
+      if (mode === "withdrawCollateral") {
+        router.push("/wallet");
+      }
     } catch (err) {
       console.error(`${mode} failed:`, err);
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, transactionAmount, mode, modeConfig.tokenSymbol, compound, fluid, isXaut, refetchBalances, refetchLoanData, parsedInput, onComplete]);
+  }, [isProcessing, transactionAmount, mode, modeConfig.tokenSymbol, compound, fluid, isXaut, refetchBalances, refetchLoanData, parsedInput, onComplete, collateralSymbol, router]);
 
   // Format display values based on mode
   const formatInputDisplay = useCallback((value: number) => {
@@ -656,7 +677,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                       data-testid="simulator-input"
                     />
                     <p className="text-white/40 text-sm mt-1 text-center">
-                      ≈ {formatCurrency(parsedInput * collateralPrice)} • {collateralSymbol}
+                      {mode === "repay" || mode === "borrow"
+                        ? `≈ ${formatCurrency(parsedInput)} • USDT`
+                        : `≈ ${formatCurrency(parsedInput * collateralPrice)} • ${collateralSymbol}`}
                     </p>
                   </div>
 
