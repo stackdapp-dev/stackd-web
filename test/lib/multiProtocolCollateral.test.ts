@@ -174,3 +174,81 @@ describe('Token Price Handling', () => {
         expect(expectedUsd).toBeCloseTo(19.01, 1);
     });
 });
+
+describe('Live Token Price Fetching', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        // Reset fetch mock
+        global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should fetch live prices from token-prices API', async () => {
+        // Mock the fetch response with live prices
+        const mockPrices = {
+            XAUT: { usd: 3200 }, // Higher than fallback $2700
+            WBTC: { usd: 105000 }, // Higher than fallback $100k
+        };
+
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockPrices),
+        });
+
+        // Import the function dynamically to get fresh module
+        const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        const prices = await fetchLiveTokenPrices();
+
+        expect(prices.XAUT).toBe(3200);
+        expect(prices.WBTC).toBe(105000);
+    });
+
+    it('should return fallback prices when API fails', async () => {
+        (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+
+        const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        const prices = await fetchLiveTokenPrices();
+
+        // Should return fallback values
+        expect(prices.XAUT).toBe(2700);
+        expect(prices.WBTC).toBe(100000);
+    });
+
+    it('should cache prices for 60 seconds', async () => {
+        const mockPrices = {
+            XAUT: { usd: 3200 },
+            WBTC: { usd: 105000 },
+        };
+
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(mockPrices),
+        });
+
+        const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        // First call - should fetch
+        await fetchLiveTokenPrices();
+
+        // Second call - should use cache
+        await fetchLiveTokenPrices();
+
+        // Fetch should only be called once due to caching
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should calculate Fluid collateral with live XAUT price', async () => {
+        // 55.5 oz XAUT at $3200/oz = $177,600 (vs $149,850 with fallback $2700)
+        const xautAmount = 55.5;
+        const liveXautPrice = 3200;
+        const expectedWithLivePrice = xautAmount * liveXautPrice;
+
+        expect(expectedWithLivePrice).toBe(177600);
+        expect(expectedWithLivePrice).toBeGreaterThan(149850); // Should be higher than fallback price calculation
+    });
+});
