@@ -132,8 +132,12 @@ describe("WBTC Position Creation - Fork Test", () => {
      * 
      * This test demonstrates the original bug: approving WBTC to Bulker
      * instead of Comet causes the transfer to fail.
+     * 
+     * SKIPPED: This test requires a local Anvil fork with impersonation.
+     * It relies on a specific wallet having WBTC balance at a pinned block,
+     * which isn't available in CI environments using public RPCs.
      */
-    it("should fail when WBTC is approved to Bulker instead of Comet (reproduces bug)", async () => {
+    it.skip("should fail when WBTC is approved to Bulker instead of Comet (reproduces bug)", async () => {
         // Create test client with fork at pinned block
         testClient = createTestClient({
             chain: arbitrum,
