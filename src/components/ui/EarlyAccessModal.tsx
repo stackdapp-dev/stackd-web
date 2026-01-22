@@ -36,7 +36,7 @@ export default function EarlyAccessModal() {
             <div
                 className="relative text-white rounded-3xl p-8 max-w-md w-full border border-white/10"
                 style={{
-                    background: 'rgba(30, 30, 30, 0.8)',
+                    background: 'rgba(30, 30, 30, 0.95)',
                     backdropFilter: 'blur(40px)',
                     WebkitBackdropFilter: 'blur(40px)',
                 }}
@@ -45,7 +45,7 @@ export default function EarlyAccessModal() {
                 <button
                     aria-label="Close"
                     onClick={handleDismiss}
-                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full border border-white/20 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-colors"
                 >
                     <X size={16} />
                 </button>
@@ -69,7 +69,7 @@ export default function EarlyAccessModal() {
                     {/* Action button */}
                     <Button
                         onClick={handleDismiss}
-                        className="w-full mt-2"
+                        className="w-full mt-2 rounded-xl"
                     >
                         Got it!
                     </Button>

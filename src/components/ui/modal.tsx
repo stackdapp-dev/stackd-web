@@ -39,7 +39,7 @@ export default function Modal({
       <div
         className="relative text-white rounded-3xl p-8 max-w-md w-full overflow-auto scrollbar-hide border border-white/10"
         style={{
-          background: 'rgba(30, 30, 30, 0.8)',
+          background: 'rgba(30, 30, 30, 0.95)',
           backdropFilter: 'blur(40px)',
           WebkitBackdropFilter: 'blur(40px)',
         }}
@@ -48,9 +48,9 @@ export default function Modal({
           <button
             aria-label="Close"
             onClick={onClose}
-            className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors"
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-colors"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         )}
 
@@ -67,16 +67,15 @@ export default function Modal({
           {showActionButtons && (
             <div className="flex w-full gap-3">
               {secondaryButtonText && (
-                <Button
-                  variant="ghost"
-                  className="flex-1"
+                <button
                   onClick={secondaryButtonAction}
+                  className="flex-1 py-3 px-4 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors"
                 >
                   {secondaryButtonText}
-                </Button>
+                </button>
               )}
               {primaryButtonText && (
-                <Button className="flex-1" onClick={primaryButtonAction}>
+                <Button className="flex-1 rounded-xl" onClick={primaryButtonAction}>
                   {primaryButtonText}
                 </Button>
               )}
