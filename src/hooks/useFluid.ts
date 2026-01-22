@@ -327,6 +327,7 @@ export function useFluid(): UseFluidResult {
             to: xautAddress,
             data: approveData,
             chainId: mainnet.id,
+            forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
           });
 
           if (approvalResult.error) {
@@ -344,6 +345,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -406,6 +408,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -438,6 +441,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -468,6 +472,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -499,6 +504,7 @@ export function useFluid(): UseFluidResult {
           to: token,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -571,6 +577,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {

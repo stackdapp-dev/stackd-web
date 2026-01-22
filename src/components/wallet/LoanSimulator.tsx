@@ -20,9 +20,10 @@ import { getTokenMetadata } from "@/constants/Tokens";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
 import { RotateCcw, AlertTriangle, CheckCircle } from "lucide-react";
-import { parseUnits } from "viem";
+import { parseUnits, formatUnits } from "viem";
 import { showSuccessToast } from "@/components/ui/custom-toast";
 import { useRouter } from "next/navigation";
+import { useWeb3 } from "@/providers/Web3Provider";
 
 export type SimulatorMode = "borrow" | "addCollateral" | "repay" | "withdrawCollateral" | "simulate";
 export type CollateralType = "WBTC" | "XAUT";
@@ -75,6 +76,10 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const [isProcessing, setIsProcessing] = useState(false);
   const [needsApproval, setNeedsApproval] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showEthAlert, setShowEthAlert] = useState(false);
+
+  // Web3 for ETH balance check
+  const { ethereumPublicClient, activeWalletAddress } = useWeb3();
 
   // Conditionally source data from Compound (loanCalcs) or Fluid based on collateralType
   const suppliedAssets = isXaut ? fluid.suppliedAssets : loanCalcs.suppliedAssets;
@@ -416,6 +421,25 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   // Execute transaction
   const handleConfirm = useCallback(async () => {
     if (isProcessing || transactionAmount <= 0) return;
+
+    // For XAUT operations, check ETH balance for gas fees (sponsorship disabled)
+    if (isXaut && activeWalletAddress && ethereumPublicClient) {
+      try {
+        const ethBalance = await ethereumPublicClient.getBalance({
+          address: activeWalletAddress as `0x${string}`
+        });
+        // Require at least 0.005 ETH for gas (conservative estimate)
+        const minEthRequired = parseUnits("0.005", 18);
+        if (ethBalance < minEthRequired) {
+          console.log("[FLUID] Insufficient ETH for gas:", formatUnits(ethBalance, 18), "ETH");
+          setShowEthAlert(true);
+          return;
+        }
+      } catch (err) {
+        console.error("[FLUID] ETH balance check failed:", err);
+        // Continue anyway if balance check fails
+      }
+    }
 
     setIsProcessing(true);
     try {
@@ -946,12 +970,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           isProcessing || isApproving ? (
             <Loading />
           ) : (
-            <div className={cn(
-              "rounded-full p-4",
-              modeConfig.successIcon ? "bg-green-500/20" : "bg-amber-500/20"
-            )}>
-              <TokenIcon symbol={modeConfig.tokenSymbol} width={40} height={40} />
-            </div>
+            <TokenIcon symbol={modeConfig.tokenSymbol} width={56} height={56} />
           )
         }
         message={
@@ -966,7 +985,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           ) : (
             <div className="flex flex-col gap-4">
               {/* Amount Display */}
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <div className="rounded-2xl p-4 border border-white/20">
                 <p className="text-white/50 text-sm mb-1">{modeConfig.title} Amount</p>
                 <p className="text-3xl font-bold text-white">
                   {formatInputDisplay(transactionAmount)}
@@ -976,7 +995,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
               {/* Summary based on mode */}
               {mode === "borrow" && (
-                <>
+                <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-white/50">Current Borrowed</span>
                     <span className="text-white">{formatCurrency(currentBorrowedAmount, 2)}</span>
@@ -985,37 +1004,37 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                     <span className="text-white/50">New Total</span>
                     <span className="text-amber-400 font-semibold">{formatCurrency(parsedInput, 2)}</span>
                   </div>
-                </>
+                </div>
               )}
 
               {mode === "addCollateral" && (
-                <>
+                <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-white/50">Current Collateral</span>
                     <span className="text-white">{formatAmount(currentCollateralAmount, 4)} {collateralSymbol}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-white/50">New Total</span>
-                    <span className="text-purple-400 font-semibold">{formatAmount(simulatedCollateral, 4)} {collateralSymbol}</span>
+                    <span className="text-emerald-400 font-semibold">{formatAmount(simulatedCollateral, 4)} {collateralSymbol}</span>
                   </div>
-                </>
+                </div>
               )}
 
               {mode === "repay" && (
-                <>
+                <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-white/50">Current Borrowed</span>
                     <span className="text-white">{formatCurrency(currentBorrowedAmount, 2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-white/50">Remaining Debt</span>
-                    <span className="text-blue-400 font-semibold">{formatCurrency(simulatedBorrow, 2)}</span>
+                    <span className="text-emerald-400 font-semibold">{formatCurrency(simulatedBorrow, 2)}</span>
                   </div>
-                </>
+                </div>
               )}
 
               {mode === "withdrawCollateral" && (
-                <>
+                <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-white/50">Current Collateral</span>
                     <span className="text-white">{formatAmount(currentCollateralAmount, 4)} {collateralSymbol}</span>
@@ -1024,24 +1043,24 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                     <span className="text-white/50">Remaining Collateral</span>
                     <span className="text-amber-400 font-semibold">{formatAmount(simulatedCollateral, 4)} {collateralSymbol}</span>
                   </div>
-                </>
+                </div>
               )}
 
               {/* Warning/Success Banner */}
               <div className={cn(
-                "border rounded-lg px-3 py-2 flex items-start gap-2",
+                "rounded-xl px-4 py-3 flex items-start gap-3",
                 modeConfig.successIcon
-                  ? "bg-green-500/10 border-green-500/20"
-                  : "bg-amber-500/10 border-amber-500/20"
+                  ? "bg-emerald-500/10 border border-emerald-500/30"
+                  : "bg-amber-500/10 border border-amber-500/30"
               )}>
                 {modeConfig.successIcon ? (
-                  <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
                 )}
                 <p className={cn(
-                  "text-xs",
-                  modeConfig.successIcon ? "text-green-400/80" : "text-amber-400/80"
+                  "text-sm",
+                  modeConfig.successIcon ? "text-emerald-400" : "text-amber-400"
                 )}>
                   {modeConfig.warningText}
                 </p>
@@ -1063,6 +1082,39 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         secondaryButtonAction={() => setShowConfirmModal(false)}
         showCloseButton={!isProcessing && !isApproving}
         showActionButtons={!isProcessing && !isApproving}
+      />
+
+      {/* ETH Alert Modal - shown when insufficient ETH for Fluid operations */}
+      <Modal
+        isOpen={showEthAlert}
+        onClose={() => setShowEthAlert(false)}
+        title="ETH Required for Gas"
+        icon={
+          <div className="w-14 h-14 rounded-full bg-amber-500/20 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-amber-400" />
+          </div>
+        }
+        message={
+          <div className="flex flex-col gap-4">
+            <Text tone="muted">
+              ETH balance required during Beta testing. Gas sponsorship is temporarily disabled for Ethereum mainnet operations.
+            </Text>
+            <div className="rounded-xl px-4 py-3 bg-amber-500/10 border border-amber-500/30">
+              <p className="text-amber-400 text-sm">
+                Please add at least 0.005 ETH to your wallet to cover gas fees for this transaction.
+              </p>
+            </div>
+          </div>
+        }
+        primaryButtonText="Get ETH"
+        primaryButtonAction={() => {
+          setShowEthAlert(false);
+          router.push("/cash-in");
+        }}
+        secondaryButtonText="Cancel"
+        secondaryButtonAction={() => setShowEthAlert(false)}
+        showCloseButton={true}
+        showActionButtons={true}
       />
     </div>
   );

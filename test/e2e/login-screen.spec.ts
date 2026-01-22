@@ -50,18 +50,18 @@ test.describe("Login Screen - UI Elements", () => {
         await expect(emailIcon).toBeVisible();
     });
 
-    test("should display Continue with Wallet button with icon and WORKS BEST badge", async ({ page }) => {
+    test("should display Continue with Wallet button with icon and RECOMMENDED badge", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("domcontentloaded");
 
         const walletButton = page.getByTestId("login-wallet-button");
         await expect(walletButton).toBeVisible();
-        await expect(walletButton).toContainText("Continue with a Wallet");
+        await expect(walletButton).toContainText("Connect External Wallet");
 
-        // Check for WORKS BEST badge on wallet button
+        // Check for RECOMMENDED badge on wallet button
         const walletBadge = page.getByTestId("login-wallet-badge");
         await expect(walletBadge).toBeVisible();
-        await expect(walletBadge).toContainText("WORKS BEST");
+        await expect(walletBadge).toContainText("RECOMMENDED");
 
         // Check for wallet icon
         const walletIcon = page.getByTestId("login-wallet-icon");
@@ -110,7 +110,7 @@ test.describe("Login Screen - UI Elements", () => {
 
         // Verify order by checking text content
         await expect(buttons.nth(0)).toContainText("Login with Email");
-        await expect(buttons.nth(1)).toContainText("Continue with a Wallet");
+        await expect(buttons.nth(1)).toContainText("Connect External Wallet");
         await expect(buttons.nth(2)).toContainText("Login with Passkey");
     });
 
