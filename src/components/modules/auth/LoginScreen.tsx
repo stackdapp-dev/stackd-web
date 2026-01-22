@@ -12,7 +12,7 @@ const LoginScreen = () => {
   return (
     <div
       data-testid="login-container"
-      className="flex min-h-screen flex-col items-center justify-center px-8 py-12"
+      className="flex min-h-screen flex-col items-center justify-center px-8 py-12 bg-black"
     >
       {/* BETA Badge at top */}
       <Badge
