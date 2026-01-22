@@ -22,13 +22,17 @@ function Home() {
     setShowSplash(splashShown !== "true");
   }, []);
 
-  // Set html background to black for login page overscroll, restore on unmount
+  // Set html and body background to black for login page overscroll, restore on unmount
   useEffect(() => {
-    const originalBgColor = "#020617";
+    const originalHtmlBg = "#020617";
+    const originalBodyBg = "linear-gradient(to bottom, #020617, #0f172a, #000000)";
+
     document.documentElement.style.backgroundColor = "#000000";
+    document.body.style.background = "#000000";
 
     return () => {
-      document.documentElement.style.backgroundColor = originalBgColor;
+      document.documentElement.style.backgroundColor = originalHtmlBg;
+      document.body.style.background = originalBodyBg;
     };
   }, []);
 
