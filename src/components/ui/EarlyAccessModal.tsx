@@ -32,14 +32,13 @@ export default function EarlyAccessModal() {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6">
             <div
-                className="relative text-white rounded-2xl p-6 max-w-md w-full border border-white/20"
+                className="relative text-white rounded-3xl p-8 max-w-md w-full border border-white/10"
                 style={{
-                    background: 'rgba(30, 30, 35, 0.85)',
-                    backdropFilter: 'blur(40px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    background: 'rgba(30, 30, 30, 0.8)',
+                    backdropFilter: 'blur(40px)',
+                    WebkitBackdropFilter: 'blur(40px)',
                 }}
             >
                 {/* Close button */}
