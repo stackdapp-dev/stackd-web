@@ -19,12 +19,94 @@ import {
 } from '@/lib/web3/fluid';
 import { parseAbi } from 'viem';
 
-// Token prices - these should ideally come from an oracle/price feed
-// For now, we use approximate values that can be updated
-const TOKEN_PRICES: Record<string, number> = {
-    XAUT: 2700, // Gold price per troy oz (XAUT = 1 oz gold)
-    WBTC: 100000, // BTC price (approximate)
+// CoinGecko API for live token prices
+const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3/simple/price';
+const COINGECKO_IDS: Record<string, string> = {
+    XAUT: 'tether-gold',
+    WBTC: 'bitcoin',
 };
+
+// Fallback prices when CoinGecko API is unavailable
+// These are updated dynamically on each successful CoinGecko fetch to stay current
+let fallbackPrices: Record<string, number> = {
+    XAUT: 3200, // Gold price per troy oz (XAUT = 1 oz gold) - updated Jan 2026
+    WBTC: 105000, // BTC price - updated Jan 2026
+};
+
+// Cache for live token prices (60 second TTL)
+let priceCache: { prices: Record<string, number>; timestamp: number } | null = null;
+const PRICE_CACHE_TTL = 60_000; // 60 seconds
+
+/**
+ * Fetch live token prices directly from CoinGecko API
+ * Uses caching to avoid rate limiting (60s TTL)
+ * Falls back to last known prices if API fails
+ */
+export async function fetchLiveTokenPrices(): Promise<Record<string, number>> {
+    // Check cache first
+    if (priceCache && Date.now() - priceCache.timestamp < PRICE_CACHE_TTL) {
+        return priceCache.prices;
+    }
+
+    try {
+        // Fetch directly from CoinGecko API
+        const coinIds = Object.values(COINGECKO_IDS).join(',');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+        const res = await fetch(
+            `${COINGECKO_API_URL}?ids=${coinIds}&vs_currencies=usd`,
+            {
+                headers: { Accept: 'application/json' },
+                signal: controller.signal,
+            }
+        );
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+            throw new Error(`CoinGecko API error: ${res.status}`);
+        }
+
+        const coingeckoData = await res.json();
+
+        // Map CoinGecko response to our token symbols
+        const prices: Record<string, number> = {};
+        for (const [symbol, coinId] of Object.entries(COINGECKO_IDS)) {
+            if (coingeckoData[coinId]?.usd) {
+                prices[symbol] = coingeckoData[coinId].usd;
+            } else {
+                // Use fallback for missing tokens
+                prices[symbol] = fallbackPrices[symbol] || 0;
+            }
+        }
+
+        // Update cache
+        priceCache = { prices, timestamp: Date.now() };
+
+        // Update fallback prices with latest successful fetch (keeps fallback current)
+        fallbackPrices = { ...prices };
+
+        console.log('[MultiProtocol] Fetched live token prices from CoinGecko:', prices);
+
+        return prices;
+    } catch (error) {
+        // Handle timeout gracefully
+        const isTimeout = error instanceof Error && error.name === 'AbortError';
+        if (isTimeout) {
+            console.warn('[MultiProtocol] CoinGecko request timed out, using fallback prices');
+        } else {
+            console.warn('[MultiProtocol] Failed to fetch from CoinGecko, using fallback:', error);
+        }
+
+        // Return cached data if available (even if expired)
+        if (priceCache) {
+            console.log('[MultiProtocol] Using cached prices:', priceCache.prices);
+            return priceCache.prices;
+        }
+
+        return fallbackPrices;
+    }
+}
 
 export interface MultiProtocolCollateral {
     walletAddress: string;
@@ -122,13 +204,15 @@ async function getFluidCollateral(walletAddress: string): Promise<number> {
                     const supplyDecimals = knownVault.supplyDecimals || 6;
                     const supplyAmount = Number(userPosition.supply) / Math.pow(10, supplyDecimals);
 
-                    // Get token price (XAUT = gold price)
+                    // Get token price (XAUT = gold price) - use live prices
                     const tokenSymbol = knownVault.supplyToken.toLowerCase() ===
                         '0x68749665ff8d2d112fa859aa293f07a622782f38'.toLowerCase()
                         ? 'XAUT'
                         : 'WBTC';
 
-                    const tokenPrice = TOKEN_PRICES[tokenSymbol] || 0;
+                    // Fetch live prices (cached for 60s)
+                    const livePrices = await fetchLiveTokenPrices();
+                    const tokenPrice = livePrices[tokenSymbol] || fallbackPrices[tokenSymbol] || 0;
                     const positionValueUsd = supplyAmount * tokenPrice;
 
                     totalFluidUsd += positionValueUsd;

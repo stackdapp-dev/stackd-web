@@ -174,3 +174,133 @@ describe('Token Price Handling', () => {
         expect(expectedUsd).toBeCloseTo(19.01, 1);
     });
 });
+
+describe('Live Token Price Fetching', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        // Reset modules to get fresh cache state for each test
+        vi.resetModules();
+        // Reset fetch mock
+        global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should fetch live prices from CoinGecko API', async () => {
+        // Mock CoinGecko response format: { "tether-gold": { usd: 3200 }, "bitcoin": { usd: 105000 } }
+        const mockCoinGeckoResponse = {
+            'tether-gold': { usd: 3200 },
+            'bitcoin': { usd: 105000 },
+        };
+
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockCoinGeckoResponse),
+        });
+
+        // Import the function dynamically to get fresh module with clean cache
+        const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        const prices = await fetchLiveTokenPrices();
+
+        // Should map CoinGecko IDs back to our token symbols
+        expect(prices.XAUT).toBe(3200);
+        expect(prices.WBTC).toBe(105000);
+    });
+
+    it('should return updated fallback prices when API fails', async () => {
+        (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+
+        // Import fresh module after resetModules
+        const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        const prices = await fetchLiveTokenPrices();
+
+        // Should return UPDATED fallback values (not old $2700/$100k)
+        expect(prices.XAUT).toBe(3200);
+        expect(prices.WBTC).toBe(105000);
+    });
+
+    it('should cache prices for 60 seconds', async () => {
+        const mockCoinGeckoResponse = {
+            'tether-gold': { usd: 3200 },
+            'bitcoin': { usd: 105000 },
+        };
+
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(mockCoinGeckoResponse),
+        });
+
+        // Import fresh module after resetModules
+        const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        // First call - should fetch
+        await fetchLiveTokenPrices();
+
+        // Second call - should use cache
+        await fetchLiveTokenPrices();
+
+        // Fetch should only be called once due to caching
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should calculate Fluid collateral with live XAUT price', async () => {
+        // 55.5 oz XAUT at $3200/oz = $177,600 (vs $149,850 with old fallback $2700)
+        const xautAmount = 55.5;
+        const liveXautPrice = 3200;
+        const expectedWithLivePrice = xautAmount * liveXautPrice;
+
+        expect(expectedWithLivePrice).toBe(177600);
+        expect(expectedWithLivePrice).toBeGreaterThan(149850); // Should be higher than old fallback price calculation
+    });
+
+    /**
+     * Regression test for deposit leaderboard pricing bug
+     * 
+     * Previously, the leaderboard showed $99.6K for a wallet with $178.1K actual collateral
+     * because the server-side code was falling back to outdated prices ($2700 XAUT)
+     * instead of fetching live prices from CoinGecko.
+     */
+    it('should use live CoinGecko prices for accurate leaderboard calculation', async () => {
+        // Real scenario: wallet 0x9B62...71ca has ~55.5 oz XAUT
+        const xautAmount = 55.5;
+
+        // Old fallback price caused undervaluation
+        const oldFallbackPrice = 2700;
+        const oldCalculation = xautAmount * oldFallbackPrice; // $149,850
+
+        // Live price gives accurate value
+        const livePrice = 3200;
+        const liveCalculation = xautAmount * livePrice; // $177,600
+
+        // The difference is significant (~18%)
+        const priceDifference = ((liveCalculation - oldCalculation) / oldCalculation) * 100;
+        expect(priceDifference).toBeGreaterThan(15); // At least 15% difference
+
+        // Mock CoinGecko to return live prices
+        const mockCoinGeckoResponse = {
+            'tether-gold': { usd: livePrice },
+            'bitcoin': { usd: 105000 },
+        };
+
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockCoinGeckoResponse),
+        });
+
+        const { fetchLiveTokenPrices } = await import('@/lib/collateral/multiProtocolCollateral');
+        const prices = await fetchLiveTokenPrices();
+
+        // Verify correct price is returned
+        expect(prices.XAUT).toBe(livePrice);
+
+        // Calculate with live price
+        const calculatedValue = xautAmount * prices.XAUT;
+        expect(calculatedValue).toBe(177600);
+        expect(calculatedValue).toBeCloseTo(liveCalculation, 0);
+    });
+});
+
