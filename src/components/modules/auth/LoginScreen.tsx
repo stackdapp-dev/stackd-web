@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, Wallet, KeyRound } from "lucide-react";
+import { motion } from "framer-motion";
 
 const LoginScreen = () => {
   const { login } = usePrivy();
@@ -25,7 +26,7 @@ const LoginScreen = () => {
       </Badge>
 
       {/* Stack'd Logo */}
-      <div className="flex items-center gap-3 mb-16">
+      <div className="flex items-center gap-3 mb-8">
         <Image
           src="/login-logo.png"
           alt="Stack'd Logo"
@@ -33,6 +34,67 @@ const LoginScreen = () => {
           height={26}
           priority
         />
+      </div>
+
+      {/* Animated Stacking Lines */}
+      <div className="flex justify-center mb-16">
+        <div className="relative w-48 h-28">
+          {/* Line 1 (bottom - drops first - LEFT aligned) */}
+          <motion.div
+            initial={{ y: -150, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{
+              duration: 0.6,
+              delay: 0.3,
+              ease: "easeOut",
+              repeat: Infinity,
+              repeatDelay: 1.5,
+            }}
+            className="absolute bottom-0 left-0 w-[130px] h-2.5 bg-[#ffa02d] rounded-full shadow-lg shadow-[#ffa02d]/50"
+          />
+
+          {/* Line 2 (3rd from bottom - drops second - RIGHT aligned) */}
+          <motion.div
+            initial={{ y: -150, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{
+              duration: 0.6,
+              delay: 0.6,
+              ease: "easeOut",
+              repeat: Infinity,
+              repeatDelay: 1.5,
+            }}
+            className="absolute bottom-6 right-0 w-[130px] h-2.5 bg-[#ffa02d] rounded-full shadow-lg shadow-[#ffa02d]/50"
+          />
+
+          {/* Line 3 (2nd from bottom - drops third - LEFT aligned) */}
+          <motion.div
+            initial={{ y: -150, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{
+              duration: 0.6,
+              delay: 0.9,
+              ease: "easeOut",
+              repeat: Infinity,
+              repeatDelay: 1.5,
+            }}
+            className="absolute bottom-12 left-0 w-[130px] h-2.5 bg-[#ffa02d] rounded-full shadow-lg shadow-[#ffa02d]/50"
+          />
+
+          {/* Line 4 (top - drops last - RIGHT aligned) */}
+          <motion.div
+            initial={{ y: -150, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{
+              duration: 0.6,
+              delay: 1.2,
+              ease: "easeOut",
+              repeat: Infinity,
+              repeatDelay: 1.5,
+            }}
+            className="absolute bottom-[4.5rem] right-0 w-[130px] h-2.5 bg-[#ffa02d] rounded-full shadow-lg shadow-[#ffa02d]/50"
+          />
+        </div>
       </div>
 
       {/* Login Buttons Container */}
@@ -66,7 +128,7 @@ const LoginScreen = () => {
           </Button>
         </div>
 
-        {/* Continue with a Wallet */}
+        {/* Connect External Wallet */}
         <div className="relative">
           <Badge
             data-testid="login-wallet-badge"
@@ -75,7 +137,7 @@ const LoginScreen = () => {
             dotColor="#22c55e"
             className="absolute -top-3 left-4 z-10"
           >
-            WORKS BEST
+            RECOMMENDED
           </Badge>
           <Button
             data-testid="login-wallet-button"
@@ -88,7 +150,7 @@ const LoginScreen = () => {
               className="w-5 h-5 mr-2 text-amber-500"
               strokeWidth={2}
             />
-            Continue with a Wallet
+            Connect External Wallet
           </Button>
         </div>
 
