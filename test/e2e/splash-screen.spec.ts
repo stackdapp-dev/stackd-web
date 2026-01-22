@@ -57,8 +57,9 @@ test.describe("Splash Screen - Initial Load", () => {
         const splashScreen = page.getByTestId("splash-screen");
         await expect(splashScreen).toBeVisible();
 
-        // Check that splash screen is full viewport
-        await expect(splashScreen).toHaveCSS("min-height", /100vh|100svh/);
+        // Check that splash screen covers full viewport using fixed positioning
+        await expect(splashScreen).toHaveCSS("position", "fixed");
+        await expect(splashScreen).toHaveCSS("inset", "0px");
 
         // Animation container should be positioned slightly above center
         const animationContainer = page.getByTestId("splash-animation-container");
