@@ -168,8 +168,8 @@ describe("NewLoanModal", () => {
 
             const user = userEvent.setup();
 
-            // Find and click the backdrop (the div with bg-black/60 class)
-            const backdrop = document.querySelector(".bg-black\\/60");
+            // Find and click the backdrop (the div with bg-black/50 class - liquid glass design)
+            const backdrop = document.querySelector(".bg-black\\/50");
             expect(backdrop).toBeInTheDocument();
 
             if (backdrop) {

@@ -37,6 +37,8 @@ type SendTransactionParams = {
   data?: Hex;
   value?: bigint;
   chainId?: number;
+  /** Force disable sponsorship even for embedded wallets. Used for Ethereum mainnet Fluid operations. */
+  forceNoSponsor?: boolean;
 };
 
 type Web3ProviderValue = {
@@ -395,7 +397,10 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       // Check if this is an embedded wallet (supports gas sponsorship)
       const isEmbeddedWallet = activeWallet.walletClientType === "privy";
 
-      if (isEmbeddedWallet) {
+      // Disable sponsorship if explicitly requested (e.g., for Ethereum mainnet Fluid operations)
+      const shouldSponsor = isEmbeddedWallet && !params.forceNoSponsor;
+
+      if (shouldSponsor) {
         // Use Privy's sendTransaction with gas sponsorship for embedded wallets
         console.log("[TX] Using sponsored transaction (embedded wallet)");
         const txReceipt = await privySendTransaction(
