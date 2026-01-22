@@ -54,12 +54,12 @@ const LoginScreen = () => {
           <Button
             data-testid="login-email-button"
             variant="outline"
-            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-white/20 hover:border-white/40"
+            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
             onClick={() => login({ loginMethods: ["email"] })}
           >
             <Mail
               data-testid="login-email-icon"
-              className="w-5 h-5 mr-2"
+              className="w-5 h-5 mr-2 text-amber-500"
               strokeWidth={2}
             />
             Login with Email
@@ -80,12 +80,12 @@ const LoginScreen = () => {
           <Button
             data-testid="login-wallet-button"
             variant="outline"
-            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-white/20 hover:border-white/40"
+            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
             onClick={() => login({ loginMethods: ["wallet"] })}
           >
             <Wallet
               data-testid="login-wallet-icon"
-              className="w-5 h-5 mr-2"
+              className="w-5 h-5 mr-2 text-amber-500"
               strokeWidth={2}
             />
             Continue with a Wallet
@@ -106,12 +106,12 @@ const LoginScreen = () => {
           <Button
             data-testid="login-passkey-button"
             variant="outline"
-            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-white/20 hover:border-white/40"
+            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
             onClick={() => login({ loginMethods: ["passkey"] })}
           >
             <KeyRound
               data-testid="login-passkey-icon"
-              className="w-5 h-5 mr-2"
+              className="w-5 h-5 mr-2 text-amber-500"
               strokeWidth={2}
             />
             Login with Passkey
