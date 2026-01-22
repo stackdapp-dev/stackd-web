@@ -136,9 +136,9 @@ test.describe("Mobile Navigation", () => {
         const nav = page.locator("nav");
         await expect(nav).toBeVisible();
 
-        // Mobile nav should have bottom positioning
+        // Mobile nav should have fixed positioning
         const navClasses = await nav.getAttribute("class");
-        expect(navClasses).toContain("bottom-");
+        expect(navClasses).toContain("fixed");
     });
 
     test("should NOT display logo on mobile", async ({ page }) => {
