@@ -49,7 +49,7 @@ const ReferralGate = ({ onValidated, initialError, validateCode, isLoading }: Re
     };
 
     return (
-        <div className="flex pt-24 flex-col gap-8 items-center px-8">
+        <div className="flex pt-24 flex-col gap-8 items-center px-8 min-h-screen bg-black">
             <Image src="/login-logo.png" alt="Stack'd Logo" width={164} height={26} />
 
             <div className="flex flex-col items-center gap-4 text-center max-w-sm">
