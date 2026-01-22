@@ -1083,6 +1083,39 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         showCloseButton={!isProcessing && !isApproving}
         showActionButtons={!isProcessing && !isApproving}
       />
+
+      {/* ETH Alert Modal - shown when insufficient ETH for Fluid operations */}
+      <Modal
+        isOpen={showEthAlert}
+        onClose={() => setShowEthAlert(false)}
+        title="ETH Required for Gas"
+        icon={
+          <div className="w-14 h-14 rounded-full bg-amber-500/20 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-amber-400" />
+          </div>
+        }
+        message={
+          <div className="flex flex-col gap-4">
+            <Text tone="muted">
+              ETH balance required during Beta testing. Gas sponsorship is temporarily disabled for Ethereum mainnet operations.
+            </Text>
+            <div className="rounded-xl px-4 py-3 bg-amber-500/10 border border-amber-500/30">
+              <p className="text-amber-400 text-sm">
+                Please add at least 0.005 ETH to your wallet to cover gas fees for this transaction.
+              </p>
+            </div>
+          </div>
+        }
+        primaryButtonText="Get ETH"
+        primaryButtonAction={() => {
+          setShowEthAlert(false);
+          router.push("/cash-in");
+        }}
+        secondaryButtonText="Cancel"
+        secondaryButtonAction={() => setShowEthAlert(false)}
+        showCloseButton={true}
+        showActionButtons={true}
+      />
     </div>
   );
 }
