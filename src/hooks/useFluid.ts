@@ -369,7 +369,39 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
+        // Debug logging for withdrawal issue investigation
+        const negativeAmount = -amount;
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+        console.log("[FLUID WITHDRAW DEBUG] Input amount (bigint):", amount.toString());
+        console.log("[FLUID WITHDRAW DEBUG] Input amount (hex):", "0x" + amount.toString(16));
+        console.log("[FLUID WITHDRAW DEBUG] Negative amount (bigint):", negativeAmount.toString());
+        console.log("[FLUID WITHDRAW DEBUG] Negative amount (hex):", negativeAmount < 0n
+          ? "-0x" + (-negativeAmount).toString(16)
+          : "0x" + negativeAmount.toString(16));
+        console.log("[FLUID WITHDRAW DEBUG] NFT ID:", nftId.toString());
+        console.log("[FLUID WITHDRAW DEBUG] Recipient:", acct);
+        console.log("[FLUID WITHDRAW DEBUG] Vault address:", XAUT_USDT_VAULT);
+
         const data = encodeFluidWithdraw(nftId, amount, acct as Address);
+        console.log("[FLUID WITHDRAW DEBUG] Encoded calldata:", data);
+        console.log("[FLUID WITHDRAW DEBUG] Calldata length:", data.length, "chars");
+
+        // Decode and verify the calldata structure
+        // First 4 bytes (8 hex chars after 0x) = function selector
+        // Next 32 bytes = nftId, next 32 = collateralDelta, next 32 = debtDelta, next 32 = recipient
+        const selector = data.slice(0, 10);
+        const param1 = data.slice(10, 74);  // nftId
+        const param2 = data.slice(74, 138); // collateralDelta (should be negative)
+        const param3 = data.slice(138, 202); // debtDelta (should be 0)
+        const param4 = data.slice(202, 266); // recipient address
+
+        console.log("[FLUID WITHDRAW DEBUG] Function selector:", selector);
+        console.log("[FLUID WITHDRAW DEBUG] Param 1 (nftId):", "0x" + param1);
+        console.log("[FLUID WITHDRAW DEBUG] Param 2 (collateralDelta):", "0x" + param2);
+        console.log("[FLUID WITHDRAW DEBUG] Param 3 (debtDelta):", "0x" + param3);
+        console.log("[FLUID WITHDRAW DEBUG] Param 4 (recipient):", "0x" + param4);
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+
         const result = await sendSponsoredTransaction({
           to: XAUT_USDT_VAULT as Address,
           data,
@@ -377,12 +409,14 @@ export function useFluid(): UseFluidResult {
         });
 
         if (result.error) {
+          console.error("[FLUID WITHDRAW DEBUG] Transaction error:", result.error);
           return { txHash: null, error: result.error };
         }
+        console.log("[FLUID WITHDRAW DEBUG] Transaction success:", result.hash);
         return { txHash: result.hash as Hex, error: null };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown withdraw error";
-        console.error("[FLUID] Withdraw failed:", err);
+        console.error("[FLUID WITHDRAW DEBUG] Exception:", err);
         return { txHash: null, error: errorMessage };
       }
     },
