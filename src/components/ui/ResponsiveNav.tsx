@@ -172,7 +172,8 @@ const MobileNav = ({ items, pathname, onNavigate, onPrefetch }: NavProps) => {
     return (
         <nav
             role="navigation"
-            className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+8px)] px-4 pointer-events-none"
+            className="fixed left-0 right-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+8px)] px-4 pointer-events-none"
+            style={{ bottom: 0, transform: 'translateZ(0)' }}
         >
             <div
                 className="pointer-events-auto flex items-center justify-around gap-1 px-4 py-2 rounded-[24px] border border-white/20"

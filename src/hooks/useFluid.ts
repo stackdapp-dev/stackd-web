@@ -290,8 +290,55 @@ export function useFluid(): UseFluidResult {
       if (!acct) {
         return { txHash: null, error: "No account connected" };
       }
+      if (!ethereumPublicClient) {
+        return { txHash: null, error: "No public client available" };
+      }
 
       try {
+        // Pre-approval check for iOS Safari passkey wallets
+        // The paymaster simulation fails if allowance isn't already set,
+        // so we approve BEFORE the supply transaction
+        const xautAddress = ETHEREUM_TOKEN_ADDRESSES.XAUT as Address;
+        const spender = XAUT_USDT_VAULT as Address;
+
+        // Check current allowance
+        let currentAllowance: bigint;
+        try {
+          const allowanceResult = await ethereumPublicClient.readContract({
+            address: xautAddress,
+            abi: ERC20_ABI,
+            functionName: "allowance",
+            args: [acct as Address, spender],
+          });
+          currentAllowance = allowanceResult as bigint;
+        } catch (err) {
+          console.error("[FLUID] Allowance check failed:", err);
+          currentAllowance = BigInt(0);
+        }
+
+        console.log("[FLUID] Supply - Current allowance:", currentAllowance.toString());
+        console.log("[FLUID] Supply - Required amount:", amount.toString());
+
+        // If allowance is insufficient, approve first
+        if (currentAllowance < amount) {
+          console.log("[FLUID] Supply - Approving XAUT for vault...");
+          const approveData = encodeApproveData(spender, amount);
+          const approvalResult = await sendSponsoredTransaction({
+            to: xautAddress,
+            data: approveData,
+            chainId: mainnet.id,
+          });
+
+          if (approvalResult.error) {
+            return { txHash: null, error: `Approval failed: ${approvalResult.error}` };
+          }
+
+          console.log("[FLUID] Supply - Approval tx submitted:", approvalResult.hash);
+          // Wait for approval to be processed before supply
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        // Now execute the supply transaction
         const data = encodeFluidSupply(nftId, amount, acct as Address);
         const result = await sendSponsoredTransaction({
           to: XAUT_USDT_VAULT as Address,
@@ -309,7 +356,7 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [nftId, acct, sendSponsoredTransaction]
+    [nftId, acct, ethereumPublicClient, sendSponsoredTransaction]
   );
 
   const withdraw = useCallback(
