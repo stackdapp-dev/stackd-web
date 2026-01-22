@@ -7,12 +7,22 @@ import { useReferralGate } from "@/hooks/useReferralGate";
 import { usePrivy } from "@privy-io/react-auth";
 import { redirect } from "next/navigation";
 import { ToastContainer } from "react-toastify";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function Home() {
   const { ready, authenticated } = usePrivy();
   const { isValidated, isLoading, error, validateCode } = useReferralGate();
   const [showLogin, setShowLogin] = useState(false);
+
+  // Set html background to black for login page overscroll, restore on unmount
+  useEffect(() => {
+    const originalBgColor = "#020617";
+    document.documentElement.style.backgroundColor = "#000000";
+
+    return () => {
+      document.documentElement.style.backgroundColor = originalBgColor;
+    };
+  }, []);
 
   // Show loader while Privy or referral gate is initializing
   if (!ready || isLoading) {
