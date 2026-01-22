@@ -9,9 +9,9 @@ test.describe("Login Screen - UI Elements", () => {
     test.beforeEach(async ({ page }) => {
         // Clear any mock auth to ensure we see the login screen
         await page.addInitScript(clearMockAuthScript);
-        // Set localStorage to bypass referral gate
+        // Set localStorage to bypass referral gate (use actual code key)
         await page.addInitScript(() => {
-            localStorage.setItem("stackd_referral_validated", "true");
+            localStorage.setItem("stackd_referral_code", "STACKTEST1");
         });
     });
 
@@ -135,8 +135,9 @@ test.describe("Login Screen - UI Elements", () => {
 test.describe("Login Screen - Layout", () => {
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(clearMockAuthScript);
+        // Set localStorage to bypass referral gate (use actual code key)
         await page.addInitScript(() => {
-            localStorage.setItem("stackd_referral_validated", "true");
+            localStorage.setItem("stackd_referral_code", "STACKTEST1");
         });
     });
 
