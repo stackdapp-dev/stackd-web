@@ -8,14 +8,33 @@
 import { isSupabaseConfigured } from './supabase';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Create Supabase client with service role key for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
+// Lazy-initialized Supabase client (created on first use)
+// This allows mocks to be set up before the client is created
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let db: SupabaseClient<any, 'public', any> | null = null;
-if (supabaseUrl && supabaseServiceKey) {
-    db = createClient(supabaseUrl, supabaseServiceKey);
+let _db: SupabaseClient<any, 'public', any> | null = null;
+let _dbInitialized = false;
+
+/**
+ * Get the Supabase client, creating it lazily if needed
+ */
+function getDb(): SupabaseClient<any, 'public', any> | null {
+    if (!_dbInitialized) {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        if (supabaseUrl && supabaseServiceKey) {
+            _db = createClient(supabaseUrl, supabaseServiceKey);
+        }
+        _dbInitialized = true;
+    }
+    return _db;
+}
+
+/**
+ * Reset the db client (for testing only)
+ */
+export function _resetDbClient(): void {
+    _db = null;
+    _dbInitialized = false;
 }
 
 /**
@@ -45,6 +64,7 @@ export interface CollateralData {
  * Get ATH record for a specific wallet
  */
 export async function getAthByWallet(walletAddress: string): Promise<DepositAth | null> {
+    const db = getDb();
     if (!isSupabaseConfigured() || !db) {
         return null;
     }
@@ -78,6 +98,7 @@ export async function updateAthIfHigher(
     walletAddress: string,
     collateral: CollateralData
 ): Promise<DepositAth | null> {
+    const db = getDb();
     if (!isSupabaseConfigured() || !db) {
         return null;
     }
@@ -151,6 +172,7 @@ export async function updateAthIfHigher(
  * Get top N depositors by ATH for leaderboard
  */
 export async function getTopAthDepositors(limit: number = 10): Promise<DepositAth[]> {
+    const db = getDb();
     if (!isSupabaseConfigured() || !db) {
         return [];
     }
@@ -181,6 +203,7 @@ export async function getTopAthDepositors(limit: number = 10): Promise<DepositAt
 export async function seedAllUsersAth(
     getCollateralForWallet: (wallet: string) => Promise<CollateralData | null>
 ): Promise<{ seeded: number; failed: number }> {
+    const db = getDb();
     if (!isSupabaseConfigured() || !db) {
         return { seeded: 0, failed: 0 };
     }

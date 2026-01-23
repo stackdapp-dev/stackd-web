@@ -17,6 +17,11 @@ const { mockFrom, mockSelect, mockInsert, mockUpdate } = vi.hoisted(() => {
     };
 });
 
+// Set environment variables BEFORE mocking modules
+// This ensures the lazy-initialized db client will be created
+vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co');
+vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key');
+
 // Mock the isSupabaseConfigured function
 vi.mock('@/lib/db/supabase', () => ({
     isSupabaseConfigured: vi.fn(() => true),
@@ -34,6 +39,7 @@ import {
     updateAthIfHigher,
     getTopAthDepositors,
     getAthByWallet,
+    _resetDbClient,
 } from '@/lib/db/depositAthDb';
 
 describe('depositAthDb', () => {
@@ -43,6 +49,8 @@ describe('depositAthDb', () => {
         mockSelect.mockReset();
         mockInsert.mockReset();
         mockUpdate.mockReset();
+        // Reset the lazy-initialized db client so mocks are applied fresh
+        _resetDbClient();
     });
 
     afterEach(() => {
