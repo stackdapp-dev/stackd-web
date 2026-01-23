@@ -1109,7 +1109,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         primaryButtonText="Get ETH"
         primaryButtonAction={() => {
           setShowEthAlert(false);
-          router.push("/cash-in");
+          router.push("/wallet/cash-in");
         }}
         secondaryButtonText="Cancel"
         secondaryButtonAction={() => setShowEthAlert(false)}

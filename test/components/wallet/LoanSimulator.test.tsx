@@ -1266,7 +1266,7 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
             expect(componentCode).toMatch(/ETH.*balance.*required|ETH.*required.*Beta/i);
         });
 
-        it("should have button to redirect to Cash In page", async () => {
+        it("should have button to redirect to Cash In page at correct route /wallet/cash-in", async () => {
             const fs = await import("fs");
             const path = await import("path");
 
@@ -1276,8 +1276,10 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
             );
             const componentCode = fs.readFileSync(componentPath, "utf-8");
 
-            // Should have navigation to /cash-in page
-            expect(componentCode).toMatch(/router\.push\s*\(\s*["']\/cash-in["']\s*\)|\/cash-in/);
+            // Should have navigation to /wallet/cash-in page (the correct route)
+            // The Cash In page is at src/app/(main)/wallet/cash-in/page.tsx
+            // so the correct route is /wallet/cash-in, NOT /cash-in
+            expect(componentCode).toMatch(/router\.push\s*\(\s*["']\/wallet\/cash-in["']\s*\)/);
         });
 
         it("should close ETH alert modal when dismissed", async () => {
@@ -1342,12 +1344,14 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
             expect(expectedMessage).toContain("ETH");
         });
 
-        it("should provide primary action to go to Cash In page", () => {
+        it("should provide primary action to go to Cash In page at /wallet/cash-in", () => {
             const primaryAction = "Get ETH";
-            const navigateTo = "/cash-in";
+            // The correct route is /wallet/cash-in (not /cash-in)
+            // Cash In page is at src/app/(main)/wallet/cash-in/page.tsx
+            const navigateTo = "/wallet/cash-in";
 
             expect(primaryAction).toBeTruthy();
-            expect(navigateTo).toBe("/cash-in");
+            expect(navigateTo).toBe("/wallet/cash-in");
         });
 
         it("should provide secondary action to dismiss alert", () => {

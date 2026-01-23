@@ -387,7 +387,7 @@ export default function SendPage() {
                                 {/* Network Dropdown */}
                                 {showNetworkDropdown && (
                                     <div className="absolute top-full right-0 mt-2 z-20 min-w-[180px]">
-                                        <Card appearance="glassDark" padding="none" className="border border-white/10">
+                                        <Card appearance="dropdown" padding="none">
                                             {(["arbitrum", "ethereum"] as const).map((network) => {
                                                 const balance = usdtBalances[network];
                                                 if (balance === 0) return null;
