@@ -429,6 +429,10 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       return;
     }
 
+    // Capture mode at the start to ensure error messages reflect the actual operation
+    // that was attempted, even if the mode prop changes during the async operation
+    const operationMode = mode;
+
     // For XAUT operations, check ETH balance for gas fees (sponsorship disabled)
     if (isXaut && activeWalletAddress && ethereumPublicClient) {
       try {
@@ -512,7 +516,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         router.push("/wallet");
       }
     } catch (err) {
-      console.error(`${mode} failed:`, err);
+      console.error(`${operationMode} failed:`, err);
     } finally {
       setIsProcessing(false);
     }
