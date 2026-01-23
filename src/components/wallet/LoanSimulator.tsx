@@ -420,7 +420,14 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
   // Execute transaction
   const handleConfirm = useCallback(async () => {
-    if (isProcessing || transactionAmount <= 0) return;
+    if (isProcessing) return;
+    setIsProcessing(true);
+
+    // Early validation check (after setting processing to true)
+    if (transactionAmount <= 0) {
+      setIsProcessing(false);
+      return;
+    }
 
     // For XAUT operations, check ETH balance for gas fees (sponsorship disabled)
     if (isXaut && activeWalletAddress && ethereumPublicClient) {
@@ -433,6 +440,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         if (ethBalance < minEthRequired) {
           console.log("[FLUID] Insufficient ETH for gas:", formatUnits(ethBalance, 18), "ETH");
           setShowEthAlert(true);
+          setIsProcessing(false);
           return;
         }
       } catch (err) {
@@ -440,8 +448,6 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         // Continue anyway if balance check fails
       }
     }
-
-    setIsProcessing(true);
     try {
       const tokenMeta = getTokenMetadata(modeConfig.tokenSymbol);
       if (!tokenMeta) throw new Error(`${modeConfig.tokenSymbol} metadata not found`);

@@ -18,7 +18,7 @@ import { encodeApproveData } from "@/lib/web3/compound";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useQuery, QueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { Address, Hex, PublicClient } from "viem";
 import { formatUnits } from "viem";
 import { mainnet } from "viem/chains";
@@ -202,6 +202,9 @@ export function useFluid(): UseFluidResult {
   const getTokenPrice = useGetTokenPrice();
   const acct = walletClient?.account?.address || activeWalletAddress;
 
+  // Transaction lock to prevent duplicate submissions
+  const transactionInProgress = useRef(false);
+
   // Debug: Log query prerequisites
   console.log("[FLUID HOOK] ethereumPublicClient:", !!ethereumPublicClient);
   console.log("[FLUID HOOK] walletClient?.account?.address:", walletClient?.account?.address);
@@ -363,10 +366,18 @@ export function useFluid(): UseFluidResult {
 
   const withdraw = useCallback(
     async (amount: bigint): Promise<TransactionResult> => {
+      // Check transaction lock to prevent duplicate submissions
+      if (transactionInProgress.current) {
+        return { txHash: null, error: "Transaction already in progress" };
+      }
+      transactionInProgress.current = true;
+
       if (!nftId) {
+        transactionInProgress.current = false;
         return { txHash: null, error: "No active position found. Cannot withdraw without nftId." };
       }
       if (!acct) {
+        transactionInProgress.current = false;
         return { txHash: null, error: "No account connected" };
       }
 
@@ -421,6 +432,8 @@ export function useFluid(): UseFluidResult {
         const errorMessage = err instanceof Error ? err.message : "Unknown withdraw error";
         console.error("[FLUID WITHDRAW DEBUG] Exception:", err);
         return { txHash: null, error: errorMessage };
+      } finally {
+        transactionInProgress.current = false;
       }
     },
     [nftId, acct, sendSponsoredTransaction]
