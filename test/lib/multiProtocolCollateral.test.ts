@@ -54,6 +54,12 @@ vi.mock('@/lib/utils', () => ({
 import { getDepositorByAddress } from '@/lib/compound/subgraph';
 import { createPublicClient } from 'viem';
 
+// Mock depositAthDb for ATH integration tests
+const mockUpdateAthIfHigher = vi.fn();
+vi.mock('@/lib/db/depositAthDb', () => ({
+    updateAthIfHigher: mockUpdateAthIfHigher,
+}));
+
 const mockGetDepositorByAddress = getDepositorByAddress as ReturnType<typeof vi.fn>;
 const mockCreatePublicClient = createPublicClient as ReturnType<typeof vi.fn>;
 
@@ -301,6 +307,119 @@ describe('Live Token Price Fetching', () => {
         const calculatedValue = xautAmount * prices.XAUT;
         expect(calculatedValue).toBe(177600);
         expect(calculatedValue).toBeCloseTo(liveCalculation, 0);
+    });
+});
+
+/**
+ * ATH (All-Time High) Integration Tests
+ *
+ * Tests that getTotalCollateralByAddress automatically updates ATH records
+ * when fetching collateral data.
+ */
+describe('ATH Update Integration', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        // Reset modules to get fresh state
+        vi.resetModules();
+        global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('should call updateAthIfHigher when collateral is found', async () => {
+        // Mock Compound response
+        mockGetDepositorByAddress.mockResolvedValue({
+            walletAddress: '0xtest123',
+            totalDepositsUsd: 5000,
+        });
+
+        // Mock Fluid - no positions
+        const mockReadContract = vi.fn().mockResolvedValue([]);
+        mockCreatePublicClient.mockReturnValue({
+            readContract: mockReadContract,
+        });
+
+        // Mock CoinGecko prices
+        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({
+                'tether-gold': { usd: 3200 },
+                'bitcoin': { usd: 105000 },
+            }),
+        });
+
+        // Reset the ATH mock
+        mockUpdateAthIfHigher.mockResolvedValue({
+            wallet_address: '0xtest123',
+            ath_usd: 5000,
+            ath_compound_usd: 5000,
+            ath_fluid_usd: 0,
+        });
+
+        // Import fresh module
+        const { getTotalCollateralByAddress } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        const result = await getTotalCollateralByAddress('0xTest123');
+
+        expect(result).not.toBeNull();
+        expect(result?.totalCollateralUsd).toBe(5000);
+
+        // Verify updateAthIfHigher was called with correct args
+        expect(mockUpdateAthIfHigher).toHaveBeenCalledTimes(1);
+        expect(mockUpdateAthIfHigher).toHaveBeenCalledWith('0xtest123', {
+            totalCollateralUsd: 5000,
+            compoundCollateralUsd: 5000,
+            fluidCollateralUsd: 0,
+        });
+    });
+
+    it('should NOT call updateAthIfHigher when no collateral is found', async () => {
+        // Mock Compound - no deposits
+        mockGetDepositorByAddress.mockResolvedValue(null);
+
+        // Mock Fluid - no positions
+        const mockReadContract = vi.fn().mockResolvedValue([]);
+        mockCreatePublicClient.mockReturnValue({
+            readContract: mockReadContract,
+        });
+
+        // Import fresh module
+        const { getTotalCollateralByAddress } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        const result = await getTotalCollateralByAddress('0xNoCollateral');
+
+        expect(result).toBeNull();
+
+        // Should NOT call updateAthIfHigher when there's no collateral
+        expect(mockUpdateAthIfHigher).not.toHaveBeenCalled();
+    });
+
+    it('should not fail if updateAthIfHigher throws an error', async () => {
+        // Mock Compound response
+        mockGetDepositorByAddress.mockResolvedValue({
+            walletAddress: '0xtest456',
+            totalDepositsUsd: 3000,
+        });
+
+        // Mock Fluid - no positions
+        const mockReadContract = vi.fn().mockResolvedValue([]);
+        mockCreatePublicClient.mockReturnValue({
+            readContract: mockReadContract,
+        });
+
+        // Mock ATH update to throw error
+        mockUpdateAthIfHigher.mockRejectedValue(new Error('DB connection failed'));
+
+        // Import fresh module
+        const { getTotalCollateralByAddress } = await import('@/lib/collateral/multiProtocolCollateral');
+
+        // Should not throw, should return collateral data
+        const result = await getTotalCollateralByAddress('0xTest456');
+
+        expect(result).not.toBeNull();
+        expect(result?.totalCollateralUsd).toBe(3000);
     });
 });
 

@@ -11,6 +11,7 @@
 import { getDepositorByAddress } from '@/lib/compound/subgraph';
 import { createPublicClient, http, type Address } from 'viem';
 import { mainnet } from 'viem/chains';
+import { updateAthIfHigher } from '@/lib/db/depositAthDb';
 
 // Import Fluid functions - we'll use a simplified version for server-side
 import {
@@ -258,6 +259,18 @@ export async function getTotalCollateralByAddress(
         }
 
         console.log(`[MultiProtocol] Total collateral for ${normalizedAddress}: $${totalCollateralUsd.toFixed(2)} (Compound: $${compoundCollateralUsd.toFixed(2)}, Fluid: $${fluidCollateralUsd.toFixed(2)})`);
+
+        // Update ATH if this collateral exceeds the stored ATH
+        // This is fire-and-forget - we don't want ATH update failures to break collateral fetching
+        try {
+            await updateAthIfHigher(normalizedAddress, {
+                totalCollateralUsd,
+                compoundCollateralUsd,
+                fluidCollateralUsd,
+            });
+        } catch (athError) {
+            console.error('[MultiProtocol] Failed to update ATH (non-fatal):', athError);
+        }
 
         return {
             walletAddress: normalizedAddress,
