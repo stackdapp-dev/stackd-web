@@ -1,6 +1,7 @@
 "use client";
 
 import Card from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { formatPercent, maskString, MASK_SHORT } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
 import { useRouter } from "next/navigation";
@@ -67,9 +68,14 @@ export default function ActiveLoans() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="text-white font-semibold">
-                      {getLoanDisplayName(position.collateralToken, position.borrowToken)}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-white font-semibold">
+                        {getLoanDisplayName(position.collateralToken, position.borrowToken)}
+                      </h3>
+                      {position.collateralToken === "XAUT" && (
+                        <Badge variant="beta" showDot dotColor="#f59e0b" className="py-0.5 px-2 text-[10px]">BETA</Badge>
+                      )}
+                    </div>
                     <p className="text-white/50 text-sm">
                       Using {position.collateralToken} as collateral
                     </p>
