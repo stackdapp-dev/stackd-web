@@ -32,25 +32,7 @@ test.describe("Login Screen - UI Elements", () => {
         await expect(logo).toBeVisible();
     });
 
-    test("should display Login with Email button with icon and BETA badge", async ({ page }) => {
-        await page.goto("/");
-        await page.waitForLoadState("domcontentloaded");
-
-        const emailButton = page.getByTestId("login-email-button");
-        await expect(emailButton).toBeVisible();
-        await expect(emailButton).toContainText("Login with Email");
-
-        // Check for BETA badge on email button
-        const emailBadge = page.getByTestId("login-email-badge");
-        await expect(emailBadge).toBeVisible();
-        await expect(emailBadge).toContainText("BETA");
-
-        // Check for email icon
-        const emailIcon = page.getByTestId("login-email-icon");
-        await expect(emailIcon).toBeVisible();
-    });
-
-    test("should display Continue with Wallet button with icon and RECOMMENDED badge", async ({ page }) => {
+    test("should display Connect External Wallet as primary button with icon", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("domcontentloaded");
 
@@ -58,30 +40,69 @@ test.describe("Login Screen - UI Elements", () => {
         await expect(walletButton).toBeVisible();
         await expect(walletButton).toContainText("Connect External Wallet");
 
-        // Check for RECOMMENDED badge on wallet button
-        const walletBadge = page.getByTestId("login-wallet-badge");
-        await expect(walletBadge).toBeVisible();
-        await expect(walletBadge).toContainText("RECOMMENDED");
-
         // Check for wallet icon
         const walletIcon = page.getByTestId("login-wallet-icon");
         await expect(walletIcon).toBeVisible();
+
+        // Wallet button should NOT have a badge (RECOMMENDED badge removed)
+        const walletBadge = page.getByTestId("login-wallet-badge");
+        await expect(walletBadge).not.toBeVisible();
     });
 
-    test("should display Login with Passkey button with icon and BETA badge", async ({ page }) => {
+    test("should display Other Login Options dropdown button", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("domcontentloaded");
 
+        const otherOptionsButton = page.getByTestId("login-other-options-button");
+        await expect(otherOptionsButton).toBeVisible();
+        await expect(otherOptionsButton).toContainText("Other Login Options");
+
+        // Check for chevron icon
+        const chevronIcon = page.getByTestId("login-other-options-chevron");
+        await expect(chevronIcon).toBeVisible();
+    });
+
+    test("should hide Email and Passkey buttons by default", async ({ page }) => {
+        await page.goto("/");
+        await page.waitForLoadState("domcontentloaded");
+
+        // Email and Passkey buttons should NOT be visible initially
+        const emailButton = page.getByTestId("login-email-button");
+        await expect(emailButton).not.toBeVisible();
+
+        const passkeyButton = page.getByTestId("login-passkey-button");
+        await expect(passkeyButton).not.toBeVisible();
+    });
+
+    test("should show Email and Passkey buttons when dropdown is expanded", async ({ page }) => {
+        await page.goto("/");
+        await page.waitForLoadState("domcontentloaded");
+
+        // Click to expand dropdown
+        const otherOptionsButton = page.getByTestId("login-other-options-button");
+        await otherOptionsButton.click();
+
+        // Email button should now be visible with BETA badge
+        const emailButton = page.getByTestId("login-email-button");
+        await expect(emailButton).toBeVisible();
+        await expect(emailButton).toContainText("Login with Email");
+
+        const emailBadge = page.getByTestId("login-email-badge");
+        await expect(emailBadge).toBeVisible();
+        await expect(emailBadge).toContainText("BETA");
+
+        const emailIcon = page.getByTestId("login-email-icon");
+        await expect(emailIcon).toBeVisible();
+
+        // Passkey button should now be visible with BETA badge
         const passkeyButton = page.getByTestId("login-passkey-button");
         await expect(passkeyButton).toBeVisible();
         await expect(passkeyButton).toContainText("Login with Passkey");
 
-        // Check for BETA badge on passkey button
         const passkeyBadge = page.getByTestId("login-passkey-badge");
         await expect(passkeyBadge).toBeVisible();
         await expect(passkeyBadge).toContainText("BETA");
 
-        // Check for passkey/key icon
         const passkeyIcon = page.getByTestId("login-passkey-icon");
         await expect(passkeyIcon).toBeVisible();
     });
@@ -97,36 +118,42 @@ test.describe("Login Screen - UI Elements", () => {
         await expect(privacyLink).toBeVisible();
     });
 
-    test("should have correct button order: email, wallet, passkey", async ({ page }) => {
+    test("should have correct button order: wallet first, then other options", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("domcontentloaded");
 
         const buttonContainer = page.getByTestId("login-buttons-container");
         await expect(buttonContainer).toBeVisible();
 
-        // Get all buttons in order
-        const buttons = buttonContainer.locator("button");
-        await expect(buttons).toHaveCount(3);
+        // Get visible buttons in order (dropdown collapsed)
+        const buttons = buttonContainer.locator("> button");
+        await expect(buttons).toHaveCount(2);
 
         // Verify order by checking text content
-        await expect(buttons.nth(0)).toContainText("Login with Email");
-        await expect(buttons.nth(1)).toContainText("Connect External Wallet");
-        await expect(buttons.nth(2)).toContainText("Login with Passkey");
+        await expect(buttons.nth(0)).toContainText("Connect External Wallet");
+        await expect(buttons.nth(1)).toContainText("Other Login Options");
     });
 
     test("buttons should be clickable and trigger login flow", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("domcontentloaded");
 
-        // Email button should be clickable
-        const emailButton = page.getByTestId("login-email-button");
-        await expect(emailButton).toBeEnabled();
-
         // Wallet button should be clickable
         const walletButton = page.getByTestId("login-wallet-button");
         await expect(walletButton).toBeEnabled();
 
-        // Passkey button should be clickable
+        // Other options button should be clickable
+        const otherOptionsButton = page.getByTestId("login-other-options-button");
+        await expect(otherOptionsButton).toBeEnabled();
+
+        // Expand dropdown to access email and passkey
+        await otherOptionsButton.click();
+
+        // Email button should be clickable after expanding
+        const emailButton = page.getByTestId("login-email-button");
+        await expect(emailButton).toBeEnabled();
+
+        // Passkey button should be clickable after expanding
         const passkeyButton = page.getByTestId("login-passkey-button");
         await expect(passkeyButton).toBeEnabled();
     });
