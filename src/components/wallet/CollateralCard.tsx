@@ -13,6 +13,7 @@ import { Lock, Unlock, Wallet, AlertTriangle, ChevronDown } from "lucide-react";
 import TokenIcon from "../common/TokenIcon";
 import NetworkIcon from "../common/NetworkIcon";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
+import { Badge } from "@/components/ui/badge";
 
 interface AssetItem {
     symbol: string;
@@ -435,7 +436,10 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         <div className="flex items-center gap-3">
                             <TokenIcon symbol="XAUT" width={36} height={36} />
                             <div className="flex flex-col text-left">
-                                <span className="text-white font-semibold">Tether Gold</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-white font-semibold">Tether Gold</span>
+                                    <Badge variant="beta" showDot dotColor="#f59e0b" className="py-0.5 px-2 text-[10px]">BETA</Badge>
+                                </div>
                                 <span className="text-white/50 text-xs">
                                     {maskString(formatAmount(xautBreakdown.totalXaut, 4), visibility.visible, MASK_SHORT)}
                                 </span>
