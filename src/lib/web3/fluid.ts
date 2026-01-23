@@ -442,12 +442,30 @@ export function encodeFluidSupply(
  * @param nftId - Position NFT ID
  * @param amount - Amount of collateral to withdraw (positive value, will be negated)
  * @param recipient - Address to receive the withdrawn collateral
+ * @throws Error if nftId is 0 or negative
+ * @throws Error if amount is 0 or negative
+ * @throws Error if recipient is zero address
  */
 export function encodeFluidWithdraw(
   nftId: bigint,
   amount: bigint,
   recipient: Address
 ): Hex {
+  // Validate nftId - must be positive (0 is only valid for creating new positions, not withdrawing)
+  if (nftId <= 0n) {
+    throw new Error("nftId must be greater than 0");
+  }
+
+  // Validate amount - must be positive (will be negated internally)
+  if (amount <= 0n) {
+    throw new Error("amount must be greater than 0");
+  }
+
+  // Validate recipient - cannot be zero address
+  if (recipient === "0x0000000000000000000000000000000000000000") {
+    throw new Error("recipient cannot be zero address");
+  }
+
   return encodeFluidOperateData(nftId, -amount, BigInt(0), recipient);
 }
 
