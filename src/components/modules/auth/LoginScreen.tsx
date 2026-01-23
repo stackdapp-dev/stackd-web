@@ -3,11 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { usePrivy } from "@privy-io/react-auth";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Wallet, KeyRound } from "lucide-react";
-import { motion } from "framer-motion";
+import { Mail, Wallet, KeyRound, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 
 const LoginScreen = () => {
   const { login } = usePrivy();
+  const [showOtherOptions, setShowOtherOptions] = useState(false);
 
   return (
     <div
@@ -102,83 +104,99 @@ const LoginScreen = () => {
         data-testid="login-buttons-container"
         className="w-full max-w-md flex flex-col gap-4"
       >
-        {/* Login with Email */}
-        <div className="relative">
-          <Badge
-            data-testid="login-email-badge"
-            variant="beta"
-            showDot
-            dotColor="#f59e0b"
-            className="absolute -top-3 left-4 z-10"
-          >
-            BETA
-          </Badge>
-          <Button
-            data-testid="login-email-button"
-            variant="outline"
-            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
-            onClick={() => login({ loginMethods: ["email"] })}
-          >
-            <Mail
-              data-testid="login-email-icon"
-              className="w-5 h-5 mr-2 text-amber-500"
-              strokeWidth={2}
-            />
-            Login with Email
-          </Button>
-        </div>
+        {/* Connect External Wallet - Primary Action */}
+        <Button
+          data-testid="login-wallet-button"
+          className="w-full text-lg font-semibold h-14 bg-amber-500 hover:bg-amber-600 text-black"
+          onClick={() => login({ loginMethods: ["wallet"] })}
+        >
+          <Wallet
+            data-testid="login-wallet-icon"
+            className="w-5 h-5 mr-2"
+            strokeWidth={2}
+          />
+          Connect External Wallet
+        </Button>
 
-        {/* Connect External Wallet */}
-        <div className="relative">
-          <Badge
-            data-testid="login-wallet-badge"
-            variant="recommended"
-            showDot
-            dotColor="#22c55e"
-            className="absolute -top-3 left-4 z-10"
-          >
-            RECOMMENDED
-          </Badge>
-          <Button
-            data-testid="login-wallet-button"
-            variant="outline"
-            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
-            onClick={() => login({ loginMethods: ["wallet"] })}
-          >
-            <Wallet
-              data-testid="login-wallet-icon"
-              className="w-5 h-5 mr-2 text-amber-500"
-              strokeWidth={2}
-            />
-            Connect External Wallet
-          </Button>
-        </div>
+        {/* Other Login Options Dropdown */}
+        <Button
+          data-testid="login-other-options-button"
+          variant="outline"
+          className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-white/20 hover:border-white/30 text-white/80 hover:text-white hover:bg-[#1a1a1a]"
+          onClick={() => setShowOtherOptions(!showOtherOptions)}
+        >
+          Other Login Options
+          <ChevronDown
+            data-testid="login-other-options-chevron"
+            className={`w-5 h-5 ml-2 transition-transform duration-200 ${showOtherOptions ? "rotate-180" : ""}`}
+            strokeWidth={2}
+          />
+        </Button>
 
-        {/* Login with Passkey */}
-        <div className="relative">
-          <Badge
-            data-testid="login-passkey-badge"
-            variant="beta"
-            showDot
-            dotColor="#f59e0b"
-            className="absolute -top-3 left-4 z-10"
-          >
-            BETA
-          </Badge>
-          <Button
-            data-testid="login-passkey-button"
-            variant="outline"
-            className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
-            onClick={() => login({ loginMethods: ["passkey"] })}
-          >
-            <KeyRound
-              data-testid="login-passkey-icon"
-              className="w-5 h-5 mr-2 text-amber-500"
-              strokeWidth={2}
-            />
-            Login with Passkey
-          </Button>
-        </div>
+        {/* Expandable Options */}
+        <AnimatePresence>
+          {showOtherOptions && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col gap-4 overflow-hidden"
+            >
+              {/* Login with Email */}
+              <div className="relative">
+                <Badge
+                  data-testid="login-email-badge"
+                  variant="beta"
+                  showDot
+                  dotColor="#f59e0b"
+                  className="absolute -top-3 left-4 z-10"
+                >
+                  BETA
+                </Badge>
+                <Button
+                  data-testid="login-email-button"
+                  variant="outline"
+                  className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
+                  onClick={() => login({ loginMethods: ["email"] })}
+                >
+                  <Mail
+                    data-testid="login-email-icon"
+                    className="w-5 h-5 mr-2 text-amber-500"
+                    strokeWidth={2}
+                  />
+                  Login with Email
+                </Button>
+              </div>
+
+              {/* Login with Passkey */}
+              <div className="relative">
+                <Badge
+                  data-testid="login-passkey-badge"
+                  variant="beta"
+                  showDot
+                  dotColor="#f59e0b"
+                  className="absolute -top-3 left-4 z-10"
+                >
+                  BETA
+                </Badge>
+                <Button
+                  data-testid="login-passkey-button"
+                  variant="outline"
+                  className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
+                  onClick={() => login({ loginMethods: ["passkey"] })}
+                >
+                  <KeyRound
+                    data-testid="login-passkey-icon"
+                    className="w-5 h-5 mr-2 text-amber-500"
+                    strokeWidth={2}
+                  />
+                  Login with Passkey
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Terms and Privacy Policy */}
