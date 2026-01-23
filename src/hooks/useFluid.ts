@@ -42,6 +42,96 @@ const rateToApr = (ratePerSecond: bigint) => {
   return (Number(ratePerSecond) / 1e18) * secondsPerYear * 100;
 };
 
+/**
+ * Pre-flight validation for withdrawal amounts
+ *
+ * Validates that a withdrawal will not:
+ * 1. Exceed the total collateral available
+ * 2. Exceed the unlocked collateral (collateral not needed to maintain loan health)
+ * 3. Cause the position's LTV to exceed the maximum allowed LTV
+ *
+ * This prevents "Execution reverted for an unknown reason" errors by checking
+ * position health BEFORE sending the transaction.
+ *
+ * @param withdrawalAmount - Amount to withdraw in raw units (bigint)
+ * @param collateralRaw - Total collateral in raw units (bigint)
+ * @param borrowRaw - Total borrowed amount in raw units (bigint)
+ * @param collateralPrice - Price of collateral token in USD
+ * @param borrowPrice - Price of borrow token in USD
+ * @param maxLtv - Maximum LTV percentage (e.g., 75 for 75%)
+ * @param collateralDecimals - Decimals for collateral token (XAUT = 6)
+ * @param borrowDecimals - Decimals for borrow token (USDT = 6)
+ */
+export function validateWithdrawalAmount(
+  withdrawalAmount: bigint,
+  collateralRaw: bigint,
+  borrowRaw: bigint,
+  collateralPrice: number,
+  borrowPrice: number,
+  maxLtv: number,
+  collateralDecimals: number = 6,
+  borrowDecimals: number = 6
+): { valid: true } | { valid: false; error: string } {
+  // Check 1: Cannot withdraw more than total collateral
+  if (withdrawalAmount > collateralRaw) {
+    return {
+      valid: false,
+      error: "Withdrawal amount exceeds available collateral",
+    };
+  }
+
+  // If there's no borrow, any withdrawal up to collateral is valid
+  if (borrowRaw === BigInt(0)) {
+    return { valid: true };
+  }
+
+  // Calculate USD values
+  const collateralUsd =
+    (Number(collateralRaw) / 10 ** collateralDecimals) * collateralPrice;
+  const borrowUsd = (Number(borrowRaw) / 10 ** borrowDecimals) * borrowPrice;
+  const withdrawalUsd =
+    (Number(withdrawalAmount) / 10 ** collateralDecimals) * collateralPrice;
+
+  // Calculate locked collateral (minimum collateral needed to maintain maxLtv)
+  // lockedCollateral = borrowedUSD / (maxLtv / 100)
+  const lockedCollateralUsd = borrowUsd / (maxLtv / 100);
+
+  // Calculate available (unlocked) collateral in USD
+  const availableCollateralUsd = collateralUsd - lockedCollateralUsd;
+
+  // Check 2: Cannot withdraw more than unlocked collateral
+  if (withdrawalUsd > availableCollateralUsd) {
+    return {
+      valid: false,
+      error:
+        "Withdrawal would exceed available collateral. Some collateral is locked to maintain your loan health. Reduce the withdrawal amount or repay some debt to unlock more collateral.",
+    };
+  }
+
+  // Check 3: Verify post-withdrawal LTV doesn't exceed maxLtv
+  const postWithdrawalCollateralUsd = collateralUsd - withdrawalUsd;
+
+  // Avoid division by zero
+  if (postWithdrawalCollateralUsd <= 0) {
+    return {
+      valid: false,
+      error:
+        "Cannot withdraw entire collateral while loan is active. Repay your loan first.",
+    };
+  }
+
+  const postWithdrawalLtv = (borrowUsd / postWithdrawalCollateralUsd) * 100;
+
+  if (postWithdrawalLtv > maxLtv) {
+    return {
+      valid: false,
+      error: `Withdrawal would cause your loan-to-value ratio (${postWithdrawalLtv.toFixed(1)}%) to exceed the maximum allowed (${maxLtv}%). Reduce withdrawal amount or repay some debt first.`,
+    };
+  }
+
+  return { valid: true };
+}
+
 interface FluidData {
   collateralRaw: bigint;
   borrowRaw: bigint;
@@ -371,6 +461,28 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
+        // Pre-flight position health check to prevent "Execution reverted" errors
+        const collateralDecimals = getTokenMetadata(COLLATERAL_TOKEN).decimals;
+        const borrowDecimals = getTokenMetadata(borrowToken).decimals;
+
+        const validation = validateWithdrawalAmount(
+          amount,
+          collateralRaw,
+          borrowRaw,
+          xautPrice,
+          borrowTokenPrice,
+          maxLtv,
+          collateralDecimals,
+          borrowDecimals
+        );
+
+        if (!validation.valid) {
+          console.log("[FLUID WITHDRAW] Pre-flight validation failed:", validation.error);
+          return { txHash: null, error: validation.error };
+        }
+
+        console.log("[FLUID WITHDRAW] Pre-flight validation passed");
+
         // Debug logging for withdrawal issue investigation
         const negativeAmount = -amount;
         console.log("[FLUID WITHDRAW DEBUG] ==================");
@@ -423,7 +535,7 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [nftId, acct, sendSponsoredTransaction]
+    [nftId, acct, sendSponsoredTransaction, collateralRaw, borrowRaw, maxLtv, xautPrice, borrowTokenPrice, borrowToken]
   );
 
   const borrow = useCallback(
