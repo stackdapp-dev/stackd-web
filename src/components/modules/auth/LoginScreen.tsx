@@ -14,33 +14,36 @@ const LoginScreen = () => {
   return (
     <div
       data-testid="login-container"
-      className="flex min-h-screen flex-col items-center justify-center px-8 py-12 bg-black"
+      className="flex min-h-screen flex-col items-center px-8 py-12 bg-black"
     >
-      {/* BETA Badge at top */}
-      <Badge
-        data-testid="login-beta-badge"
-        variant="beta"
-        showDot
-        dotColor="#f59e0b"
-        className="mb-8"
-      >
-        BETA
-      </Badge>
+      {/* Top section - BETA Badge, Logo, Animation (pushed down 20%) */}
+      <div className="flex flex-col items-center pt-[12vh]">
+        {/* BETA Badge at top */}
+        <Badge
+          data-testid="login-beta-badge"
+          variant="beta"
+          showDot
+          dotColor="#f59e0b"
+          className="mb-8"
+        >
+          BETA
+        </Badge>
 
-      {/* Stack'd Logo */}
-      <div className="flex items-center gap-3 mb-8">
-        <Image
-          src="/login-logo.png"
-          alt="Stack'd Logo"
-          width={164}
-          height={26}
-          priority
-        />
-      </div>
+        {/* Stack'd Logo - sized to match button container width (max-w-xs = 320px) */}
+        <div className="flex items-center gap-3 mb-8">
+          <Image
+            src="/login-logo.png"
+            alt="Stack'd Logo"
+            width={280}
+            height={45}
+            priority
+            className="w-auto h-auto max-w-[280px]"
+          />
+        </div>
 
-      {/* Animated Stacking Lines */}
-      <div className="flex justify-center mb-16">
-        <div className="relative w-48 h-28">
+        {/* Animated Stacking Lines */}
+        <div className="flex justify-center mb-8">
+          <div className="relative w-48 h-28">
           {/* Line 1 (bottom - drops first - LEFT aligned) */}
           <motion.div
             initial={{ y: -150, opacity: 0 }}
@@ -97,43 +100,47 @@ const LoginScreen = () => {
             className="absolute bottom-[4.5rem] right-0 w-[130px] h-2.5 bg-[#ffa02d] rounded-full shadow-lg shadow-[#ffa02d]/50"
           />
         </div>
+        </div>
       </div>
 
-      {/* Login Buttons Container */}
+      {/* Spacer to push buttons down */}
+      <div className="flex-1 min-h-[10vh]" />
+
+      {/* Login Buttons Container - 30% smaller, positioned lower */}
       <div
         data-testid="login-buttons-container"
-        className="w-full max-w-md flex flex-col gap-4"
+        className="w-full max-w-xs flex flex-col gap-3"
       >
-        {/* Connect External Wallet - Primary Action */}
+        {/* Connect External Wallet - Primary Action (30% smaller) */}
         <Button
           data-testid="login-wallet-button"
-          className="w-full text-lg font-semibold h-14 bg-amber-500 hover:bg-amber-600 text-black"
+          className="w-full text-base font-semibold h-10 bg-amber-500 hover:bg-amber-600 text-black"
           onClick={() => login({ loginMethods: ["wallet"] })}
         >
           <Wallet
             data-testid="login-wallet-icon"
-            className="w-5 h-5 mr-2"
+            className="w-4 h-4 mr-2"
             strokeWidth={2}
           />
           Connect External Wallet
         </Button>
 
-        {/* Other Login Options Dropdown */}
+        {/* Other Login Options Dropdown (30% smaller) */}
         <Button
           data-testid="login-other-options-button"
           variant="outline"
-          className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-white/20 hover:border-white/30 text-white/80 hover:text-white hover:bg-[#1a1a1a]"
+          className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-white/20 hover:border-white/30 text-white/80 hover:text-white hover:bg-[#1a1a1a]"
           onClick={() => setShowOtherOptions(!showOtherOptions)}
         >
           Other Login Options
           <ChevronDown
             data-testid="login-other-options-chevron"
-            className={`w-5 h-5 ml-2 transition-transform duration-200 ${showOtherOptions ? "rotate-180" : ""}`}
+            className={`w-4 h-4 ml-2 transition-transform duration-200 ${showOtherOptions ? "rotate-180" : ""}`}
             strokeWidth={2}
           />
         </Button>
 
-        {/* Expandable Options */}
+        {/* Expandable Options (30% smaller) */}
         <AnimatePresence>
           {showOtherOptions && (
             <motion.div
@@ -141,7 +148,7 @@ const LoginScreen = () => {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-4 overflow-hidden"
+              className="flex flex-col gap-3 overflow-hidden"
             >
               {/* Login with Email */}
               <div className="relative">
@@ -150,19 +157,19 @@ const LoginScreen = () => {
                   variant="beta"
                   showDot
                   dotColor="#f59e0b"
-                  className="absolute -top-3 left-4 z-10"
+                  className="absolute -top-2.5 left-3 z-10 text-xs"
                 >
                   BETA
                 </Badge>
                 <Button
                   data-testid="login-email-button"
                   variant="outline"
-                  className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
+                  className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
                   onClick={() => login({ loginMethods: ["email"] })}
                 >
                   <Mail
                     data-testid="login-email-icon"
-                    className="w-5 h-5 mr-2 text-amber-500"
+                    className="w-4 h-4 mr-2 text-amber-500"
                     strokeWidth={2}
                   />
                   Login with Email
@@ -176,19 +183,19 @@ const LoginScreen = () => {
                   variant="beta"
                   showDot
                   dotColor="#f59e0b"
-                  className="absolute -top-3 left-4 z-10"
+                  className="absolute -top-2.5 left-3 z-10 text-xs"
                 >
                   BETA
                 </Badge>
                 <Button
                   data-testid="login-passkey-button"
                   variant="outline"
-                  className="w-full text-lg font-semibold h-14 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
+                  className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
                   onClick={() => login({ loginMethods: ["passkey"] })}
                 >
                   <KeyRound
                     data-testid="login-passkey-icon"
-                    className="w-5 h-5 mr-2 text-amber-500"
+                    className="w-4 h-4 mr-2 text-amber-500"
                     strokeWidth={2}
                   />
                   Login with Passkey
@@ -200,7 +207,7 @@ const LoginScreen = () => {
       </div>
 
       {/* Terms and Privacy Policy */}
-      <p className="text-center text-white/60 mt-16 text-sm">
+      <p className="text-center text-white/60 mt-8 text-sm">
         By continuing, you agree to our{" "}
         <Link
           href="/terms"
