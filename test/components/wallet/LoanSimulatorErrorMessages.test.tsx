@@ -89,27 +89,21 @@ describe("LoanSimulator - Error Message Mode Capture (Issue #4)", () => {
       // const operationMode = mode;
       // ... before any await statements
 
-      // Extract handleConfirm function content
-      const handleConfirmMatch = componentCode.match(
-        /const\s+handleConfirm\s*=\s*useCallback\s*\(\s*async\s*\(\s*\)\s*=>\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/s
-      );
+      // Verify operationMode is declared in the component
+      // The operationMode should be captured at the start of handleConfirm
+      expect(componentCode).toContain("const operationMode = mode");
 
-      if (handleConfirmMatch) {
-        const handleConfirmBody = handleConfirmMatch[1];
+      // Verify it's used in the error handler
+      expect(componentCode).toContain("operationMode} failed:");
 
-        // Find position of operationMode declaration
-        const operationModePos = handleConfirmBody.indexOf("const operationMode = mode");
+      // Find handleConfirm and verify operationMode is declared early
+      const handleConfirmIndex = componentCode.indexOf("const handleConfirm = useCallback");
+      const operationModeIndex = componentCode.indexOf("const operationMode = mode", handleConfirmIndex);
 
-        // Find position of first await (the async operation)
-        const firstAwaitPos = handleConfirmBody.indexOf("await");
-
-        // operationMode should be declared before first await, or at least early in the function
-        // We verify operationMode exists
-        expect(operationModePos).toBeGreaterThan(-1);
-      } else {
-        // If we can't find the function with regex, at least verify operationMode exists
-        expect(componentCode).toContain("const operationMode = mode");
-      }
+      // operationMode should be within the first 500 characters of handleConfirm
+      // (allows for guard clause and ETH balance check before mode capture)
+      expect(operationModeIndex).toBeGreaterThan(handleConfirmIndex);
+      expect(operationModeIndex - handleConfirmIndex).toBeLessThan(500);
     });
   });
 
