@@ -11,6 +11,7 @@ import { dbService as mockDbService } from './mock';
 import type { User } from './supabase.types';
 import type { ReferralStats } from './types';
 import { getTotalCollateralByAddress } from '@/lib/collateral/multiProtocolCollateral';
+import { getTopAthDepositors, getAthByWallet } from '@/lib/db/depositAthDb';
 
 // Create Supabase client with service role key for server-side operations (bypasses RLS)
 // Only create if env vars are present (prevents CI/CD failures)
@@ -435,33 +436,22 @@ class ReferralDatabaseService {
                 .slice(0, 10)
                 .map((e, i) => ({ ...e, rank: i + 1 }));
 
-            // Fetch deposits for each Stack'd user individually from BOTH protocols (Compound + Fluid)
-            // This ensures we get ALL Stack'd users with deposits across all protocols
-            const stackdDepositPromises = usersWithReferrals.map(async (user) => {
-                const collateral = await getTotalCollateralByAddress(user.wallet_address);
-                return {
-                    walletAddress: user.wallet_address.toLowerCase(),
-                    totalDepositsUsd: collateral?.totalCollateralUsd || 0,
-                };
-            });
+            // Fetch ATH (All-Time High) deposits from persistent storage
+            // This shows historical peak deposits per wallet, not current balances
+            const athDepositors = await getTopAthDepositors(10);
 
-            const stackdDeposits = await Promise.all(stackdDepositPromises);
+            console.log('[ReferralDB] ATH depositors from DB:', athDepositors.length, athDepositors.slice(0, 3).map(d => ({
+                wallet: d.wallet_address,
+                ath: d.ath_usd,
+            })));
 
-            // Filter users with deposits > 0 and sort by deposit amount
-            const stackdDepositors = stackdDeposits
-                .filter(d => d.totalDepositsUsd > 0)
-                .sort((a, b) => b.totalDepositsUsd - a.totalDepositsUsd)
-                .slice(0, 10);
-
-            console.log('[ReferralDB] Stack\'d users with deposits:', stackdDepositors.length, stackdDepositors.slice(0, 3));
-
-            // Transform filtered data to leaderboard format with correct ranks
-            const sortedByDeposits = stackdDepositors.map((depositor, index) => ({
+            // Transform ATH data to leaderboard format
+            const sortedByDeposits = athDepositors.map((depositor, index) => ({
                 rank: index + 1,
-                walletAddress: depositor.walletAddress,
+                walletAddress: depositor.wallet_address,
                 referralCount: 0, // Deposits tab doesn't need referral count
-                totalDeposits: depositor.totalDepositsUsd,
-                isCurrentUser: normalizedWallet ? depositor.walletAddress.toLowerCase() === normalizedWallet : false,
+                totalDeposits: depositor.ath_usd,
+                isCurrentUser: normalizedWallet ? depositor.wallet_address.toLowerCase() === normalizedWallet : false,
             }));
 
             // Calculate user's rank if they're authenticated
@@ -472,12 +462,12 @@ class ReferralDatabaseService {
                     // Count users with more referrals
                     const referralRank = entries.filter(e => e.referralCount > userEntry.referralCount).length + 1;
 
-                    // Get user's total collateral from BOTH protocols for deposit rank (among Stack'd users only)
+                    // Get user's ATH for deposit rank
                     let depositsRank = 0;
-                    const userCollateral = await getTotalCollateralByAddress(normalizedWallet);
-                    if (userCollateral && userCollateral.totalCollateralUsd > 0) {
-                        // Count Stack'd depositors with more deposits than user
-                        depositsRank = stackdDeposits.filter(d => d.totalDepositsUsd > userCollateral.totalCollateralUsd).length + 1;
+                    const userAth = await getAthByWallet(normalizedWallet);
+                    if (userAth && userAth.ath_usd > 0) {
+                        // Count depositors with higher ATH than user
+                        depositsRank = athDepositors.filter(d => d.ath_usd > userAth.ath_usd).length + 1;
                     }
 
                     userRank = {

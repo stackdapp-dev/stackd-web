@@ -428,8 +428,8 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         const ethBalance = await ethereumPublicClient.getBalance({
           address: activeWalletAddress as `0x${string}`
         });
-        // Require at least 0.005 ETH for gas (conservative estimate)
-        const minEthRequired = parseUnits("0.005", 18);
+        // Require at least 0.00005 ETH for gas
+        const minEthRequired = parseUnits("0.00005", 18);
         if (ethBalance < minEthRequired) {
           console.log("[FLUID] Insufficient ETH for gas:", formatUnits(ethBalance, 18), "ETH");
           setShowEthAlert(true);
@@ -1101,7 +1101,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
             </Text>
             <div className="rounded-xl px-4 py-3 bg-amber-500/10 border border-amber-500/30">
               <p className="text-amber-400 text-sm">
-                Please add at least 0.005 ETH to your wallet to cover gas fees for this transaction.
+                Please add at least 0.00005 ETH to your wallet to cover gas fees for this transaction.
               </p>
             </div>
           </div>

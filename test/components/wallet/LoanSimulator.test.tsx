@@ -1296,10 +1296,10 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
     });
 
     describe("ETH balance check logic", () => {
-        it("should require minimum 0.005 ETH for gas fees", () => {
+        it("should require minimum 0.00005 ETH for gas fees", () => {
             // Minimum ETH required for Fluid operations
-            const MIN_ETH_FOR_GAS = 0.005;
-            const ethBalance = 0.003; // Insufficient
+            const MIN_ETH_FOR_GAS = 0.00005;
+            const ethBalance = 0.00003; // Insufficient
 
             const hasInsufficientEth = ethBalance < MIN_ETH_FOR_GAS;
 
@@ -1307,8 +1307,8 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
         });
 
         it("should allow transaction when ETH balance is sufficient", () => {
-            const MIN_ETH_FOR_GAS = 0.005;
-            const ethBalance = 0.01; // Sufficient
+            const MIN_ETH_FOR_GAS = 0.00005;
+            const ethBalance = 0.0001; // Sufficient
 
             const hasInsufficientEth = ethBalance < MIN_ETH_FOR_GAS;
 
