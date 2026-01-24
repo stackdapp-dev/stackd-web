@@ -20,15 +20,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import LoanConfirmationModal from "@/components/wallet/LoanConfirmationModal";
 
-// Mock Modal component
+// Mock Modal component - includes close button to test close behavior
 vi.mock("@/components/ui/modal", () => ({
     default: ({
         isOpen,
+        onClose,
         title,
         message,
         icon,
     }: {
         isOpen: boolean;
+        onClose: () => void;
         title: string;
         message: React.ReactNode;
         icon?: React.ReactNode;
@@ -36,6 +38,13 @@ vi.mock("@/components/ui/modal", () => ({
         if (!isOpen) return null;
         return (
             <div data-testid="modal">
+                <button
+                    data-testid="modal-close-button"
+                    aria-label="Close"
+                    onClick={onClose}
+                >
+                    X
+                </button>
                 <div data-testid="modal-title">{title}</div>
                 {icon && <div data-testid="modal-icon">{icon}</div>}
                 <div data-testid="modal-message">{message}</div>
@@ -576,6 +585,68 @@ describe("LoanConfirmationModal Component", () => {
             );
 
             expect(screen.getByText(/\$1,500\.00/)).toBeInTheDocument();
+        });
+    });
+
+    describe("Close Button During Processing States", () => {
+        it("should always render close button (X) even during processing state", () => {
+            render(<LoanConfirmationModal {...defaultProps} isProcessing={true} />);
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            expect(closeButton).toBeInTheDocument();
+        });
+
+        it("should always render close button (X) even during approving state", () => {
+            render(<LoanConfirmationModal {...defaultProps} isApproving={true} />);
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            expect(closeButton).toBeInTheDocument();
+        });
+
+        it("should call onClose when close button is clicked during processing state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should call onClose when close button is clicked during approving state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isApproving={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should call onClose when close button is clicked during both processing and approving state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    isApproving={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
         });
     });
 });
