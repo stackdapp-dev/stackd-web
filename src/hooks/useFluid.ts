@@ -18,7 +18,7 @@ import { encodeApproveData } from "@/lib/web3/compound";
 import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useQuery, QueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { Address, Hex, PublicClient } from "viem";
 import { formatUnits } from "viem";
 import { mainnet } from "viem/chains";
@@ -41,6 +41,96 @@ const rateToApr = (ratePerSecond: bigint) => {
   const secondsPerYear = 60 * 60 * 24 * 365;
   return (Number(ratePerSecond) / 1e18) * secondsPerYear * 100;
 };
+
+/**
+ * Pre-flight validation for withdrawal amounts
+ *
+ * Validates that a withdrawal will not:
+ * 1. Exceed the total collateral available
+ * 2. Exceed the unlocked collateral (collateral not needed to maintain loan health)
+ * 3. Cause the position's LTV to exceed the maximum allowed LTV
+ *
+ * This prevents "Execution reverted for an unknown reason" errors by checking
+ * position health BEFORE sending the transaction.
+ *
+ * @param withdrawalAmount - Amount to withdraw in raw units (bigint)
+ * @param collateralRaw - Total collateral in raw units (bigint)
+ * @param borrowRaw - Total borrowed amount in raw units (bigint)
+ * @param collateralPrice - Price of collateral token in USD
+ * @param borrowPrice - Price of borrow token in USD
+ * @param maxLtv - Maximum LTV percentage (e.g., 75 for 75%)
+ * @param collateralDecimals - Decimals for collateral token (XAUT = 6)
+ * @param borrowDecimals - Decimals for borrow token (USDT = 6)
+ */
+export function validateWithdrawalAmount(
+  withdrawalAmount: bigint,
+  collateralRaw: bigint,
+  borrowRaw: bigint,
+  collateralPrice: number,
+  borrowPrice: number,
+  maxLtv: number,
+  collateralDecimals: number = 6,
+  borrowDecimals: number = 6
+): { valid: true } | { valid: false; error: string } {
+  // Check 1: Cannot withdraw more than total collateral
+  if (withdrawalAmount > collateralRaw) {
+    return {
+      valid: false,
+      error: "Withdrawal amount exceeds available collateral",
+    };
+  }
+
+  // If there's no borrow, any withdrawal up to collateral is valid
+  if (borrowRaw === BigInt(0)) {
+    return { valid: true };
+  }
+
+  // Calculate USD values
+  const collateralUsd =
+    (Number(collateralRaw) / 10 ** collateralDecimals) * collateralPrice;
+  const borrowUsd = (Number(borrowRaw) / 10 ** borrowDecimals) * borrowPrice;
+  const withdrawalUsd =
+    (Number(withdrawalAmount) / 10 ** collateralDecimals) * collateralPrice;
+
+  // Calculate locked collateral (minimum collateral needed to maintain maxLtv)
+  // lockedCollateral = borrowedUSD / (maxLtv / 100)
+  const lockedCollateralUsd = borrowUsd / (maxLtv / 100);
+
+  // Calculate available (unlocked) collateral in USD
+  const availableCollateralUsd = collateralUsd - lockedCollateralUsd;
+
+  // Check 2: Cannot withdraw more than unlocked collateral
+  if (withdrawalUsd > availableCollateralUsd) {
+    return {
+      valid: false,
+      error:
+        "Withdrawal would exceed available collateral. Some collateral is locked to maintain your loan health. Reduce the withdrawal amount or repay some debt to unlock more collateral.",
+    };
+  }
+
+  // Check 3: Verify post-withdrawal LTV doesn't exceed maxLtv
+  const postWithdrawalCollateralUsd = collateralUsd - withdrawalUsd;
+
+  // Avoid division by zero
+  if (postWithdrawalCollateralUsd <= 0) {
+    return {
+      valid: false,
+      error:
+        "Cannot withdraw entire collateral while loan is active. Repay your loan first.",
+    };
+  }
+
+  const postWithdrawalLtv = (borrowUsd / postWithdrawalCollateralUsd) * 100;
+
+  if (postWithdrawalLtv > maxLtv) {
+    return {
+      valid: false,
+      error: `Withdrawal would cause your loan-to-value ratio (${postWithdrawalLtv.toFixed(1)}%) to exceed the maximum allowed (${maxLtv}%). Reduce withdrawal amount or repay some debt first.`,
+    };
+  }
+
+  return { valid: true };
+}
 
 interface FluidData {
   collateralRaw: bigint;
@@ -202,6 +292,9 @@ export function useFluid(): UseFluidResult {
   const getTokenPrice = useGetTokenPrice();
   const acct = walletClient?.account?.address || activeWalletAddress;
 
+  // Transaction lock to prevent duplicate submissions
+  const transactionInProgress = useRef(false);
+
   // Debug: Log query prerequisites
   console.log("[FLUID HOOK] ethereumPublicClient:", !!ethereumPublicClient);
   console.log("[FLUID HOOK] walletClient?.account?.address:", walletClient?.account?.address);
@@ -290,13 +383,62 @@ export function useFluid(): UseFluidResult {
       if (!acct) {
         return { txHash: null, error: "No account connected" };
       }
+      if (!ethereumPublicClient) {
+        return { txHash: null, error: "No public client available" };
+      }
 
       try {
+        // Pre-approval check for iOS Safari passkey wallets
+        // The paymaster simulation fails if allowance isn't already set,
+        // so we approve BEFORE the supply transaction
+        const xautAddress = ETHEREUM_TOKEN_ADDRESSES.XAUT as Address;
+        const spender = XAUT_USDT_VAULT as Address;
+
+        // Check current allowance
+        let currentAllowance: bigint;
+        try {
+          const allowanceResult = await ethereumPublicClient.readContract({
+            address: xautAddress,
+            abi: ERC20_ABI,
+            functionName: "allowance",
+            args: [acct as Address, spender],
+          });
+          currentAllowance = allowanceResult as bigint;
+        } catch (err) {
+          console.error("[FLUID] Allowance check failed:", err);
+          currentAllowance = BigInt(0);
+        }
+
+        console.log("[FLUID] Supply - Current allowance:", currentAllowance.toString());
+        console.log("[FLUID] Supply - Required amount:", amount.toString());
+
+        // If allowance is insufficient, approve first
+        if (currentAllowance < amount) {
+          console.log("[FLUID] Supply - Approving XAUT for vault...");
+          const approveData = encodeApproveData(spender, amount);
+          const approvalResult = await sendSponsoredTransaction({
+            to: xautAddress,
+            data: approveData,
+            chainId: mainnet.id,
+            forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
+          });
+
+          if (approvalResult.error) {
+            return { txHash: null, error: `Approval failed: ${approvalResult.error}` };
+          }
+
+          console.log("[FLUID] Supply - Approval tx submitted:", approvalResult.hash);
+          // Wait for approval to be processed before supply
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        // Now execute the supply transaction
         const data = encodeFluidSupply(nftId, amount, acct as Address);
         const result = await sendSponsoredTransaction({
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -309,37 +451,104 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [nftId, acct, sendSponsoredTransaction]
+    [nftId, acct, ethereumPublicClient, sendSponsoredTransaction]
   );
 
   const withdraw = useCallback(
     async (amount: bigint): Promise<TransactionResult> => {
+      // Check transaction lock to prevent duplicate submissions
+      if (transactionInProgress.current) {
+        return { txHash: null, error: "Transaction already in progress" };
+      }
+      transactionInProgress.current = true;
+
       if (!nftId) {
+        transactionInProgress.current = false;
         return { txHash: null, error: "No active position found. Cannot withdraw without nftId." };
       }
       if (!acct) {
+        transactionInProgress.current = false;
         return { txHash: null, error: "No account connected" };
       }
 
       try {
+        // Pre-flight position health check to prevent "Execution reverted" errors
+        const collateralDecimals = getTokenMetadata(COLLATERAL_TOKEN).decimals;
+        const borrowDecimals = getTokenMetadata(borrowToken).decimals;
+
+        const validation = validateWithdrawalAmount(
+          amount,
+          collateralRaw,
+          borrowRaw,
+          xautPrice,
+          borrowTokenPrice,
+          maxLtv,
+          collateralDecimals,
+          borrowDecimals
+        );
+
+        if (!validation.valid) {
+          console.log("[FLUID WITHDRAW] Pre-flight validation failed:", validation.error);
+          return { txHash: null, error: validation.error };
+        }
+
+        console.log("[FLUID WITHDRAW] Pre-flight validation passed");
+
+        // Debug logging for withdrawal issue investigation
+        const negativeAmount = -amount;
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+        console.log("[FLUID WITHDRAW DEBUG] Input amount (bigint):", amount.toString());
+        console.log("[FLUID WITHDRAW DEBUG] Input amount (hex):", "0x" + amount.toString(16));
+        console.log("[FLUID WITHDRAW DEBUG] Negative amount (bigint):", negativeAmount.toString());
+        console.log("[FLUID WITHDRAW DEBUG] Negative amount (hex):", negativeAmount < 0n
+          ? "-0x" + (-negativeAmount).toString(16)
+          : "0x" + negativeAmount.toString(16));
+        console.log("[FLUID WITHDRAW DEBUG] NFT ID:", nftId.toString());
+        console.log("[FLUID WITHDRAW DEBUG] Recipient:", acct);
+        console.log("[FLUID WITHDRAW DEBUG] Vault address:", XAUT_USDT_VAULT);
+
         const data = encodeFluidWithdraw(nftId, amount, acct as Address);
+        console.log("[FLUID WITHDRAW DEBUG] Encoded calldata:", data);
+        console.log("[FLUID WITHDRAW DEBUG] Calldata length:", data.length, "chars");
+
+        // Decode and verify the calldata structure
+        // First 4 bytes (8 hex chars after 0x) = function selector
+        // Next 32 bytes = nftId, next 32 = collateralDelta, next 32 = debtDelta, next 32 = recipient
+        const selector = data.slice(0, 10);
+        const param1 = data.slice(10, 74);  // nftId
+        const param2 = data.slice(74, 138); // collateralDelta (should be negative)
+        const param3 = data.slice(138, 202); // debtDelta (should be 0)
+        const param4 = data.slice(202, 266); // recipient address
+
+        console.log("[FLUID WITHDRAW DEBUG] Function selector:", selector);
+        console.log("[FLUID WITHDRAW DEBUG] Param 1 (nftId):", "0x" + param1);
+        console.log("[FLUID WITHDRAW DEBUG] Param 2 (collateralDelta):", "0x" + param2);
+        console.log("[FLUID WITHDRAW DEBUG] Param 3 (debtDelta):", "0x" + param3);
+        console.log("[FLUID WITHDRAW DEBUG] Param 4 (recipient):", "0x" + param4);
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+
         const result = await sendSponsoredTransaction({
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
+          console.error("[FLUID WITHDRAW DEBUG] Transaction error:", result.error);
           return { txHash: null, error: result.error };
         }
+        console.log("[FLUID WITHDRAW DEBUG] Transaction success:", result.hash);
         return { txHash: result.hash as Hex, error: null };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown withdraw error";
-        console.error("[FLUID] Withdraw failed:", err);
+        console.error("[FLUID WITHDRAW DEBUG] Exception:", err);
         return { txHash: null, error: errorMessage };
+      } finally {
+        transactionInProgress.current = false;
       }
     },
-    [nftId, acct, sendSponsoredTransaction]
+    [nftId, acct, sendSponsoredTransaction, collateralRaw, borrowRaw, maxLtv, xautPrice, borrowTokenPrice, borrowToken]
   );
 
   const borrow = useCallback(
@@ -357,6 +566,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -387,6 +597,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -418,6 +629,7 @@ export function useFluid(): UseFluidResult {
           to: token,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {
@@ -490,6 +702,7 @@ export function useFluid(): UseFluidResult {
           to: XAUT_USDT_VAULT as Address,
           data,
           chainId: mainnet.id,
+          forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
         });
 
         if (result.error) {

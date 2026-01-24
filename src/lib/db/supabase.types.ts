@@ -78,6 +78,39 @@ export interface Database {
                 };
                 Relationships: [];
             };
+            deposit_ath: {
+                Row: {
+                    id: string;
+                    wallet_address: string;
+                    ath_usd: number;
+                    ath_compound_usd: number;
+                    ath_fluid_usd: number;
+                    recorded_at: string;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    wallet_address: string;
+                    ath_usd: number;
+                    ath_compound_usd?: number;
+                    ath_fluid_usd?: number;
+                    recorded_at?: string;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    id?: string;
+                    wallet_address?: string;
+                    ath_usd?: number;
+                    ath_compound_usd?: number;
+                    ath_fluid_usd?: number;
+                    recorded_at?: string;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Relationships: [];
+            };
         };
         Views: Record<string, never>;
         Functions: Record<string, never>;
@@ -93,3 +126,5 @@ export type User = Database['public']['Tables']['users']['Row'];
 export type UserInsert = Database['public']['Tables']['users']['Insert'];
 export type ReferralEarning = Database['public']['Tables']['referral_earnings']['Row'];
 export type ReferralEarningInsert = Database['public']['Tables']['referral_earnings']['Insert'];
+export type DepositAth = Database['public']['Tables']['deposit_ath']['Row'];
+export type DepositAthInsert = Database['public']['Tables']['deposit_ath']['Insert'];

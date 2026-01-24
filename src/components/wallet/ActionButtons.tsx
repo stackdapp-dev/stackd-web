@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import LoanSimulator from "@/components/wallet/LoanSimulator";
 import NewLoanModal from "@/components/wallet/NewLoanModal";
+import { Badge } from "@/components/ui/badge";
 
 interface ActionButtonProps {
     icon: React.ReactNode;
     label: string;
     onClick: () => void;
     disabled?: boolean;
+    showBetaBadge?: boolean;
 }
 
-function ActionButton({ icon, label, onClick, disabled }: ActionButtonProps) {
+function ActionButton({ icon, label, onClick, disabled, showBetaBadge }: ActionButtonProps) {
     return (
         <button
             onClick={onClick}
@@ -21,13 +23,25 @@ function ActionButton({ icon, label, onClick, disabled }: ActionButtonProps) {
             className={`flex flex-col items-center gap-2 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                 }`}
         >
-            <div
-                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${disabled
-                    ? "bg-white/5 border border-white/10"
-                    : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
-                    }`}
-            >
-                {icon}
+            <div className="relative">
+                {showBetaBadge && (
+                    <Badge
+                        variant="beta"
+                        showDot
+                        dotColor="#f59e0b"
+                        className="absolute -top-2.5 left-1/2 -translate-x-1/2 py-0.5 px-2 text-[10px] z-10"
+                    >
+                        BETA
+                    </Badge>
+                )}
+                <div
+                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${disabled
+                        ? "bg-white/5 border border-white/10"
+                        : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
+                        }`}
+                >
+                    {icon}
+                </div>
             </div>
             <span className="text-white text-sm font-medium">{label}</span>
         </button>
@@ -51,6 +65,7 @@ export default function ActionButtons() {
                     icon={<ArrowRightLeft className="w-6 h-6 text-blue-400" />}
                     label="Convert"
                     onClick={() => router.push("/wallet/convert")}
+                    showBetaBadge={true}
                 />
                 <ActionButton
                     icon={<Calculator className="w-6 h-6 text-emerald-400" />}

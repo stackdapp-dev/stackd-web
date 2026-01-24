@@ -23,6 +23,7 @@ const cardVariants = cva("w-full rounded-2xl transition-all", {
       glassDark: "backdrop-blur-xl bg-black/20 border border-white/5",
       glassAccent: "backdrop-blur-xl bg-[#ffa02d]/10 border border-[#ffa02d]/20",
       container: "border border-white/10 bg-white/5",
+      dropdown: "backdrop-blur-xl bg-slate-900/95 border border-white/10",
     },
   },
   defaultVariants: {

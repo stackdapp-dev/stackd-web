@@ -85,12 +85,21 @@ export default function RewardsSimulatorModal({
         >
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/70 transition-opacity"
+                className="absolute inset-0 bg-black/50 transition-opacity"
                 onClick={onClose}
             />
 
             {/* Modal Content */}
-            <div className="relative w-full max-w-md bg-neutral-900 rounded-2xl p-6 animate-fade-in max-h-[90vh] overflow-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div
+                className="relative w-full max-w-md rounded-3xl p-6 animate-fade-in max-h-[90vh] overflow-auto scrollbar-hide border border-white/10"
+                style={{
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    background: 'rgba(30, 30, 30, 0.95)',
+                    backdropFilter: 'blur(40px)',
+                    WebkitBackdropFilter: 'blur(40px)',
+                }}
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
@@ -103,10 +112,10 @@ export default function RewardsSimulatorModal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/50 hover:text-white transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-colors"
                         aria-label="Close"
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 

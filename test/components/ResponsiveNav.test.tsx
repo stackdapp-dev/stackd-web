@@ -139,7 +139,10 @@ describe("ResponsiveNav", () => {
 
             const nav = screen.getByRole("navigation");
             expect(nav).toBeInTheDocument();
-            expect(nav.className).toMatch(/bottom-/);
+            // Check for fixed positioning
+            expect(nav.className).toMatch(/fixed/);
+            // bottom: 0 is set via inline style for iOS Safari scroll fix (Bug #4)
+            expect(nav.style.bottom).toBe("0px");
         });
 
         it("should NOT display logo on mobile", async () => {

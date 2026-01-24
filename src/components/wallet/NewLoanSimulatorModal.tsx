@@ -485,12 +485,19 @@ export default function NewLoanSimulatorModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/60 transition-opacity"
+                className="absolute inset-0 bg-black/50 transition-opacity"
                 onClick={onClose}
             />
 
             {/* Modal Content */}
-            <div className="relative w-full max-w-lg bg-slate-900 rounded-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div
+                className="relative w-full max-w-lg rounded-3xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto border border-white/10"
+                style={{
+                    background: 'rgba(30, 30, 30, 0.95)',
+                    backdropFilter: 'blur(40px)',
+                    WebkitBackdropFilter: 'blur(40px)',
+                }}
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -502,9 +509,9 @@ export default function NewLoanSimulatorModal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/50 hover:text-white transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-colors"
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
@@ -675,9 +682,7 @@ export default function NewLoanSimulatorModal({
                         isProcessing || isApproving || isConfirming ? (
                             <Loading />
                         ) : (
-                            <div className="rounded-full p-4 bg-amber-500/20">
-                                <TokenIcon symbol={collateralSymbol} width={40} height={40} />
-                            </div>
+                            <TokenIcon symbol={collateralSymbol} width={56} height={56} />
                         )
                     }
                     message={
@@ -696,10 +701,9 @@ export default function NewLoanSimulatorModal({
                         ) : (
                             <div className="flex flex-col gap-4">
                                 {/* Summary */}
-                                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                                <div className="rounded-2xl p-4 border border-white/20">
                                     <p className="text-white/50 text-sm mb-2">You will deposit</p>
-                                    <div className="flex items-center gap-2">
-                                        <TokenIcon symbol={collateralSymbol} width={24} height={24} />
+                                    <div className="flex items-center justify-center gap-2">
                                         <p className="text-2xl font-bold text-white">
                                             {formatAmount(parsedCollateral, 6)} {collateralSymbol}
                                         </p>
@@ -709,32 +713,32 @@ export default function NewLoanSimulatorModal({
                                     </p>
                                 </div>
 
-                                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                                <div className="rounded-2xl p-4 border border-white/20">
                                     <p className="text-white/50 text-sm mb-2">And borrow</p>
-                                    <div className="flex items-center gap-2">
-                                        <TokenIcon symbol="USDT" width={24} height={24} />
+                                    <div className="flex items-center justify-center gap-2">
                                         <p className="text-2xl font-bold text-white">
                                             {formatCurrency(parsedBorrow, 2)}
                                         </p>
                                     </div>
+                                    <p className="text-white/40 text-sm mt-1">USDT</p>
                                 </div>
 
                                 {/* Stats */}
-                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                    <div className="flex justify-between">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex justify-between text-sm">
                                         <span className="text-white/50">LTV</span>
                                         <span className="text-white font-medium">{simulatedResult.ltv.toFixed(1)}%</span>
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="flex justify-between text-sm">
                                         <span className="text-white/50">APR</span>
                                         <span className="text-white font-medium">{borrowApr.toFixed(2)}%</span>
                                     </div>
                                 </div>
 
                                 {/* Warning */}
-                                <div className="border rounded-lg px-3 py-2 flex items-start gap-2 bg-amber-500/10 border-amber-500/20">
-                                    <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                                    <p className="text-xs text-amber-400/80">
+                                <div className="rounded-xl px-4 py-3 flex items-start gap-3 bg-amber-500/10 border border-amber-500/30">
+                                    <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+                                    <p className="text-sm text-amber-400">
                                         This will create a new loan position. You will need to repay the borrowed amount plus interest.
                                     </p>
                                 </div>

@@ -140,20 +140,27 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 transition-opacity"
+        className="absolute inset-0 bg-black/50 transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-md bg-slate-900 rounded-2xl p-6 animate-fade-in">
+      <div
+        className="relative w-full max-w-md rounded-3xl p-6 animate-fade-in border border-white/10"
+        style={{
+          background: 'rgba(30, 30, 30, 0.95)',
+          backdropFilter: 'blur(40px)',
+          WebkitBackdropFilter: 'blur(40px)',
+        }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-white text-xl font-semibold">New Loan Position</h2>
           <button
             onClick={onClose}
-            className="text-white/50 hover:text-white transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -196,7 +203,14 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
 
           {/* Dropdown Options */}
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-white/10 rounded-xl overflow-hidden z-10">
+            <div
+              className="absolute top-full left-0 right-0 mt-2 border border-white/10 rounded-xl overflow-hidden z-10"
+              style={{
+                background: 'rgba(30, 30, 30, 0.95)',
+                backdropFilter: 'blur(40px)',
+                WebkitBackdropFilter: 'blur(40px)',
+              }}
+            >
               {COLLATERAL_OPTIONS.map((option) => (
                 <button
                   key={option.type}
@@ -227,17 +241,16 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button
+          <button
             onClick={onClose}
-            variant="ghost"
-            className="flex-1 bg-white/10 hover:bg-white/20"
+            className="flex-1 py-3 px-4 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors"
           >
             Cancel
-          </Button>
+          </button>
           <Button
             onClick={handleContinue}
             disabled={!selectedCollateral}
-            className={`flex-1 ${selectedCollateral
+            className={`flex-1 rounded-xl ${selectedCollateral
               ? "bg-amber-500 hover:bg-amber-600 text-black"
               : "bg-white/10 text-white/40"
               }`}

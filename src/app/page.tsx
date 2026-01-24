@@ -2,21 +2,53 @@
 
 import LoginScreen from "@/components/modules/auth/LoginScreen";
 import ReferralGate from "@/components/modules/auth/ReferralGate";
+import SplashScreen from "@/components/modules/auth/SplashScreen";
 import { FullScreenLoader } from "@/components/orig/ui/fullscreen-loader";
 import { useReferralGate } from "@/hooks/useReferralGate";
 import { usePrivy } from "@privy-io/react-auth";
 import { redirect } from "next/navigation";
 import { ToastContainer } from "react-toastify";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function Home() {
   const { ready, authenticated } = usePrivy();
   const { isValidated, isLoading, error, validateCode } = useReferralGate();
   const [showLogin, setShowLogin] = useState(false);
+  const [showSplash, setShowSplash] = useState<boolean | null>(null);
 
-  // Show loader while Privy or referral gate is initializing
-  if (!ready || isLoading) {
+  // Check if splash was already shown this session
+  useEffect(() => {
+    const splashShown = sessionStorage.getItem("stackd_splash_shown");
+    setShowSplash(splashShown !== "true");
+  }, []);
+
+  // Set html and body background to black for login page overscroll, restore on unmount
+  useEffect(() => {
+    const originalHtmlBg = "#020617";
+    const originalBodyBg = "linear-gradient(to bottom, #020617, #0f172a, #000000)";
+
+    document.documentElement.style.backgroundColor = "#000000";
+    document.body.style.background = "#000000";
+
+    return () => {
+      document.documentElement.style.backgroundColor = originalHtmlBg;
+      document.body.style.background = originalBodyBg;
+    };
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem("stackd_splash_shown", "true");
+    setShowSplash(false);
+  };
+
+  // Show loader while Privy or referral gate is initializing, or splash state not yet determined
+  if (!ready || isLoading || showSplash === null) {
     return <FullScreenLoader />;
+  }
+
+  // Show splash screen on first visit of session
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
   // Authenticated users go to wallet

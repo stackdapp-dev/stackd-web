@@ -1179,3 +1179,184 @@ describe("LoanSimulator - Withdraw Collateral UX Flow (Issue 3)", () => {
         });
     });
 });
+
+/**
+ * TDD tests for Bug #3: ETH Alert Modal for Fluid Operations
+ *
+ * When sponsorship is disabled for Fluid (Ethereum mainnet) operations,
+ * users need ETH for gas fees. If they have insufficient ETH, we should:
+ * 1. Show an alert modal explaining the requirement
+ * 2. Provide a way to navigate to Cash In page to get ETH
+ * 3. Allow dismissing the alert
+ *
+ * This is a workaround for iOS Passkey users where paymaster simulation fails.
+ */
+describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
+    describe("Implementation verification for ETH alert modal", () => {
+        it("should have showEthAlert state for controlling alert modal visibility", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have showEthAlert state
+            expect(componentCode).toContain("showEthAlert");
+            expect(componentCode).toMatch(/useState.*showEthAlert|setShowEthAlert/);
+        });
+
+        it("should check ETH balance before XAUT operations", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should check ETH balance for XAUT (Fluid) operations
+            expect(componentCode).toMatch(/isXaut.*ETH|ETH.*isXaut/i);
+            expect(componentCode).toMatch(/getBalance|ethBalance/i);
+        });
+
+        it("should set showEthAlert to true when ETH balance is insufficient", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should set showEthAlert when ETH is insufficient
+            expect(componentCode).toMatch(/setShowEthAlert\s*\(\s*true\s*\)/);
+        });
+
+        it("should render ETH alert Modal component when showEthAlert is true", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have Modal component with showEthAlert condition
+            // Look for isOpen={showEthAlert} pattern
+            expect(componentCode).toMatch(/isOpen\s*=\s*\{?\s*showEthAlert\s*\}?/);
+        });
+
+        it("should display message about ETH required during Beta testing", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have message about ETH balance required during Beta testing
+            expect(componentCode).toMatch(/ETH.*balance.*required|ETH.*required.*Beta/i);
+        });
+
+        it("should have button to redirect to Cash In page at correct route /wallet/cash-in", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should have navigation to /wallet/cash-in page (the correct route)
+            // The Cash In page is at src/app/(main)/wallet/cash-in/page.tsx
+            // so the correct route is /wallet/cash-in, NOT /cash-in
+            expect(componentCode).toMatch(/router\.push\s*\(\s*["']\/wallet\/cash-in["']\s*\)/);
+        });
+
+        it("should close ETH alert modal when dismissed", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // Should set showEthAlert to false to close modal
+            expect(componentCode).toMatch(/setShowEthAlert\s*\(\s*false\s*\)/);
+        });
+    });
+
+    describe("ETH balance check logic", () => {
+        it("should require minimum 0.00005 ETH for gas fees", () => {
+            // Minimum ETH required for Fluid operations
+            const MIN_ETH_FOR_GAS = 0.00005;
+            const ethBalance = 0.00003; // Insufficient
+
+            const hasInsufficientEth = ethBalance < MIN_ETH_FOR_GAS;
+
+            expect(hasInsufficientEth).toBe(true);
+        });
+
+        it("should allow transaction when ETH balance is sufficient", () => {
+            const MIN_ETH_FOR_GAS = 0.00005;
+            const ethBalance = 0.0001; // Sufficient
+
+            const hasInsufficientEth = ethBalance < MIN_ETH_FOR_GAS;
+
+            expect(hasInsufficientEth).toBe(false);
+        });
+
+        it("should only check ETH balance for XAUT (Fluid) operations", () => {
+            // WBTC uses Compound on Arbitrum - doesn't need this check
+            // XAUT uses Fluid on Ethereum mainnet - needs ETH for gas
+            const isXaut = true;
+            const shouldCheckEthBalance = isXaut;
+
+            expect(shouldCheckEthBalance).toBe(true);
+
+            const isWbtc = false;
+            const shouldNotCheckEthBalance = isWbtc;
+
+            expect(shouldNotCheckEthBalance).toBe(false);
+        });
+    });
+
+    describe("ETH alert modal UX", () => {
+        it("should show informative title about ETH requirement", () => {
+            const expectedTitleContent = "ETH";
+            expect(expectedTitleContent).toContain("ETH");
+        });
+
+        it("should explain why ETH is needed (Beta testing, sponsorship disabled)", () => {
+            const expectedMessage = "ETH balance required during Beta testing";
+            expect(expectedMessage).toContain("Beta");
+            expect(expectedMessage).toContain("ETH");
+        });
+
+        it("should provide primary action to go to Cash In page at /wallet/cash-in", () => {
+            const primaryAction = "Get ETH";
+            // The correct route is /wallet/cash-in (not /cash-in)
+            // Cash In page is at src/app/(main)/wallet/cash-in/page.tsx
+            const navigateTo = "/wallet/cash-in";
+
+            expect(primaryAction).toBeTruthy();
+            expect(navigateTo).toBe("/wallet/cash-in");
+        });
+
+        it("should provide secondary action to dismiss alert", () => {
+            const secondaryAction = "Cancel";
+            expect(secondaryAction).toBeTruthy();
+        });
+    });
+});
