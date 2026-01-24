@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
-import { Loading } from "@/components/ui/loading";
+import LoanConfirmationModal from "@/components/wallet/LoanConfirmationModal";
 import TokenIcon from "@/components/common/TokenIcon";
 import SimulatorGauge from "@/components/wallet/SimulatorGauge";
 import SimulatorResults from "@/components/wallet/SimulatorResults";
@@ -19,7 +19,7 @@ import { useXautBalance } from "@/hooks/useXautBalance";
 import { getTokenMetadata } from "@/constants/Tokens";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
 import { formatAmount, formatCurrency, cn } from "@/lib/utils";
-import { RotateCcw, AlertTriangle, CheckCircle } from "lucide-react";
+import { RotateCcw, AlertTriangle } from "lucide-react";
 import { parseUnits, formatUnits } from "viem";
 import { showSuccessToast } from "@/components/ui/custom-toast";
 import { useRouter } from "next/navigation";
@@ -113,12 +113,15 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     const xautPrice = getPrice("XAUT");
 
     // Calculate locked XAUT based on borrowed amount and max LTV
-    const lockedXautUsd = borrowedUsd > 0 && fluid.maxLtv > 0
-      ? borrowedUsd / (fluid.maxLtv / 100)
+    // Use 1 percentage point buffer (maxLtv - 1) instead of 0.99 multiplier on result
+    // This provides safety margin for price fluctuations and transaction delays
+    const effectiveLtv = fluid.maxLtv - 1; // 1 percentage point buffer (e.g., 74% instead of 75%)
+    const lockedXautUsd = borrowedUsd > 0 && effectiveLtv > 0
+      ? borrowedUsd / (effectiveLtv / 100)
       : 0;
     const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
 
-    return Math.max(0, totalXaut - lockedXaut) * 0.99; // 1% safety buffer
+    return Math.max(0, totalXaut - lockedXaut);
   }, [isXaut, fluid.suppliedAssets, fluid.borrowedAssets, fluid.maxLtv, getPrice]);
 
   // Mode-specific configuration
@@ -157,8 +160,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           inputLabel: `Withdraw Amount (${collateralSymbol})`,
           tokenSymbol: collateralSymbol,
           actionButtonText: "Withdraw",
-          // Use XAUT available for XAUT, or BTC breakdown for WBTC  
-          maxValue: isXaut ? xautAvailableToWithdraw : breakdown.availableToWithdrawBtc * 0.99,
+          // Use XAUT available for XAUT, or BTC breakdown for WBTC
+          // Note: 1% LTV buffer is now applied in collateralCalculations, no additional multiplier needed
+          maxValue: isXaut ? xautAvailableToWithdraw : breakdown.availableToWithdrawBtc,
           isRiskReducing: false,
           warningText: "This will reduce your collateral and increase liquidation risk.",
           successIcon: false,
@@ -972,126 +976,24 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       </div>
 
       {/* Confirmation Modal */}
-      <Modal
+      <LoanConfirmationModal
         isOpen={showConfirmModal}
         onClose={() => !isProcessing && !isApproving && setShowConfirmModal(false)}
-        title={isProcessing || isApproving ? "Processing" : `Confirm ${modeConfig.title}`}
-        icon={
-          isProcessing || isApproving ? (
-            <Loading />
-          ) : (
-            <TokenIcon symbol={modeConfig.tokenSymbol} width={56} height={56} />
-          )
-        }
-        message={
-          isProcessing ? (
-            <Text tone="muted">
-              Please confirm the transaction in your wallet.
-            </Text>
-          ) : isApproving ? (
-            <Text tone="muted">
-              Please approve token spending in your wallet.
-            </Text>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {/* Amount Display */}
-              <div className="rounded-2xl p-4 border border-white/20">
-                <p className="text-white/50 text-sm mb-1">{modeConfig.title} Amount</p>
-                <p className="text-3xl font-bold text-white">
-                  {formatInputDisplay(transactionAmount)}
-                </p>
-                <p className="text-white/40 text-sm mt-1">{modeConfig.tokenSymbol}</p>
-              </div>
-
-              {/* Summary based on mode */}
-              {mode === "borrow" && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Current Borrowed</span>
-                    <span className="text-white">{formatCurrency(currentBorrowedAmount, 2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">New Total</span>
-                    <span className="text-amber-400 font-semibold">{formatCurrency(parsedInput, 2)}</span>
-                  </div>
-                </div>
-              )}
-
-              {mode === "addCollateral" && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Current Collateral</span>
-                    <span className="text-white">{formatAmount(currentCollateralAmount, 4)} {collateralSymbol}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">New Total</span>
-                    <span className="text-emerald-400 font-semibold">{formatAmount(simulatedCollateral, 4)} {collateralSymbol}</span>
-                  </div>
-                </div>
-              )}
-
-              {mode === "repay" && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Current Borrowed</span>
-                    <span className="text-white">{formatCurrency(currentBorrowedAmount, 2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Remaining Debt</span>
-                    <span className="text-emerald-400 font-semibold">{formatCurrency(simulatedBorrow, 2)}</span>
-                  </div>
-                </div>
-              )}
-
-              {mode === "withdrawCollateral" && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Current Collateral</span>
-                    <span className="text-white">{formatAmount(currentCollateralAmount, 4)} {collateralSymbol}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Remaining Collateral</span>
-                    <span className="text-amber-400 font-semibold">{formatAmount(simulatedCollateral, 4)} {collateralSymbol}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Warning/Success Banner */}
-              <div className={cn(
-                "rounded-xl px-4 py-3 flex items-start gap-3",
-                modeConfig.successIcon
-                  ? "bg-emerald-500/10 border border-emerald-500/30"
-                  : "bg-amber-500/10 border border-amber-500/30"
-              )}>
-                {modeConfig.successIcon ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
-                )}
-                <p className={cn(
-                  "text-sm",
-                  modeConfig.successIcon ? "text-emerald-400" : "text-amber-400"
-                )}>
-                  {modeConfig.warningText}
-                </p>
-              </div>
-            </div>
-          )
-        }
-        primaryButtonText={
-          isProcessing
-            ? "Processing..."
-            : isApproving
-              ? "Approving..."
-              : needsApproval
-                ? "Approve & Continue"
-                : modeConfig.actionButtonText
-        }
-        primaryButtonAction={needsApproval ? handleApprove : handleConfirm}
-        secondaryButtonText="Cancel"
-        secondaryButtonAction={() => setShowConfirmModal(false)}
-        showCloseButton={!isProcessing && !isApproving}
-        showActionButtons={!isProcessing && !isApproving}
+        mode={mode as 'addCollateral' | 'withdrawCollateral' | 'borrow' | 'repay'}
+        collateralType={collateralSymbol as 'WBTC' | 'XAUT'}
+        amount={transactionAmount}
+        tokenSymbol={modeConfig.tokenSymbol}
+        currentValue={mode === 'borrow' || mode === 'repay' ? currentBorrowedAmount : currentCollateralAmount}
+        newValue={mode === 'borrow' || mode === 'repay' ? simulatedBorrow : simulatedCollateral}
+        currentLtv={currentResult.ltv}
+        newLtv={simulatedResult.ltv}
+        maxLtv={maxLtv}
+        isProcessing={isProcessing}
+        isApproving={isApproving}
+        needsApproval={needsApproval}
+        onConfirm={handleConfirm}
+        onApprove={handleApprove}
+        warningText={modeConfig.warningText}
       />
 
       {/* ETH Alert Modal - shown when insufficient ETH for Fluid operations */}
