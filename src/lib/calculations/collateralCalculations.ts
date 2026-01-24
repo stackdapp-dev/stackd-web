@@ -74,9 +74,18 @@ export function calculateMaxWithdrawable(
 
     const totalCollateralUsd = totalCollateralBtc * btcPrice;
 
-    // Calculate minimum collateral required to maintain max LTV
-    // Formula: minCollateral = borrowed / maxLtv
-    const minCollateralRequiredUsd = effectiveBorrowed / maxLtv;
+    // Apply 1% LTV buffer for withdrawal calculations
+    // This provides a safety margin to prevent users from withdrawing right up to the limit
+    const effectiveLtv = maxLtv - 0.01;
+
+    // If effective LTV is 0 or negative after buffer, can't withdraw anything with loans
+    if (effectiveLtv <= 0) {
+        return 0;
+    }
+
+    // Calculate minimum collateral required to maintain effective LTV (with buffer)
+    // Formula: minCollateral = borrowed / effectiveLtv
+    const minCollateralRequiredUsd = effectiveBorrowed / effectiveLtv;
 
     // Calculate max withdrawable
     const maxWithdrawableUsd = totalCollateralUsd - minCollateralRequiredUsd;
@@ -122,9 +131,14 @@ export function calculateCollateralBreakdown(
     const totalCollateralUsd = totalCollateralBtc * safePrice;
 
     // Calculate locked collateral (minimum required to back loans)
+    // Apply 1% LTV buffer for withdrawal calculations to provide safety margin
+    const effectiveLtv = safeLtv - 0.01;
     let lockedCollateralUsd = 0;
-    if (safeBorrowed > 0 && safeLtv > 0) {
-        lockedCollateralUsd = safeBorrowed / safeLtv;
+    if (safeBorrowed > 0 && effectiveLtv > 0) {
+        lockedCollateralUsd = safeBorrowed / effectiveLtv;
+    } else if (safeBorrowed > 0 && effectiveLtv <= 0) {
+        // If effective LTV is 0 or negative after buffer, all collateral is locked
+        lockedCollateralUsd = totalCollateralUsd;
     }
 
     // Cap locked at total collateral

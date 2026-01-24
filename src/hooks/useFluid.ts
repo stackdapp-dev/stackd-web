@@ -92,9 +92,11 @@ export function validateWithdrawalAmount(
   const withdrawalUsd =
     (Number(withdrawalAmount) / 10 ** collateralDecimals) * collateralPrice;
 
-  // Calculate locked collateral (minimum collateral needed to maintain maxLtv)
-  // lockedCollateral = borrowedUSD / (maxLtv / 100)
-  const lockedCollateralUsd = borrowUsd / (maxLtv / 100);
+  // Calculate locked collateral (minimum collateral needed to maintain effective maxLtv)
+  // We use (maxLtv - 1) to provide a 1% safety buffer
+  // lockedCollateral = borrowedUSD / ((maxLtv - 1) / 100)
+  const effectiveMaxLtv = maxLtv - 1;
+  const lockedCollateralUsd = borrowUsd / (effectiveMaxLtv / 100);
 
   // Calculate available (unlocked) collateral in USD
   const availableCollateralUsd = collateralUsd - lockedCollateralUsd;
@@ -122,10 +124,10 @@ export function validateWithdrawalAmount(
 
   const postWithdrawalLtv = (borrowUsd / postWithdrawalCollateralUsd) * 100;
 
-  if (postWithdrawalLtv > maxLtv) {
+  if (postWithdrawalLtv > effectiveMaxLtv) {
     return {
       valid: false,
-      error: `Withdrawal would cause your loan-to-value ratio (${postWithdrawalLtv.toFixed(1)}%) to exceed the maximum allowed (${maxLtv}%). Reduce withdrawal amount or repay some debt first.`,
+      error: `Withdrawal would cause your loan-to-value ratio (${postWithdrawalLtv.toFixed(1)}%) to exceed the maximum allowed (${effectiveMaxLtv}%). Reduce withdrawal amount or repay some debt first.`,
     };
   }
 
