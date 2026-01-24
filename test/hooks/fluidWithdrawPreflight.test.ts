@@ -11,6 +11,7 @@
  * 3. Returns user-friendly error messages instead of raw "Execution reverted"
  */
 import { describe, it, expect } from "vitest";
+import { validateWithdrawalAmount as actualValidateWithdrawalAmount } from "@/hooks/useFluid";
 
 /**
  * Pure validation logic that can be tested without React hooks
@@ -412,6 +413,256 @@ describe("fluidWithdrawPreflight - validateWithdrawalAmount", () => {
       );
 
       expect(result.valid).toBe(false);
+    });
+  });
+});
+
+/**
+ * TDD tests for 1% LTV Buffer in withdrawal validation
+ *
+ * These tests use the ACTUAL validateWithdrawalAmount function from useFluid.ts
+ * to verify the 1% LTV buffer implementation.
+ *
+ * The withdrawal validation now uses an effective LTV that is 1 percentage point
+ * less than the maxLtv (e.g., 74% instead of 75%). This provides a safety buffer
+ * to prevent users from getting too close to the liquidation threshold.
+ *
+ * Changes:
+ * 1. Locked collateral calculation: borrowUsd / ((maxLtv - 1) / 100)
+ * 2. Post-withdrawal LTV check: postWithdrawalLtv > (maxLtv - 1)
+ * 3. Error message shows buffered LTV: "${maxLtv - 1}%" instead of "${maxLtv}%"
+ */
+describe("fluidWithdrawPreflight - 1% LTV Buffer (actual implementation)", () => {
+  const XAUT_DECIMALS = 6;
+  const USDT_DECIMALS = 6;
+  const XAUT_PRICE = 2700; // $2700 per XAUT
+  const USDT_PRICE = 1; // $1 per USDT
+  const MAX_LTV = 75; // 75% nominal max LTV
+  const EFFECTIVE_MAX_LTV = 74; // 74% effective max LTV (1% buffer)
+
+  describe("locked collateral calculation uses buffered LTV", () => {
+    it("should calculate locked collateral using (maxLtv - 1) instead of maxLtv", () => {
+      // User has 1 XAUT collateral ($2700)
+      const collateralRaw = BigInt(1_000_000);
+      // User has $1480 USDT borrowed
+      // At 74% effective LTV: locked = $1480 / 0.74 = $2000 (exactly)
+      // Available = $2700 - $2000 = $700
+      // At 75% LTV: locked = $1480 / 0.75 = $1973.33
+      // Available = $2700 - $1973.33 = $726.67
+      const borrowRaw = BigInt(1_480_000_000);
+
+      // Trying to withdraw 0.26 XAUT ($702) - should fail with 74% effective LTV
+      // but would succeed with 75% LTV
+      const withdrawalAmount = BigInt(260_000);
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      // Should fail because with 1% buffer, available is only ~$700
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.error).toContain("locked");
+      }
+    });
+
+    it("should allow withdrawal that is within buffered available collateral", () => {
+      // User has 1 XAUT collateral ($2700)
+      const collateralRaw = BigInt(1_000_000);
+      // User has $1480 USDT borrowed
+      // At 74% effective LTV: locked = $1480 / 0.74 = $2000
+      // Available = $2700 - $2000 = $700
+      const borrowRaw = BigInt(1_480_000_000);
+
+      // Trying to withdraw 0.25 XAUT ($675) - should succeed (under $700 available)
+      const withdrawalAmount = BigInt(250_000);
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  describe("post-withdrawal LTV check uses buffered LTV", () => {
+    it("should reject withdrawal that would result in LTV between 74% and 75%", () => {
+      // User has 1 XAUT collateral ($2700)
+      const collateralRaw = BigInt(1_000_000);
+      // User has $1998 USDT borrowed (current LTV = 74%)
+      const borrowRaw = BigInt(1_998_000_000);
+      // Trying to withdraw 0.001 XAUT ($2.70)
+      // Post-withdrawal collateral = $2697.30
+      // Post-withdrawal LTV = $1998 / $2697.30 = 74.07% > 74% (effective max)
+      // This should fail even though it's below 75%
+      const withdrawalAmount = BigInt(1_000);
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      expect(result.valid).toBe(false);
+    });
+
+    it("should accept withdrawal that keeps LTV at or below 74% (effective max)", () => {
+      // User has 2 XAUT collateral ($5400)
+      const collateralRaw = BigInt(2_000_000);
+      // User has $2960 USDT borrowed (current LTV = 54.8%)
+      const borrowRaw = BigInt(2_960_000_000);
+      // Withdrawing 0.4 XAUT ($1080)
+      // Post-withdrawal collateral = $4320
+      // Post-withdrawal LTV = $2960 / $4320 = 68.5% < 74%
+      const withdrawalAmount = BigInt(400_000);
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      expect(result.valid).toBe(true);
+    });
+
+    it("should handle position at exactly 74% LTV - no withdrawal allowed", () => {
+      // User has 1 XAUT collateral ($2700)
+      const collateralRaw = BigInt(1_000_000);
+      // $1998 borrowed = exactly 74% LTV
+      const borrowRaw = BigInt(1_998_000_000);
+      // Even 1 raw unit withdrawal should fail
+      const withdrawalAmount = BigInt(1);
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      expect(result.valid).toBe(false);
+    });
+  });
+
+  describe("error messages show buffered LTV value", () => {
+    it("should show 74% (effective max) in error message, not 75% (nominal max)", () => {
+      // User has 1 XAUT collateral ($2700)
+      const collateralRaw = BigInt(1_000_000);
+      // User has $2000 USDT borrowed (current LTV = 74.07%)
+      const borrowRaw = BigInt(2_000_000_000);
+      // Trying to withdraw 0.05 XAUT ($135)
+      // Post-withdrawal collateral = $2565
+      // Post-withdrawal LTV = $2000 / $2565 = 77.97%
+      const withdrawalAmount = BigInt(50_000);
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        // Error message should show 74%, not 75%
+        expect(result.error).toContain("74%");
+        expect(result.error).not.toContain("75%");
+      }
+    });
+  });
+
+  describe("boundary cases for 1% buffer", () => {
+    it("should fail withdrawal that would be valid at exactly 75% but exceeds 74%", () => {
+      // This is the key test case: A withdrawal that would result in exactly 75% LTV
+      // should fail because the effective max is 74%
+
+      // User has 1 XAUT collateral ($2700)
+      const collateralRaw = BigInt(1_000_000);
+      // User has $1350 USDT borrowed (current LTV = 50%)
+      const borrowRaw = BigInt(1_350_000_000);
+
+      // Calculate withdrawal that would result in exactly 75% LTV:
+      // postLTV = borrowUsd / (collateralUsd - withdrawalUsd) = 0.75
+      // $1350 / (collateralUsd - withdrawalUsd) = 0.75
+      // collateralUsd - withdrawalUsd = $1350 / 0.75 = $1800
+      // withdrawalUsd = $2700 - $1800 = $900 = 0.333... XAUT = 333333 raw
+      const withdrawalAmount = BigInt(333_333);
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      // This withdrawal would result in exactly 75% LTV, but should fail
+      // because effective max is 74%
+      expect(result.valid).toBe(false);
+    });
+
+    it("should pass withdrawal that keeps LTV at exactly 74%", () => {
+      // User has 1 XAUT collateral ($2700)
+      const collateralRaw = BigInt(1_000_000);
+      // User has $1350 USDT borrowed (current LTV = 50%)
+      const borrowRaw = BigInt(1_350_000_000);
+
+      // Calculate withdrawal that would result in exactly 74% LTV:
+      // postLTV = borrowUsd / (collateralUsd - withdrawalUsd) = 0.74
+      // $1350 / (collateralUsd - withdrawalUsd) = 0.74
+      // collateralUsd - withdrawalUsd = $1350 / 0.74 = $1824.32...
+      // withdrawalUsd = $2700 - $1824.32 = $875.68 = 0.3243... XAUT
+      // Using slightly less to stay at or below 74%
+      const withdrawalAmount = BigInt(324_000); // 0.324 XAUT = $874.80
+
+      const result = actualValidateWithdrawalAmount(
+        withdrawalAmount,
+        collateralRaw,
+        borrowRaw,
+        XAUT_PRICE,
+        USDT_PRICE,
+        MAX_LTV,
+        XAUT_DECIMALS,
+        USDT_DECIMALS
+      );
+
+      // Post-withdrawal: $1350 / ($2700 - $874.80) = $1350 / $1825.20 = 73.97%
+      expect(result.valid).toBe(true);
     });
   });
 });
