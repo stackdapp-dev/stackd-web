@@ -170,7 +170,8 @@ describe("ConfirmationAmountCard Component", () => {
             );
 
             expect(screen.getByText(/0\.01/)).toBeInTheDocument();
-            expect(screen.getByText(/XAUT/)).toBeInTheDocument();
+            // Token symbol may appear in both icon and text, so use getAllByText
+            expect(screen.getAllByText(/XAUT/).length).toBeGreaterThanOrEqual(1);
         });
 
         it("should default to token display mode when not specified", () => {
@@ -184,7 +185,8 @@ describe("ConfirmationAmountCard Component", () => {
             );
 
             expect(screen.getByText(/0\.50/)).toBeInTheDocument();
-            expect(screen.getByText(/WBTC/)).toBeInTheDocument();
+            // Token symbol may appear in both icon and text, so use getAllByText
+            expect(screen.getAllByText(/WBTC/).length).toBeGreaterThanOrEqual(1);
         });
     });
 
@@ -220,8 +222,8 @@ describe("ConfirmationAmountCard Component", () => {
 
             // USD should be the main display
             expect(screen.getByText(/\$20\.00/)).toBeInTheDocument();
-            // Token should be shown below
-            expect(screen.getByText(/XAUT/)).toBeInTheDocument();
+            // Token should be shown below (may appear in both icon and text)
+            expect(screen.getAllByText(/XAUT/).length).toBeGreaterThanOrEqual(1);
         });
     });
 
@@ -369,8 +371,8 @@ describe("ConfirmationAmountCard Component", () => {
                 />
             );
 
-            // Should still render without crashing
-            expect(screen.getByText(/WBTC/)).toBeInTheDocument();
+            // Should still render without crashing (token symbol appears in both icon and text)
+            expect(screen.getAllByText(/WBTC/).length).toBeGreaterThanOrEqual(1);
         });
     });
 });
