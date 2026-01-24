@@ -38,6 +38,7 @@ const modeConfig = {
         successIcon: true,
         buttonText: "Add Collateral",
         label: "Add Collateral Amount",
+        valueChangeLabel: "Collateral Value",
     },
     withdrawCollateral: {
         title: "Confirm Withdraw Collateral",
@@ -48,6 +49,7 @@ const modeConfig = {
         successIcon: false,
         buttonText: "Withdraw Collateral",
         label: "Withdraw Amount",
+        valueChangeLabel: "Collateral Value",
     },
     borrow: {
         title: "Confirm Borrow",
@@ -56,7 +58,8 @@ const modeConfig = {
         defaultWarning: "This will increase your LTV and the risk of liquidation.",
         successIcon: false,
         buttonText: "Borrow",
-        label: "Borrow Amount",
+        label: "New Borrow Amount",
+        valueChangeLabel: "Current Debt",
     },
     repay: {
         title: "Confirm Repay Loan",
@@ -66,6 +69,7 @@ const modeConfig = {
         successIcon: true,
         buttonText: "Repay Loan",
         label: "Repay Amount",
+        valueChangeLabel: "Current Debt",
     },
 };
 
@@ -143,7 +147,7 @@ export default function LoanConfirmationModal({
                 {/* Summary Section */}
                 <div className="bg-white/5 rounded-xl p-4">
                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-white/60">Value Change</span>
+                        <span className="text-white/60">{config.valueChangeLabel}</span>
                         <div className="flex items-center gap-2">
                             <span className="text-white/60">
                                 {formatCurrency(currentValue)}
