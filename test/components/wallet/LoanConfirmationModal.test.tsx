@@ -578,4 +578,180 @@ describe("LoanConfirmationModal Component", () => {
             expect(screen.getByText(/\$1,500\.00/)).toBeInTheDocument();
         });
     });
+
+    describe("USD Calculation for Collateral Operations", () => {
+        /**
+         * BUG FIX TEST: For collateral operations (withdrawCollateral, addCollateral),
+         * the modal should display USD values calculated from tokenAmount * tokenPrice,
+         * not just the raw token amounts.
+         *
+         * Previously, currentValue and newValue were passed as token amounts
+         * (e.g., 0.0047 XAUT) which displayed as "$0.00" instead of the actual
+         * USD value (~$23.50 at $5000/oz).
+         *
+         * The fix: LoanConfirmationModal now accepts a tokenPrice prop for collateral modes.
+         * When provided, it multiplies currentValue and newValue by tokenPrice to get USD values.
+         */
+
+        it("should display correct USD value for WBTC withdrawal (tokenPrice prop)", () => {
+            // Given: Withdrawing 0.01 WBTC at $100,000/BTC
+            // Current collateral: 0.05 WBTC (should display as $5,000)
+            // New collateral after withdrawal: 0.04 WBTC (should display as $4,000)
+            const tokenPrice = 100000; // $100,000 per WBTC
+            const currentCollateral = 0.05; // 0.05 WBTC (token amount)
+            const newCollateral = 0.04; // 0.04 WBTC (token amount)
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="withdrawCollateral"
+                    collateralType="WBTC"
+                    tokenSymbol="WBTC"
+                    amount={0.01}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.05 WBTC (token amount)
+                    newValue={newCollateral} // 0.04 WBTC (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.05 * 100000 = $5,000, 0.04 * 100000 = $4,000
+            expect(screen.getByText(/\$5,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$4,000\.00/)).toBeInTheDocument();
+        });
+
+        it("should display correct USD value for XAUT withdrawal (tokenPrice prop)", () => {
+            // Given: Withdrawing 0.0047 XAUT at $5,000/oz
+            // Current collateral: 0.01 XAUT (should display as $50)
+            // New collateral after withdrawal: 0.0053 XAUT (should display as $26.50)
+            const tokenPrice = 5000; // $5,000 per oz
+            const currentCollateral = 0.01; // 0.01 XAUT (token amount)
+            const newCollateral = 0.0053; // 0.0053 XAUT (token amount)
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="withdrawCollateral"
+                    collateralType="XAUT"
+                    tokenSymbol="XAUT"
+                    amount={0.0047}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.01 XAUT (token amount)
+                    newValue={newCollateral} // 0.0053 XAUT (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.01 * 5000 = $50, 0.0053 * 5000 = $26.50
+            expect(screen.getByText(/\$50\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$26\.50/)).toBeInTheDocument();
+        });
+
+        it("should display correct USD value for WBTC addCollateral (tokenPrice prop)", () => {
+            // Given: Adding 0.02 WBTC at $100,000/BTC
+            // Current collateral: 0.03 WBTC (should display as $3,000)
+            // New collateral after adding: 0.05 WBTC (should display as $5,000)
+            const tokenPrice = 100000;
+            const currentCollateral = 0.03; // token amount
+            const newCollateral = 0.05; // token amount
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="addCollateral"
+                    collateralType="WBTC"
+                    tokenSymbol="WBTC"
+                    amount={0.02}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.03 WBTC (token amount)
+                    newValue={newCollateral} // 0.05 WBTC (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.03 * 100000 = $3,000, 0.05 * 100000 = $5,000
+            expect(screen.getByText(/\$3,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$5,000\.00/)).toBeInTheDocument();
+        });
+
+        it("should display correct USD value for XAUT addCollateral (tokenPrice prop)", () => {
+            // Given: Adding 0.01 XAUT at $5,000/oz
+            // Current collateral: 0.005 XAUT (should display as $25)
+            // New collateral after adding: 0.015 XAUT (should display as $75)
+            const tokenPrice = 5000;
+            const currentCollateral = 0.005; // token amount
+            const newCollateral = 0.015; // token amount
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="addCollateral"
+                    collateralType="XAUT"
+                    tokenSymbol="XAUT"
+                    amount={0.01}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.005 XAUT (token amount)
+                    newValue={newCollateral} // 0.015 XAUT (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.005 * 5000 = $25, 0.015 * 5000 = $75
+            expect(screen.getByText(/\$25\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$75\.00/)).toBeInTheDocument();
+        });
+
+        it("should handle borrow mode without tokenPrice (values already in USD)", () => {
+            // For borrow mode, currentValue and newValue are already in USD
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="borrow"
+                    tokenSymbol="USDT"
+                    amount={500}
+                    currentValue={1000} // $1,000 current debt (already in USD)
+                    newValue={1500} // $1,500 new debt (already in USD)
+                />
+            );
+
+            // Should display USD values correctly (no conversion needed)
+            expect(screen.getByText(/\$1,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$1,500\.00/)).toBeInTheDocument();
+        });
+
+        it("should handle repay mode without tokenPrice (values already in USD)", () => {
+            // For repay mode, currentValue and newValue are already in USD
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="repay"
+                    tokenSymbol="USDT"
+                    amount={200}
+                    currentValue={1000} // $1,000 current debt (already in USD)
+                    newValue={800} // $800 new debt after repayment (already in USD)
+                />
+            );
+
+            // Should display USD values correctly (no conversion needed)
+            expect(screen.getByText(/\$1,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$800\.00/)).toBeInTheDocument();
+        });
+
+        it("should fallback to raw values when tokenPrice is not provided for collateral mode", () => {
+            // This tests backward compatibility: if tokenPrice is not passed,
+            // currentValue and newValue are displayed as-is
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="withdrawCollateral"
+                    collateralType="WBTC"
+                    tokenSymbol="WBTC"
+                    amount={0.01}
+                    // tokenPrice NOT provided
+                    currentValue={5000} // Pre-calculated USD value
+                    newValue={4000} // Pre-calculated USD value
+                />
+            );
+
+            // Should display the values as-is
+            expect(screen.getByText(/\$5,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$4,000\.00/)).toBeInTheDocument();
+        });
+    });
 });
