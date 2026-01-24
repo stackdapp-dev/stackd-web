@@ -157,8 +157,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           inputLabel: `Withdraw Amount (${collateralSymbol})`,
           tokenSymbol: collateralSymbol,
           actionButtonText: "Withdraw",
-          // Use XAUT available for XAUT, or BTC breakdown for WBTC  
-          maxValue: isXaut ? xautAvailableToWithdraw : breakdown.availableToWithdrawBtc * 0.99,
+          // Use XAUT available for XAUT, or BTC breakdown for WBTC
+          // Note: 1% LTV buffer is now applied in collateralCalculations, no additional multiplier needed
+          maxValue: isXaut ? xautAvailableToWithdraw : breakdown.availableToWithdrawBtc,
           isRiskReducing: false,
           warningText: "This will reduce your collateral and increase liquidation risk.",
           successIcon: false,
