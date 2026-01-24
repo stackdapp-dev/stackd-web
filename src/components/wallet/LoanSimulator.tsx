@@ -113,12 +113,15 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     const xautPrice = getPrice("XAUT");
 
     // Calculate locked XAUT based on borrowed amount and max LTV
-    const lockedXautUsd = borrowedUsd > 0 && fluid.maxLtv > 0
-      ? borrowedUsd / (fluid.maxLtv / 100)
+    // Use 1 percentage point buffer (maxLtv - 1) instead of 0.99 multiplier on result
+    // This provides safety margin for price fluctuations and transaction delays
+    const effectiveLtv = fluid.maxLtv - 1; // 1 percentage point buffer (e.g., 74% instead of 75%)
+    const lockedXautUsd = borrowedUsd > 0 && effectiveLtv > 0
+      ? borrowedUsd / (effectiveLtv / 100)
       : 0;
     const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
 
-    return Math.max(0, totalXaut - lockedXaut) * 0.99; // 1% safety buffer
+    return Math.max(0, totalXaut - lockedXaut);
   }, [isXaut, fluid.suppliedAssets, fluid.borrowedAssets, fluid.maxLtv, getPrice]);
 
   // Mode-specific configuration

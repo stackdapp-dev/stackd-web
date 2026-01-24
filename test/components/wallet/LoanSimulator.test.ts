@@ -261,7 +261,7 @@ describe("LoanSimulator Data Source Selection", () => {
          * TDD: Repay slider should allow simulation up to the full borrowed amount,
          * NOT be limited by wallet balance. This allows users to see what
          * their LTV would be after repayment, even if they don't have enough USDT.
-         * 
+         *
          * CRITICAL: Users should be able to simulate repayment scenarios.
          */
 
@@ -289,6 +289,203 @@ describe("LoanSimulator Data Source Selection", () => {
             // Then: maxValue should still be the borrowed amount
             expect(maxValue).toBe(5000);
             expect(maxValue).toBeGreaterThan(0);
+        });
+    });
+
+    describe("XAUT Withdrawal Slider LTV Buffer - FEATURE", () => {
+        /**
+         * TDD: The XAUT withdrawal slider should use a 1 percentage point LTV buffer
+         * to prevent users from withdrawing up to exactly the max LTV threshold.
+         *
+         * This provides a safety margin to account for:
+         * - Price fluctuations between simulation and execution
+         * - Gas/network delays during transaction execution
+         * - Rounding precision in calculations
+         *
+         * IMPLEMENTATION:
+         * - Line 117: Use (maxLtv - 1) instead of maxLtv in the locked XAUT calculation
+         * - Line 121: Remove the * 0.99 multiplier on the final result (buffer now in LTV)
+         *
+         * Example: With maxLtv = 75%:
+         * - Old: lockedXautUsd = borrowedUsd / 0.75, then result * 0.99
+         * - New: lockedXautUsd = borrowedUsd / 0.74, no final multiplier
+         *
+         * The new approach is more intuitive because:
+         * - The buffer is applied at the LTV level, not the amount level
+         * - Users understand "74% effective LTV" better than "99% of calculated amount"
+         */
+
+        /**
+         * Helper function that replicates the xautAvailableToWithdraw calculation
+         * with the BUFFERED LTV approach (1 percentage point reduction)
+         */
+        function calculateXautAvailableToWithdrawWithBuffer(
+            totalXaut: number,
+            borrowedUsd: number,
+            maxLtv: number,
+            xautPrice: number
+        ): number {
+            // Calculate locked XAUT using buffered LTV (maxLtv - 1)
+            const effectiveLtv = maxLtv - 1; // 1 percentage point buffer
+            const lockedXautUsd = borrowedUsd > 0 && effectiveLtv > 0
+                ? borrowedUsd / (effectiveLtv / 100)
+                : 0;
+            const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
+
+            // NO final multiplier - buffer is in the LTV
+            return Math.max(0, totalXaut - lockedXaut);
+        }
+
+        /**
+         * Helper function that replicates the OLD calculation (with 0.99 multiplier)
+         */
+        function calculateXautAvailableToWithdrawOld(
+            totalXaut: number,
+            borrowedUsd: number,
+            maxLtv: number,
+            xautPrice: number
+        ): number {
+            // Old calculation uses maxLtv directly
+            const lockedXautUsd = borrowedUsd > 0 && maxLtv > 0
+                ? borrowedUsd / (maxLtv / 100)
+                : 0;
+            const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
+
+            // Old: applies 0.99 multiplier to final result
+            return Math.max(0, totalXaut - lockedXaut) * 0.99;
+        }
+
+        it("should use buffered LTV (maxLtv - 1) for locked XAUT calculation", () => {
+            // Given: maxLtv = 75%, borrowedUsd = $7400, xautPrice = $2600, totalXaut = 10
+            // With a $7400 loan and $2600/XAUT price:
+            // - At 75% LTV: need $9866.67 collateral -> 3.795 XAUT locked
+            // - At 74% LTV: need $10000 collateral -> 3.846 XAUT locked
+
+            const maxLtv = 75;
+            const borrowedUsd = 7400;
+            const xautPrice = 2600;
+            const totalXaut = 10;
+
+            // Calculate expected locked XAUT at 74% (buffered) vs 75% (original)
+            const lockedXautAtOriginalLtv = (borrowedUsd / (maxLtv / 100)) / xautPrice;
+            const lockedXautAtBufferedLtv = (borrowedUsd / ((maxLtv - 1) / 100)) / xautPrice;
+
+            // Buffered LTV should lock MORE XAUT (safer)
+            expect(lockedXautAtBufferedLtv).toBeGreaterThan(lockedXautAtOriginalLtv);
+
+            // Verify the specific values
+            expect(lockedXautAtOriginalLtv).toBeCloseTo(3.795, 2); // 9866.67 / 2600
+            expect(lockedXautAtBufferedLtv).toBeCloseTo(3.846, 2); // 10000 / 2600
+        });
+
+        it("should NOT apply 0.99 multiplier to final result (buffer is in LTV)", () => {
+            // Given: calculation with buffer in LTV
+            const maxLtv = 75;
+            const borrowedUsd = 7400;
+            const xautPrice = 2600;
+            const totalXaut = 10;
+
+            const availableWithBuffer = calculateXautAvailableToWithdrawWithBuffer(
+                totalXaut, borrowedUsd, maxLtv, xautPrice
+            );
+
+            // The result should NOT be multiplied by 0.99
+            // Available = totalXaut - lockedXaut (at 74% LTV)
+            // lockedXaut = 7400 / 0.74 / 2600 = 3.846
+            // Available = 10 - 3.846 = 6.154
+
+            const expectedLockedXaut = (borrowedUsd / ((maxLtv - 1) / 100)) / xautPrice;
+            const expectedAvailable = totalXaut - expectedLockedXaut;
+
+            expect(availableWithBuffer).toBeCloseTo(expectedAvailable, 4);
+            // Verify no 0.99 multiplier was applied
+            expect(availableWithBuffer).not.toBeCloseTo(expectedAvailable * 0.99, 4);
+        });
+
+        it("should result in less available XAUT compared to old calculation (safer)", () => {
+            // The new buffered LTV approach should be MORE conservative
+            // (locks more XAUT, allows less withdrawal)
+
+            const maxLtv = 75;
+            const borrowedUsd = 7400;
+            const xautPrice = 2600;
+            const totalXaut = 10;
+
+            const availableWithBuffer = calculateXautAvailableToWithdrawWithBuffer(
+                totalXaut, borrowedUsd, maxLtv, xautPrice
+            );
+            const availableOld = calculateXautAvailableToWithdrawOld(
+                totalXaut, borrowedUsd, maxLtv, xautPrice
+            );
+
+            // New approach should allow LESS withdrawal (more conservative)
+            expect(availableWithBuffer).toBeLessThan(availableOld);
+        });
+
+        it("should correctly calculate with 75% maxLtv using 74% effective", () => {
+            // Given: Fluid maxLtv = 75%
+            const maxLtv = 75;
+            const totalXaut = 10;
+            const borrowedUsd = 7400;
+            const xautPrice = 2600;
+
+            // When: calculating with buffered LTV (74%)
+            const effectiveLtv = maxLtv - 1; // 74
+            const lockedXautUsd = borrowedUsd / (effectiveLtv / 100); // 7400 / 0.74 = 10000
+            const lockedXaut = lockedXautUsd / xautPrice; // 10000 / 2600 = 3.846
+            const availableXaut = Math.max(0, totalXaut - lockedXaut); // 10 - 3.846 = 6.154
+
+            // Then: verify the calculation
+            expect(effectiveLtv).toBe(74);
+            expect(lockedXautUsd).toBeCloseTo(10000, 0);
+            expect(lockedXaut).toBeCloseTo(3.846, 2);
+            expect(availableXaut).toBeCloseTo(6.154, 2);
+        });
+
+        it("should handle edge case: no borrowed amount (full withdrawal available)", () => {
+            const maxLtv = 75;
+            const totalXaut = 10;
+            const borrowedUsd = 0;
+            const xautPrice = 2600;
+
+            const availableWithBuffer = calculateXautAvailableToWithdrawWithBuffer(
+                totalXaut, borrowedUsd, maxLtv, xautPrice
+            );
+
+            // With no borrowed amount, all XAUT should be available
+            expect(availableWithBuffer).toBe(totalXaut);
+        });
+
+        it("should handle edge case: fully utilized collateral (no withdrawal available)", () => {
+            const maxLtv = 75;
+            const totalXaut = 10;
+            const xautPrice = 2600;
+            // Borrowed at exactly 74% of collateral value
+            const collateralUsd = totalXaut * xautPrice; // $26,000
+            const borrowedUsd = collateralUsd * ((maxLtv - 1) / 100); // $19,240
+
+            const availableWithBuffer = calculateXautAvailableToWithdrawWithBuffer(
+                totalXaut, borrowedUsd, maxLtv, xautPrice
+            );
+
+            // At exactly the buffered LTV, no XAUT should be available for withdrawal
+            expect(availableWithBuffer).toBeCloseTo(0, 4);
+        });
+
+        it("should handle edge case: over-borrowed (should return 0, not negative)", () => {
+            const maxLtv = 75;
+            const totalXaut = 10;
+            const xautPrice = 2600;
+            // Borrowed more than 74% of collateral value (somehow)
+            const collateralUsd = totalXaut * xautPrice; // $26,000
+            const borrowedUsd = collateralUsd * 0.80; // $20,800 - over the 74% buffer
+
+            const availableWithBuffer = calculateXautAvailableToWithdrawWithBuffer(
+                totalXaut, borrowedUsd, maxLtv, xautPrice
+            );
+
+            // Should return 0, not negative (Math.max protects against this)
+            expect(availableWithBuffer).toBe(0);
         });
     });
 });
