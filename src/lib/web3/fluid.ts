@@ -570,4 +570,64 @@ export async function getXautVaultConfig(
   }
 }
 
+// ============ Debug Functions for Passkey Withdrawal Investigation ============
+
+/**
+ * Debug function to compare encoding between different operations.
+ * Call this from browser console to verify int256 encoding is correct.
+ */
+export function debugFluidEncoding(
+  nftId: bigint = 9839n,
+  amount: bigint = 4948n,
+  recipient: Address = "0x02Ce834eE022Af1f76b263a600a98c588f8557e" as Address
+): void {
+  console.log("=".repeat(60));
+  console.log("[DEBUG] Comparing Fluid operation encodings");
+  console.log("=".repeat(60));
+  console.log("[DEBUG] NFT ID:", nftId.toString());
+  console.log("[DEBUG] Amount:", amount.toString());
+  console.log("[DEBUG] Recipient:", recipient);
+
+  // Supply (works): positive collateral
+  const supplyData = encodeFluidOperateData(nftId, amount, 0n, recipient);
+  console.log("[DEBUG] SUPPLY colDelta:", "0x" + supplyData.slice(74, 138));
+
+  // Withdraw (fails): negative collateral
+  const withdrawData = encodeFluidOperateData(nftId, -amount, 0n, recipient);
+  console.log("[DEBUG] WITHDRAW colDelta:", "0x" + withdrawData.slice(74, 138));
+
+  // Verify two's complement
+  const maxUint256 = BigInt(2) ** BigInt(256);
+  const negativeVal = BigInt("0x" + withdrawData.slice(74, 138));
+  const expected = maxUint256 - amount;
+  console.log("[DEBUG] Two's complement match:", negativeVal === expected ? "✅" : "❌");
+  console.log("=".repeat(60));
+}
+
+/**
+ * Test withdrawal simulation directly via viem (bypasses Privy).
+ */
+export async function debugWithdrawSimulation(
+  publicClient: PublicClient,
+  nftId: bigint,
+  amount: bigint,
+  userAddress: Address
+): Promise<{ success: boolean; error?: string }> {
+  console.log("[DEBUG] Testing withdrawal via direct viem simulation");
+  try {
+    const result = await publicClient.simulateContract({
+      address: XAUT_USDT_VAULT as Address,
+      abi: FLUID_VAULT_ABI,
+      functionName: "operate",
+      args: [nftId, -amount, 0n, userAddress],
+      account: userAddress,
+    });
+    console.log("[DEBUG] Simulation SUCCESS!", result);
+    return { success: true };
+  } catch (error) {
+    console.error("[DEBUG] Simulation FAILED!", error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export { VAULT_RESOLVER_ADDRESS, XAUT_USDT_VAULT, KNOWN_VAULTS };

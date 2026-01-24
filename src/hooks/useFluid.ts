@@ -472,6 +472,19 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
+        // DEBUG: Log position state at withdrawal time
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+        console.log("[FLUID WITHDRAW DEBUG] Position state at withdrawal:");
+        console.log("[FLUID WITHDRAW DEBUG] - collateralRaw:", collateralRaw.toString());
+        console.log("[FLUID WITHDRAW DEBUG] - borrowRaw:", borrowRaw.toString());
+        console.log("[FLUID WITHDRAW DEBUG] - maxLtv:", maxLtv);
+        console.log("[FLUID WITHDRAW DEBUG] - xautPrice:", xautPrice);
+        console.log("[FLUID WITHDRAW DEBUG] - borrowTokenPrice:", borrowTokenPrice);
+        console.log("[FLUID WITHDRAW DEBUG] - acct (from walletClient or activeWalletAddress):", acct);
+        console.log("[FLUID WITHDRAW DEBUG] - activeWalletAddress:", activeWalletAddress);
+        console.log("[FLUID WITHDRAW DEBUG] - Addresses match:", acct === activeWalletAddress);
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+
         // Pre-flight position health check to prevent "Execution reverted" errors
         const collateralDecimals = getTokenMetadata(COLLATERAL_TOKEN).decimals;
         const borrowDecimals = getTokenMetadata(borrowToken).decimals;
