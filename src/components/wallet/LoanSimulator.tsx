@@ -105,12 +105,17 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const currentBorrowedAmount = currentBorrowed?.usdValue || 0;
 
   // Calculate available withdrawal for XAUT (based on Fluid position data)
+  // IMPORTANT: Use Fluid's oracle price to match on-chain health calculations
   const xautAvailableToWithdraw = useMemo(() => {
     if (!isXaut) return 0;
     const xautCollateral = fluid.suppliedAssets.find(a => a.symbol === "XAUT");
     const totalXaut = xautCollateral?.amount || 0;
     const borrowedUsd = fluid.borrowedAssets.reduce((sum, a) => sum + a.usdValue, 0);
-    const xautPrice = getPrice("XAUT");
+
+    // Use Fluid's oracle price when available, fallback to external price
+    // This prevents withdrawal failures due to price discrepancy between frontend and on-chain
+    const externalXautPrice = getPrice("XAUT");
+    const xautPrice = fluid.oraclePrice > 0 ? fluid.oraclePrice : externalXautPrice;
 
     // Calculate locked XAUT based on borrowed amount and max LTV
     // Use 1 percentage point buffer (maxLtv - 1) instead of 0.99 multiplier on result
@@ -122,7 +127,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     const lockedXaut = xautPrice > 0 ? lockedXautUsd / xautPrice : 0;
 
     return Math.max(0, totalXaut - lockedXaut);
-  }, [isXaut, fluid.suppliedAssets, fluid.borrowedAssets, fluid.maxLtv, getPrice]);
+  }, [isXaut, fluid.suppliedAssets, fluid.borrowedAssets, fluid.maxLtv, fluid.oraclePrice, getPrice]);
 
   // Mode-specific configuration
   const modeConfig = useMemo(() => {
