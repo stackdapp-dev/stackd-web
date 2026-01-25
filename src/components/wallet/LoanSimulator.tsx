@@ -77,6 +77,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const [needsApproval, setNeedsApproval] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [showEthAlert, setShowEthAlert] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Web3 for ETH balance check
   const { ethereumPublicClient, activeWalletAddress } = useWeb3();
@@ -381,6 +382,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
   // Show confirmation modal
   const handleApply = useCallback(() => {
+    setError(null); // Clear any previous error when opening modal
     setShowConfirmModal(true);
   }, []);
 
@@ -390,6 +392,11 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     setShowConfirmModal(false);
     setIsProcessing(false);
     setIsApproving(false);
+  }, []);
+
+  // Handle retry after error
+  const handleRetry = useCallback(() => {
+    setError(null); // Clear error and allow user to try again
   }, []);
 
   // Handle approval
@@ -534,6 +541,8 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       }
     } catch (err) {
       console.error(`${operationMode} failed:`, err);
+      const errorMessage = err instanceof Error ? err.message : "Transaction failed";
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -992,6 +1001,12 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       <LoanConfirmationModal
         isOpen={showConfirmModal}
         onClose={handleModalClose}
+        onClose={() => {
+          if (!isProcessing && !isApproving) {
+            setShowConfirmModal(false);
+            setError(null); // Clear error when closing modal
+          }
+        }}
         mode={mode as 'addCollateral' | 'withdrawCollateral' | 'borrow' | 'repay'}
         collateralType={collateralSymbol as 'WBTC' | 'XAUT'}
         amount={transactionAmount}
@@ -1008,6 +1023,8 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         onConfirm={handleConfirm}
         onApprove={handleApprove}
         warningText={modeConfig.warningText}
+        error={error}
+        onRetry={handleRetry}
       />
 
       {/* ETH Alert Modal - shown when insufficient ETH for Fluid operations */}

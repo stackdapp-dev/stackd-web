@@ -119,6 +119,7 @@ vi.mock("lucide-react", () => ({
     CheckCircle: () => <span data-testid="check-circle-icon">✓</span>,
     AlertTriangle: () => <span data-testid="alert-triangle-icon">⚠</span>,
     ArrowRight: () => <span data-testid="arrow-right-icon">→</span>,
+    XCircle: () => <span data-testid="x-circle-icon">✕</span>,
 }));
 
 // Mock utils
@@ -588,6 +589,7 @@ describe("LoanConfirmationModal Component", () => {
         });
     });
 
+<<<<<<< HEAD
     describe("USD Calculation for Collateral Operations", () => {
         /**
          * BUG FIX TEST: For collateral operations (withdrawCollateral, addCollateral),
@@ -780,10 +782,87 @@ describe("LoanConfirmationModal Component", () => {
         });
 
         it("should call onClose when close button is clicked during processing state", () => {
+=======
+    describe("Error State", () => {
+        it("should display error message when error prop is provided", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed: insufficient funds"
+                />
+            );
+
+            expect(screen.getByText("Transaction failed: insufficient funds")).toBeInTheDocument();
+        });
+
+        it("should show error banner with red/error styling when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            const errorBanner = screen.getByTestId("error-banner");
+            expect(errorBanner).toBeInTheDocument();
+            expect(errorBanner).toHaveClass("bg-red-500/10");
+            expect(errorBanner).toHaveClass("border-red-500/20");
+        });
+
+        it("should display XCircle (error) icon in error state", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.getByTestId("x-circle-icon")).toBeInTheDocument();
+        });
+
+        it("should show 'Try Again' button when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.getByText("Try Again")).toBeInTheDocument();
+        });
+
+        it("should call onRetry when 'Try Again' button is clicked", () => {
+            const onRetry = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                    onRetry={onRetry}
+                />
+            );
+
+            fireEvent.click(screen.getByText("Try Again"));
+            expect(onRetry).toHaveBeenCalledTimes(1);
+        });
+
+        it("should still show Cancel button when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.getByText("Cancel")).toBeInTheDocument();
+        });
+
+        it("should call onClose when Cancel button is clicked in error state", () => {
+>>>>>>> claude/feat-5-modal-error-display
             const onClose = vi.fn();
             render(
                 <LoanConfirmationModal
                     {...defaultProps}
+<<<<<<< HEAD
                     isProcessing={true}
                     onClose={onClose}
                 />
@@ -823,6 +902,76 @@ describe("LoanConfirmationModal Component", () => {
             const closeButton = screen.getByTestId("modal-close-button");
             fireEvent.click(closeButton);
             expect(onClose).toHaveBeenCalledTimes(1);
+=======
+                    error="Transaction failed"
+                    onClose={onClose}
+                />
+            );
+
+            fireEvent.click(screen.getByText("Cancel"));
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should hide ConfirmationAmountCard when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.queryByTestId("confirmation-amount-card")).not.toBeInTheDocument();
+        });
+
+        it("should hide LTV indicator when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    currentLtv={30}
+                    newLtv={45}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.queryByTestId("ltv-change-indicator")).not.toBeInTheDocument();
+        });
+
+        it("should not show error when error prop is null", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error={null}
+                />
+            );
+
+            expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
+            expect(screen.queryByText("Try Again")).not.toBeInTheDocument();
+        });
+
+        it("should not show error when error prop is empty string", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error=""
+                />
+            );
+
+            expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
+        });
+
+        it("should prioritize processing state over error state", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    error="Transaction failed"
+                />
+            );
+
+            // Should show processing, not error
+            expect(screen.getByTestId("processing-state")).toBeInTheDocument();
+            expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
+>>>>>>> claude/feat-5-modal-error-display
         });
     });
 });
