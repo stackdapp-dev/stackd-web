@@ -537,8 +537,8 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         <SimulatorGauge
           currentLtv={currentResult.ltv}
           simulatedLtv={simulatedResult.ltv}
-          maxLtv={maxLtv}
-          liquidationRatio={liquidationRatio}
+          maxLtv={mode === "simulate" ? effectiveMaxLtv : maxLtv}
+          liquidationRatio={mode === "simulate" ? effectiveLiquidationRatio : liquidationRatio}
         />
 
         {/* Input Field */}
@@ -967,7 +967,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         <SimulatorResults
           currentResult={currentResult}
           simulatedResult={simulatedResult}
-          borrowApr={borrowApr}
+          borrowApr={mode === "simulate" ? effectiveBorrowApr : borrowApr}
         />
       </div>
 
