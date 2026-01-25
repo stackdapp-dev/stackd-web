@@ -17,6 +17,8 @@ export interface LoanConfirmationModalProps {
     tokenSymbol: string;
     currentValue: number;
     newValue: number;
+    /** Token price in USD - required for collateral modes to calculate USD values */
+    tokenPrice?: number;
     currentLtv?: number;
     newLtv?: number;
     maxLtv?: number;
@@ -88,6 +90,7 @@ export default function LoanConfirmationModal({
     tokenSymbol,
     currentValue,
     newValue,
+    tokenPrice,
     currentLtv,
     newLtv,
     maxLtv,
@@ -103,6 +106,18 @@ export default function LoanConfirmationModal({
     const showLtvIndicator =
         currentLtv !== undefined && newLtv !== undefined;
     const displayWarning = warningText ?? config.defaultWarning;
+
+    // Calculate USD values for display
+    // For collateral modes (addCollateral, withdrawCollateral): currentValue and newValue are token amounts
+    // We need to multiply by tokenPrice to get USD values
+    // For borrow/repay modes: currentValue and newValue are already in USD
+    const isCollateralMode = mode === "addCollateral" || mode === "withdrawCollateral";
+    const currentUsdValue = isCollateralMode && tokenPrice
+        ? currentValue * tokenPrice
+        : currentValue;
+    const newUsdValue = isCollateralMode && tokenPrice
+        ? newValue * tokenPrice
+        : newValue;
 
     // Build modal message content
     const renderContent = () => {
@@ -135,7 +150,7 @@ export default function LoanConfirmationModal({
                     label={config.label}
                     amount={amount}
                     tokenSymbol={tokenSymbol}
-                    usdValue={newValue}
+                    usdValue={newUsdValue}
                     variant={config.variant}
                     displayMode={config.displayMode}
                 />
@@ -146,11 +161,11 @@ export default function LoanConfirmationModal({
                         <span className="text-white/60">Value Change</span>
                         <div className="flex items-center gap-2">
                             <span className="text-white/60">
-                                {formatCurrency(currentValue)}
+                                {formatCurrency(currentUsdValue)}
                             </span>
                             <span className="text-white/40">→</span>
                             <span className="text-white">
-                                {formatCurrency(newValue)}
+                                {formatCurrency(newUsdValue)}
                             </span>
                         </div>
                     </div>

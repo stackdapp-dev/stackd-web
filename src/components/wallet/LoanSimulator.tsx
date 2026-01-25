@@ -990,6 +990,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         tokenSymbol={modeConfig.tokenSymbol}
         currentValue={mode === 'borrow' || mode === 'repay' ? currentBorrowedAmount : currentCollateralAmount}
         newValue={mode === 'borrow' || mode === 'repay' ? simulatedBorrow : simulatedCollateral}
+        tokenPrice={mode === 'addCollateral' || mode === 'withdrawCollateral' ? collateralPrice : undefined}
         currentLtv={currentResult.ltv}
         newLtv={simulatedResult.ltv}
         maxLtv={maxLtv}
