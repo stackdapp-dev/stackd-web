@@ -15,11 +15,12 @@ let cache: { data: Record<string, { usd: number }>; timestamp: number } | null =
 const CACHE_TTL = 60 * 1000; // 60 seconds
 
 // Fallback prices when API is unavailable (used during tests/builds)
+// Updated Jan 2026: Gold rallied to ~$5000/oz, BTC to ~$105k
 const FALLBACK_PRICES: Record<string, { usd: number }> = {
-    WBTC: { usd: 87000 },
+    WBTC: { usd: 105000 },
     USDT: { usd: 1 },
-    ETH: { usd: 2900 },
-    XAUT: { usd: 2700 }, // ~1 oz gold
+    ETH: { usd: 3500 },
+    XAUT: { usd: 5000 }, // ~1 oz gold (updated Jan 2026)
 };
 
 export async function GET() {
