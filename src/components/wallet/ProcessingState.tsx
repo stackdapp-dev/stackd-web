@@ -10,7 +10,7 @@ export interface ProcessingStateProps {
 }
 
 const DEFAULT_MESSAGES: Record<ProcessingStateProps["state"], string> = {
-  processing: "Please confirm the transaction in your wallet.",
+  processing: "Processing your transaction.",
   approving: "Please approve token spending in your wallet.",
   confirming: "Waiting for blockchain confirmation...",
 };
