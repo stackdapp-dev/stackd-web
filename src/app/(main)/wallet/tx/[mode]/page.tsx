@@ -26,6 +26,9 @@ export default function TxModePage() {
 
   const [ackChecked, setAckChecked] = useState(false);
 
+  // Parse amount for numeric comparisons (empty string becomes 0)
+  const parsedAmount = parseFloat(amount) || 0;
+
   // Button is disabled when:
   // - No available amount (for borrow: no borrowable amount from collateral, for repay: no USDT in wallet)
   // - Amount is zero or negative
@@ -33,7 +36,7 @@ export default function TxModePage() {
   // - User hasn't acknowledged the risks
   // - Amount exceeds available limit
   // - For borrow mode: amount is less than 1 USDT but greater than 0
-  const isDisabled = available <= 0 || amount <= 0 || isProcessing || !ackChecked || amount > available || (mode === "borrow" && amount < 1);
+  const isDisabled = available <= 0 || parsedAmount <= 0 || isProcessing || !ackChecked || parsedAmount > available || (mode === "borrow" && parsedAmount < 1);
 
   return (
     <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-8 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
@@ -42,18 +45,18 @@ export default function TxModePage() {
       <div className="flex flex-col gap-2">
         <InputAmountCard
           label="Amount"
-          value={String(amount)}
-          onChangeText={(value) => setAmount(Number(value))}
+          value={amount}
+          onChangeText={setAmount}
           tokenSymbol="USDT"
-          usdValue={amount}
+          usdValue={parsedAmount}
           availableAmount={available}
           onMaxPress={handleMax}
           editable={!isProcessing}
         />
         {mode === "borrow" && (
-          amount > available ? (
+          parsedAmount > available ? (
             <Text className="text-destructive">Amount exceeds your maximum borrowable amount.</Text>
-          ) : amount > 0 && amount < 1 ? (
+          ) : parsedAmount > 0 && parsedAmount < 1 ? (
             <Text className="text-destructive">Minimum borrow amount is 1 USDT.</Text>
           ) : null
         )}

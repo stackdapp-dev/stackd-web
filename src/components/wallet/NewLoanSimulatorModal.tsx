@@ -25,6 +25,8 @@ import {
     isAbortError,
 } from "@/lib/web3/transactionConfirmation";
 import { X, AlertTriangle, CheckCircle } from "lucide-react";
+import ConfirmationAmountCard from "@/components/wallet/ConfirmationAmountCard";
+import { ProcessingState } from "@/components/wallet/ProcessingState";
 import { parseUnits } from "viem";
 import type { Address, Hash } from "viem";
 import { toast } from "react-toastify";
@@ -81,9 +83,9 @@ export default function NewLoanSimulatorModal({
     const [needsApproval, setNeedsApproval] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
 
-    // Input state
+    // Input state (empty string for placeholder to show)
     const [collateralInput, setCollateralInput] = useState("");
-    const [borrowInput, setBorrowInput] = useState("0");
+    const [borrowInput, setBorrowInput] = useState("");
 
     // Parse inputs for calculations
     const parsedCollateral = parseFloat(collateralInput) || 0;
@@ -181,12 +183,12 @@ export default function NewLoanSimulatorModal({
         void checkAllowance();
     }, [parsedCollateral, collateralDecimals, isXaut, collateralSymbol, fluid.allowance, compound.allowance]);
 
-    // Handle collateral input change
+    // Handle collateral input change (reset borrow to empty for placeholder to show)
     const handleCollateralChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setCollateralInput(e.target.value);
         // Reset borrow when collateral changes significantly
         if (parseFloat(e.target.value) === 0) {
-            setBorrowInput("0");
+            setBorrowInput("");
         }
     }, []);
 
@@ -466,11 +468,11 @@ export default function NewLoanSimulatorModal({
         }
     }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol, publicClient]);
 
-    // Reset state when modal closes
+    // Reset state when modal closes (empty string for placeholder to show)
     useEffect(() => {
         if (!isOpen) {
             setCollateralInput("");
-            setBorrowInput("0");
+            setBorrowInput("");
             setShowConfirmModal(false);
             setIsProcessing(false);
             setIsConfirming(false);
@@ -687,41 +689,32 @@ export default function NewLoanSimulatorModal({
                     }
                     message={
                         isConfirming ? (
-                            <Text tone="muted">
-                                Waiting for blockchain confirmation. This may take a moment.
-                            </Text>
+                            <ProcessingState state="confirming" />
                         ) : isProcessing ? (
-                            <Text tone="muted">
-                                Please confirm the transaction in your wallet.
-                            </Text>
+                            <ProcessingState state="processing" />
                         ) : isApproving ? (
-                            <Text tone="muted">
-                                Please approve token spending in your wallet.
-                            </Text>
+                            <ProcessingState state="approving" />
                         ) : (
                             <div className="flex flex-col gap-4">
-                                {/* Summary */}
-                                <div className="rounded-2xl p-4 border border-white/20">
-                                    <p className="text-white/50 text-sm mb-2">You will deposit</p>
-                                    <div className="flex items-center justify-center gap-2">
-                                        <p className="text-2xl font-bold text-white">
-                                            {formatAmount(parsedCollateral, 6)} {collateralSymbol}
-                                        </p>
-                                    </div>
-                                    <p className="text-white/40 text-sm mt-1">
-                                        ≈ {formatCurrency(parsedCollateral * collateralPrice)}
-                                    </p>
-                                </div>
+                                {/* Deposit Amount Card */}
+                                <ConfirmationAmountCard
+                                    label="You will deposit"
+                                    amount={parsedCollateral}
+                                    tokenSymbol={collateralSymbol}
+                                    usdValue={parsedCollateral * collateralPrice}
+                                    variant="warning"
+                                    displayMode="token"
+                                />
 
-                                <div className="rounded-2xl p-4 border border-white/20">
-                                    <p className="text-white/50 text-sm mb-2">And borrow</p>
-                                    <div className="flex items-center justify-center gap-2">
-                                        <p className="text-2xl font-bold text-white">
-                                            {formatCurrency(parsedBorrow, 2)}
-                                        </p>
-                                    </div>
-                                    <p className="text-white/40 text-sm mt-1">USDT</p>
-                                </div>
+                                {/* Borrow Amount Card */}
+                                <ConfirmationAmountCard
+                                    label="And borrow"
+                                    amount={parsedBorrow}
+                                    tokenSymbol="USDT"
+                                    usdValue={parsedBorrow}
+                                    variant="warning"
+                                    displayMode="usd"
+                                />
 
                                 {/* Stats */}
                                 <div className="flex flex-col gap-2">
