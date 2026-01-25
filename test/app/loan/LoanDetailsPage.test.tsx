@@ -15,6 +15,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
+// Variable to hold current collateralType for the mock
+let mockCollateralType = "wbtc";
+
+// Mock React's use() hook to avoid Suspense issues in tests
+vi.mock("react", async () => {
+    const actual = await vi.importActual("react");
+    return {
+        ...actual,
+        use: (promise: Promise<{ collateralType: string }>) => {
+            // Return the mocked value directly instead of suspending
+            return { collateralType: mockCollateralType };
+        },
+    };
+});
+
 // Mock next/navigation
 const mockNotFound = vi.fn();
 const mockPush = vi.fn();
@@ -116,6 +131,12 @@ vi.mock("lucide-react", () => ({
 // Import the component after mocks
 import LoanDetailsPage from "@/app/(main)/wallet/loan/[collateralType]/page";
 
+// Helper to render with mocked collateralType
+const renderPage = (collateralType: "wbtc" | "xaut") => {
+    mockCollateralType = collateralType;
+    return render(<LoanDetailsPage params={Promise.resolve({ collateralType })} />);
+};
+
 // Default mock values for non-loading state
 const defaultCompoundData = {
     suppliedAssets: [{ symbol: "WBTC", amount: 1.0, usdValue: 100000, decimals: 8 }],
@@ -147,29 +168,28 @@ describe("LoanDetailsPage Loading Skeleton", () => {
     });
 
     describe("WBTC/Compound Loan Loading State", () => {
-        it("should show loading skeleton when useCompound isLoading is true", async () => {
+        it("should show loading skeleton when useCompound isLoading is true", () => {
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
                 isLoading: true,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "wbtc" })} />);
+            renderPage("wbtc");
 
             // Skeleton should be visible
             expect(screen.getByTestId("loan-loading-skeleton")).toBeInTheDocument();
         });
 
-        it("should show actual loan content when useCompound isLoading is false", async () => {
+        it("should show actual loan content when useCompound isLoading is false", () => {
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
                 isLoading: false,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "wbtc" })} />);
+            renderPage("wbtc");
 
             // Skeleton should NOT be visible
             expect(screen.queryByTestId("loan-loading-skeleton")).not.toBeInTheDocument();
-
             // Actual content should be visible
             expect(screen.getByText("Loan Details")).toBeInTheDocument();
             expect(screen.getByText("USDT Loan")).toBeInTheDocument();
@@ -177,42 +197,41 @@ describe("LoanDetailsPage Loading Skeleton", () => {
     });
 
     describe("XAUT/Fluid Loan Loading State", () => {
-        it("should show loading skeleton when useFluid isLoading is true", async () => {
+        it("should show loading skeleton when useFluid isLoading is true", () => {
             mockUseFluid.mockReturnValue({
                 ...defaultFluidData,
                 isLoading: true,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "xaut" })} />);
+            renderPage("xaut");
 
             // Skeleton should be visible
             expect(screen.getByTestId("loan-loading-skeleton")).toBeInTheDocument();
         });
 
-        it("should show actual loan content when useFluid isLoading is false", async () => {
+        it("should show actual loan content when useFluid isLoading is false", () => {
             mockUseFluid.mockReturnValue({
                 ...defaultFluidData,
                 isLoading: false,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "xaut" })} />);
+            renderPage("xaut");
 
             // Skeleton should NOT be visible
             expect(screen.queryByTestId("loan-loading-skeleton")).not.toBeInTheDocument();
-
             // Actual content should be visible
             expect(screen.getByText("Loan Details")).toBeInTheDocument();
         });
     });
 
     describe("Skeleton Structure", () => {
-        it("should render skeleton with proper layout structure for loan summary card", async () => {
+        it("should render skeleton with proper layout structure for loan summary card", () => {
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
                 isLoading: true,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "wbtc" })} />);
+            renderPage("wbtc");
 
             const skeleton = screen.getByTestId("loan-loading-skeleton");
             expect(skeleton).toBeInTheDocument();
@@ -222,13 +241,13 @@ describe("LoanDetailsPage Loading Skeleton", () => {
             expect(shimmerElements.length).toBeGreaterThan(0);
         });
 
-        it("should include skeleton for collateral section", async () => {
+        it("should include skeleton for collateral section", () => {
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
                 isLoading: true,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "wbtc" })} />);
+            renderPage("wbtc");
 
             const skeleton = screen.getByTestId("loan-loading-skeleton");
 
@@ -238,13 +257,13 @@ describe("LoanDetailsPage Loading Skeleton", () => {
             expect(roundedElements.length).toBeGreaterThan(0);
         });
 
-        it("should include skeleton for action buttons grid (2x2)", async () => {
+        it("should include skeleton for action buttons grid (2x2)", () => {
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
                 isLoading: true,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "wbtc" })} />);
+            renderPage("wbtc");
 
             const skeleton = screen.getByTestId("loan-loading-skeleton");
 
@@ -253,13 +272,13 @@ describe("LoanDetailsPage Loading Skeleton", () => {
             expect(gridElements.length).toBeGreaterThan(0);
         });
 
-        it("should include skeleton for loan statistics grid (2x2)", async () => {
+        it("should include skeleton for loan statistics grid (2x2)", () => {
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
                 isLoading: true,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "wbtc" })} />);
+            renderPage("wbtc");
 
             const skeleton = screen.getByTestId("loan-loading-skeleton");
 
@@ -270,7 +289,7 @@ describe("LoanDetailsPage Loading Skeleton", () => {
     });
 
     describe("Loading State Independence", () => {
-        it("should only check the relevant hook for each collateral type (WBTC uses Compound)", async () => {
+        it("should only check the relevant hook for each collateral type (WBTC uses Compound)", () => {
             // Even if Fluid is loading, WBTC page should check Compound
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
@@ -281,14 +300,14 @@ describe("LoanDetailsPage Loading Skeleton", () => {
                 isLoading: true,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "wbtc" })} />);
+            renderPage("wbtc");
 
             // Should show content (not skeleton) because Compound is not loading
             expect(screen.queryByTestId("loan-loading-skeleton")).not.toBeInTheDocument();
             expect(screen.getByText("Loan Details")).toBeInTheDocument();
         });
 
-        it("should only check the relevant hook for each collateral type (XAUT uses Fluid)", async () => {
+        it("should only check the relevant hook for each collateral type (XAUT uses Fluid)", () => {
             // Even if Compound is loading, XAUT page should check Fluid
             mockUseCompound.mockReturnValue({
                 ...defaultCompoundData,
@@ -299,7 +318,7 @@ describe("LoanDetailsPage Loading Skeleton", () => {
                 isLoading: false,
             });
 
-            render(<LoanDetailsPage params={Promise.resolve({ collateralType: "xaut" })} />);
+            renderPage("xaut");
 
             // Should show content (not skeleton) because Fluid is not loading
             expect(screen.queryByTestId("loan-loading-skeleton")).not.toBeInTheDocument();

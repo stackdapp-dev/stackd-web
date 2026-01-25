@@ -94,7 +94,7 @@ vi.mock("@/components/wallet/LtvChangeIndicator", () => ({
         maxLtv?: number;
     }) => (
         <div data-testid="ltv-change-indicator">
-            {currentLtv}% -> {newLtv}%{maxLtv && ` (max: ${maxLtv}%)`}
+            {currentLtv}% {"->"} {newLtv}%{maxLtv && ` (max: ${maxLtv}%)`}
         </div>
     ),
 }));
@@ -119,7 +119,7 @@ vi.mock("@/components/common/TokenIcon", () => ({
 vi.mock("lucide-react", () => ({
     CheckCircle: () => <span data-testid="check-circle-icon">check</span>,
     AlertTriangle: () => <span data-testid="alert-triangle-icon">warning</span>,
-    ArrowRight: () => <span data-testid="arrow-right-icon">-></span>,
+    ArrowRight: () => <span data-testid="arrow-right-icon">{"->"}</span>,
 }));
 
 // Mock utils

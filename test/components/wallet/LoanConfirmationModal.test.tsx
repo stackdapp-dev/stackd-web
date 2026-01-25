@@ -589,7 +589,6 @@ describe("LoanConfirmationModal Component", () => {
         });
     });
 
-<<<<<<< HEAD
     describe("USD Calculation for Collateral Operations", () => {
         /**
          * BUG FIX TEST: For collateral operations (withdrawCollateral, addCollateral),
@@ -782,7 +781,52 @@ describe("LoanConfirmationModal Component", () => {
         });
 
         it("should call onClose when close button is clicked during processing state", () => {
-=======
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should call onClose when close button is clicked during approving state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isApproving={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should call onClose when close button is clicked during both processing and approving state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    isApproving={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+    });
+
     describe("Error State", () => {
         it("should display error message when error prop is provided", () => {
             render(
@@ -857,52 +901,10 @@ describe("LoanConfirmationModal Component", () => {
         });
 
         it("should call onClose when Cancel button is clicked in error state", () => {
->>>>>>> claude/feat-5-modal-error-display
             const onClose = vi.fn();
             render(
                 <LoanConfirmationModal
                     {...defaultProps}
-<<<<<<< HEAD
-                    isProcessing={true}
-                    onClose={onClose}
-                />
-            );
-
-            const closeButton = screen.getByTestId("modal-close-button");
-            fireEvent.click(closeButton);
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it("should call onClose when close button is clicked during approving state", () => {
-            const onClose = vi.fn();
-            render(
-                <LoanConfirmationModal
-                    {...defaultProps}
-                    isApproving={true}
-                    onClose={onClose}
-                />
-            );
-
-            const closeButton = screen.getByTestId("modal-close-button");
-            fireEvent.click(closeButton);
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it("should call onClose when close button is clicked during both processing and approving state", () => {
-            const onClose = vi.fn();
-            render(
-                <LoanConfirmationModal
-                    {...defaultProps}
-                    isProcessing={true}
-                    isApproving={true}
-                    onClose={onClose}
-                />
-            );
-
-            const closeButton = screen.getByTestId("modal-close-button");
-            fireEvent.click(closeButton);
-            expect(onClose).toHaveBeenCalledTimes(1);
-=======
                     error="Transaction failed"
                     onClose={onClose}
                 />
@@ -971,7 +973,6 @@ describe("LoanConfirmationModal Component", () => {
             // Should show processing, not error
             expect(screen.getByTestId("processing-state")).toBeInTheDocument();
             expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
->>>>>>> claude/feat-5-modal-error-display
         });
     });
 });

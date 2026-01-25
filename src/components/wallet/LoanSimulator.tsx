@@ -1001,12 +1001,6 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       <LoanConfirmationModal
         isOpen={showConfirmModal}
         onClose={handleModalClose}
-        onClose={() => {
-          if (!isProcessing && !isApproving) {
-            setShowConfirmModal(false);
-            setError(null); // Clear error when closing modal
-          }
-        }}
         mode={mode as 'addCollateral' | 'withdrawCollateral' | 'borrow' | 'repay'}
         collateralType={collateralSymbol as 'WBTC' | 'XAUT'}
         amount={transactionAmount}
