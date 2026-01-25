@@ -239,11 +239,11 @@ describe("LoanConfirmationModal Component", () => {
     });
 
     describe("ConfirmationAmountCard Display Mode", () => {
-        it("should use token display mode for addCollateral mode", () => {
+        it("should use both display mode for addCollateral mode", () => {
             render(<LoanConfirmationModal {...defaultProps} mode="addCollateral" />);
 
             const card = screen.getByTestId("confirmation-amount-card");
-            expect(card).toHaveAttribute("data-display-mode", "token");
+            expect(card).toHaveAttribute("data-display-mode", "both");
         });
 
         it("should use both display mode for withdrawCollateral mode", () => {
