@@ -96,7 +96,7 @@ async function fetchWalletBalances(
 }
 
 export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = {}): WalletBalance {
-  const { publicClient, ethereumPublicClient, walletClient, isExternalWallet } = useWeb3();
+  const { publicClient, ethereumPublicClient, walletClient } = useWeb3();
 
   const walletAddress = walletClient?.account?.address
     ? formatAddress(walletClient.account.address) as Address
@@ -130,7 +130,8 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
     gcTime: 5 * 60_000, // 5 minutes
   });
 
-  const ethBalance = arbitrumData?.ethBalance ?? 0;
+  // Use Ethereum mainnet ETH balance (needed for Fluid/XAUT gas on Ethereum)
+  const ethBalance = ethereumData?.ethBalance ?? 0;
 
   // Track chain-specific balances for multi-chain tokens
   const chainBalances = useMemo((): ChainBalances => {
@@ -188,8 +189,6 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
 
   const assets: Asset[] = useMemo(() => {
     return Object.entries(TOKEN_METADATA)
-      // Only show ETH for external wallets (they need it for gas)
-      .filter(([key]) => key !== "ETH" || isExternalWallet)
       .map(([key, meta]) => {
         const amount = key === "ETH" ? ethBalance : tokenBalances[key]?.balance ?? 0;
         const usdValue = amount * (tokenPrices[key]?.usd ?? 0);
@@ -201,7 +200,7 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
           icon: meta.icon,
         };
       });
-  }, [ethBalance, tokenBalances, tokenPrices, isExternalWallet]);
+  }, [ethBalance, tokenBalances, tokenPrices]);
 
   const totalBalance = useMemo(() => {
     return assets.reduce((sum, a) => sum + a.usdValue, 0);
