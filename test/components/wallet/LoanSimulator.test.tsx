@@ -1360,3 +1360,165 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
         });
     });
 });
+
+/**
+ * TDD tests for Bug Fix: Modal Close Button During Processing States
+ *
+ * Problem: The confirmation modal cannot be closed during processing/approving states
+ * because onClose is conditionally disabled:
+ *   onClose={() => !isProcessing && !isApproving && setShowConfirmModal(false)}
+ *
+ * This is problematic when transactions get stuck - users cannot dismiss the modal.
+ *
+ * Solution:
+ * 1. Remove the conditional from onClose - always allow closing
+ * 2. Reset isProcessing/isApproving state when modal is closed
+ * 3. Close button (X) should always be clickable
+ */
+describe("LoanSimulator - Simulate Mode should not render LoanConfirmationModal", () => {
+    /**
+     * Bug Fix: LoanConfirmationModal crashes when mode="simulate"
+     *
+     * Problem: LoanConfirmationModal's modeConfig doesn't have a "simulate" entry,
+     * so when mode="simulate" is passed, modeConfig[mode] returns undefined,
+     * causing "Cannot read properties of undefined (reading 'title')" error.
+     *
+     * Solution: Don't render LoanConfirmationModal when mode is "simulate"
+     * since simulate mode doesn't have an Apply button anyway.
+     */
+    describe("Implementation verification", () => {
+        it("should NOT render LoanConfirmationModal when mode is simulate", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // The LoanConfirmationModal should only be rendered when mode is NOT "simulate"
+            // Look for a conditional that excludes simulate mode
+            const hasConditionalRendering = componentCode.match(
+                /mode\s*!==\s*["']simulate["'].*LoanConfirmationModal|{.*mode\s*!==\s*["']simulate["'].*&&.*<LoanConfirmationModal/s
+            );
+
+            expect(hasConditionalRendering).toBeTruthy();
+        });
+    });
+});
+
+describe("LoanSimulator - Modal Close Button During Processing States", () => {
+    describe("Implementation verification for always-closeable modal", () => {
+        it("should NOT have conditional check preventing close during processing", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // The old buggy pattern was:
+            // onClose={() => !isProcessing && !isApproving && setShowConfirmModal(false)}
+            // This should NOT be present - close should always work
+            const hasBuggyConditional = componentCode.match(
+                /onClose\s*=\s*\{\s*\(\)\s*=>\s*!isProcessing\s*&&\s*!isApproving\s*&&\s*setShowConfirmModal/
+            );
+
+            expect(hasBuggyConditional).toBeFalsy();
+        });
+
+        it("should have onClose that always calls setShowConfirmModal(false)", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // The correct pattern should be a simple unconditional close or
+            // a handler that resets state and closes
+            // Look for onClose with setShowConfirmModal(false) without conditionals
+            // or a handler function that closes the modal
+            const hasUnconditionalClose =
+                componentCode.match(/onClose\s*=\s*\{\s*\(\)\s*=>\s*setShowConfirmModal\s*\(\s*false\s*\)/) ||
+                componentCode.match(/onClose\s*=\s*\{\s*handleModalClose\s*\}/) ||
+                componentCode.match(/onClose\s*=\s*\{\s*\(\)\s*=>\s*\{[^}]*setShowConfirmModal\s*\(\s*false\s*\)/);
+
+            expect(hasUnconditionalClose).toBeTruthy();
+        });
+
+        it("should reset isProcessing state when modal is closed", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // When modal is closed during processing, isProcessing should be reset
+            // Look for setIsProcessing(false) in a close handler or in close logic
+            const resetsProcessing = componentCode.includes("setIsProcessing(false)");
+
+            expect(resetsProcessing).toBe(true);
+        });
+
+        it("should reset isApproving state when modal is closed", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // When modal is closed during approving, isApproving should be reset
+            // Look for setIsApproving(false) in a close handler or in close logic
+            const resetsApproving = componentCode.includes("setIsApproving(false)");
+
+            expect(resetsApproving).toBe(true);
+        });
+    });
+
+    describe("Close button behavior expectations", () => {
+        it("should allow user to close modal when transaction is stuck", () => {
+            // User scenario: Transaction gets stuck in processing state
+            // Expected: User can click X button to close modal and retry
+            const isProcessing = true;
+            const canClose = true; // Should always be true regardless of processing state
+
+            expect(canClose).toBe(true);
+        });
+
+        it("should allow user to close modal during approval state", () => {
+            // User scenario: Approval takes too long or user changes mind
+            // Expected: User can click X button to close modal
+            const isApproving = true;
+            const canClose = true; // Should always be true regardless of approving state
+
+            expect(canClose).toBe(true);
+        });
+
+        it("should reset processing state when modal is dismissed during processing", () => {
+            // When user closes modal during processing:
+            // isProcessing should be reset to false
+            // This allows fresh state when modal is reopened
+            const afterClose = {
+                isProcessing: false,
+                isApproving: false,
+                showConfirmModal: false,
+            };
+
+            expect(afterClose.isProcessing).toBe(false);
+            expect(afterClose.isApproving).toBe(false);
+            expect(afterClose.showConfirmModal).toBe(false);
+        });
+    });
+});

@@ -9,6 +9,7 @@
  * - Start Earning Now navigation to wallet
  */
 import { test, expect } from "@playwright/test";
+import { createMockAuthScript } from "./fixtures";
 
 test.describe("Rewards Simulator", () => {
     test.beforeEach(async ({ page }) => {
@@ -191,6 +192,12 @@ test.describe("Rewards Simulator", () => {
         });
 
         test("should auto-open New Loan modal when navigating to wallet with openLoan param", async ({ page }) => {
+            // Set up mock auth and dismiss early access modal for wallet access
+            await page.addInitScript(createMockAuthScript("embeddedNoLoan"));
+            await page.addInitScript(() => {
+                localStorage.setItem('stackd_early_access_shown', 'true');
+            });
+
             // Navigate directly to wallet with openLoan param
             await page.goto("/wallet?openLoan=true");
             await page.waitForLoadState("domcontentloaded");

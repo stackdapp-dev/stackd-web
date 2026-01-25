@@ -10,7 +10,10 @@ import {
   encodeFluidRepay,
   encodeFluidSupplyAndBorrow,
   getXautVaultConfig,
+  getFluidOraclePrice,
+  convertOraclePriceToUsd,
   XAUT_USDT_VAULT,
+  ORACLE_PRICE_DECIMALS,
   type FluidUserPosition,
   type FluidVaultData,
 } from "@/lib/web3/fluid";
@@ -56,11 +59,12 @@ const rateToApr = (ratePerSecond: bigint) => {
  * @param withdrawalAmount - Amount to withdraw in raw units (bigint)
  * @param collateralRaw - Total collateral in raw units (bigint)
  * @param borrowRaw - Total borrowed amount in raw units (bigint)
- * @param collateralPrice - Price of collateral token in USD
+ * @param collateralPrice - Price of collateral token in USD (from external source like CoinGecko)
  * @param borrowPrice - Price of borrow token in USD
  * @param maxLtv - Maximum LTV percentage (e.g., 75 for 75%)
  * @param collateralDecimals - Decimals for collateral token (XAUT = 6)
  * @param borrowDecimals - Decimals for borrow token (USDT = 6)
+ * @param oraclePrice - Optional Fluid oracle price in USD (preferred over collateralPrice when available)
  */
 export function validateWithdrawalAmount(
   withdrawalAmount: bigint,
@@ -70,8 +74,12 @@ export function validateWithdrawalAmount(
   borrowPrice: number,
   maxLtv: number,
   collateralDecimals: number = 6,
-  borrowDecimals: number = 6
+  borrowDecimals: number = 6,
+  oraclePrice?: number
 ): { valid: true } | { valid: false; error: string } {
+  // Use oracle price when available, fallback to external collateral price
+  // Oracle price is more accurate as it matches what Fluid uses on-chain
+  const effectivePrice = oraclePrice ?? collateralPrice;
   // Check 1: Cannot withdraw more than total collateral
   if (withdrawalAmount > collateralRaw) {
     return {
@@ -85,16 +93,18 @@ export function validateWithdrawalAmount(
     return { valid: true };
   }
 
-  // Calculate USD values
+  // Calculate USD values using effective price (oracle price when available)
   const collateralUsd =
-    (Number(collateralRaw) / 10 ** collateralDecimals) * collateralPrice;
+    (Number(collateralRaw) / 10 ** collateralDecimals) * effectivePrice;
   const borrowUsd = (Number(borrowRaw) / 10 ** borrowDecimals) * borrowPrice;
   const withdrawalUsd =
-    (Number(withdrawalAmount) / 10 ** collateralDecimals) * collateralPrice;
+    (Number(withdrawalAmount) / 10 ** collateralDecimals) * effectivePrice;
 
-  // Calculate locked collateral (minimum collateral needed to maintain maxLtv)
-  // lockedCollateral = borrowedUSD / (maxLtv / 100)
-  const lockedCollateralUsd = borrowUsd / (maxLtv / 100);
+  // Calculate locked collateral (minimum collateral needed to maintain effective maxLtv)
+  // We use (maxLtv - 1) to provide a 1% safety buffer
+  // lockedCollateral = borrowedUSD / ((maxLtv - 1) / 100)
+  const effectiveMaxLtv = maxLtv - 1;
+  const lockedCollateralUsd = borrowUsd / (effectiveMaxLtv / 100);
 
   // Calculate available (unlocked) collateral in USD
   const availableCollateralUsd = collateralUsd - lockedCollateralUsd;
@@ -122,10 +132,10 @@ export function validateWithdrawalAmount(
 
   const postWithdrawalLtv = (borrowUsd / postWithdrawalCollateralUsd) * 100;
 
-  if (postWithdrawalLtv > maxLtv) {
+  if (postWithdrawalLtv > effectiveMaxLtv) {
     return {
       valid: false,
-      error: `Withdrawal would cause your loan-to-value ratio (${postWithdrawalLtv.toFixed(1)}%) to exceed the maximum allowed (${maxLtv}%). Reduce withdrawal amount or repay some debt first.`,
+      error: `Withdrawal would cause your loan-to-value ratio (${postWithdrawalLtv.toFixed(1)}%) to exceed the maximum allowed (${effectiveMaxLtv}%). Reduce withdrawal amount or repay some debt first.`,
     };
   }
 
@@ -140,6 +150,7 @@ interface FluidData {
   borrowApr: number;
   nftId?: bigint;
   borrowToken: string; // Dynamic borrow token (USDT)
+  oraclePrice: number; // Fluid oracle price in USD (from on-chain oracle)
 }
 
 type Asset = {
@@ -167,6 +178,7 @@ type UseFluidResult = {
   netLoanValue: number;
   hasPosition: boolean;
   nftId?: bigint;
+  oraclePrice: number; // Fluid oracle price in USD (from on-chain oracle)
   // Transaction functions
   supply: (amount: bigint) => Promise<TransactionResult>;
   withdraw: (amount: bigint) => Promise<TransactionResult>;
@@ -240,6 +252,8 @@ async function fetchFluidData(
     if (!matchingPosition || !matchingVaultData || !matchedBorrowToken) {
       console.log("[FLUID] No XAUT position found, fetching vault config for new loan creation");
       const vaultConfig = await getXautVaultConfig(publicClient);
+      // Also fetch oracle price for new loan creation
+      const oraclePriceData = await getFluidOraclePrice(publicClient);
       return {
         collateralRaw: BigInt(0),
         borrowRaw: BigInt(0),
@@ -248,8 +262,12 @@ async function fetchFluidData(
         borrowApr: vaultConfig.borrowApr,
         nftId: undefined,
         borrowToken: "USDT",
+        oraclePrice: oraclePriceData?.priceUsd ?? 0,
       };
     }
+
+    // Convert oracle price from raw bigint to USD
+    const oraclePriceUsd = convertOraclePriceToUsd(matchingVaultData.oraclePrice);
 
     const result: FluidData = {
       collateralRaw: matchingPosition.supply,
@@ -259,6 +277,7 @@ async function fetchFluidData(
       borrowApr: rateToApr(matchingVaultData.borrowRate),
       nftId: matchingPosition.nftId,
       borrowToken: matchedBorrowToken,
+      oraclePrice: oraclePriceUsd,
     };
 
     // Debug logging
@@ -275,6 +294,8 @@ async function fetchFluidData(
     console.error("[FLUID] Error fetching positions:", error);
     // Return vault config on error (not zeros!) so new loans can still be created
     const vaultConfig = await getXautVaultConfig(publicClient);
+    // Try to fetch oracle price even on error
+    const oraclePriceData = await getFluidOraclePrice(publicClient).catch(() => null);
     return {
       collateralRaw: BigInt(0),
       borrowRaw: BigInt(0),
@@ -283,6 +304,7 @@ async function fetchFluidData(
       borrowApr: vaultConfig.borrowApr,
       nftId: undefined,
       borrowToken: "USDT",
+      oraclePrice: oraclePriceData?.priceUsd ?? 0,
     };
   }
 }
@@ -318,6 +340,7 @@ export function useFluid(): UseFluidResult {
   const borrowApr = data?.borrowApr ?? 0;
   const nftId = data?.nftId;
   const borrowToken = data?.borrowToken ?? "USDT";
+  const oraclePrice = data?.oraclePrice ?? 0;
 
   const collateralAmount = Number(
     formatUnits(collateralRaw, getTokenMetadata(COLLATERAL_TOKEN).decimals)
@@ -472,7 +495,22 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
+        // DEBUG: Log position state at withdrawal time
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+        console.log("[FLUID WITHDRAW DEBUG] Position state at withdrawal:");
+        console.log("[FLUID WITHDRAW DEBUG] - collateralRaw:", collateralRaw.toString());
+        console.log("[FLUID WITHDRAW DEBUG] - borrowRaw:", borrowRaw.toString());
+        console.log("[FLUID WITHDRAW DEBUG] - maxLtv:", maxLtv);
+        console.log("[FLUID WITHDRAW DEBUG] - xautPrice (external):", xautPrice);
+        console.log("[FLUID WITHDRAW DEBUG] - oraclePrice (Fluid):", oraclePrice);
+        console.log("[FLUID WITHDRAW DEBUG] - borrowTokenPrice:", borrowTokenPrice);
+        console.log("[FLUID WITHDRAW DEBUG] - acct (from walletClient or activeWalletAddress):", acct);
+        console.log("[FLUID WITHDRAW DEBUG] - activeWalletAddress:", activeWalletAddress);
+        console.log("[FLUID WITHDRAW DEBUG] - Addresses match:", acct === activeWalletAddress);
+        console.log("[FLUID WITHDRAW DEBUG] ==================");
+
         // Pre-flight position health check to prevent "Execution reverted" errors
+        // Use oracle price when available (matches what Fluid uses on-chain)
         const collateralDecimals = getTokenMetadata(COLLATERAL_TOKEN).decimals;
         const borrowDecimals = getTokenMetadata(borrowToken).decimals;
 
@@ -484,7 +522,8 @@ export function useFluid(): UseFluidResult {
           borrowTokenPrice,
           maxLtv,
           collateralDecimals,
-          borrowDecimals
+          borrowDecimals,
+          oraclePrice > 0 ? oraclePrice : undefined // Pass oracle price if available
         );
 
         if (!validation.valid) {
@@ -548,7 +587,7 @@ export function useFluid(): UseFluidResult {
         transactionInProgress.current = false;
       }
     },
-    [nftId, acct, sendSponsoredTransaction, collateralRaw, borrowRaw, maxLtv, xautPrice, borrowTokenPrice, borrowToken]
+    [nftId, acct, sendSponsoredTransaction, collateralRaw, borrowRaw, maxLtv, xautPrice, borrowTokenPrice, borrowToken, oraclePrice, activeWalletAddress]
   );
 
   const borrow = useCallback(
@@ -738,6 +777,7 @@ export function useFluid(): UseFluidResult {
     netLoanValue,
     hasPosition,
     nftId,
+    oraclePrice,
     // Transaction functions
     supply,
     withdraw,

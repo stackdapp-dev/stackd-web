@@ -35,9 +35,13 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6 overflow-auto scrollbar-hide">
+    <div
+      data-testid="modal-backdrop"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6 overflow-auto scrollbar-hide animate-in fade-in-0 duration-300"
+    >
       <div
-        className="relative text-white rounded-3xl p-8 max-w-md w-full overflow-auto scrollbar-hide border border-white/10"
+        data-testid="modal-content"
+        className="relative text-white rounded-3xl p-8 max-w-md w-full overflow-auto scrollbar-hide border border-white/10 animate-in fade-in-0 zoom-in-95 duration-300"
         style={{
           background: 'rgba(30, 30, 30, 0.95)',
           backdropFilter: 'blur(40px)',

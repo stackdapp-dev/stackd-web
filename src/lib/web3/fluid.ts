@@ -92,7 +92,11 @@ export interface FluidVaultData {
   liquidationThreshold: bigint;
   supplyRate: bigint;
   borrowRate: bigint;
+  oraclePrice: bigint; // Oracle price in 27-decimal format (price * 10^27)
 }
+
+// Fluid uses 27 decimals for oracle prices (scaled by 1e27)
+export const ORACLE_PRICE_DECIMALS = 27;
 
 export interface FluidPositionWithVault {
   position: FluidUserPosition;
@@ -187,9 +191,6 @@ export async function getUserPositions(
     const positions: FluidUserPosition[] = [];
     const vaultsData: FluidVaultData[] = [];
 
-    // Cache for live rates per vault to avoid duplicate RPC calls
-    const liveRatesCache: Map<string, { borrowRateRay: bigint; supplyRateRay: bigint } | null> = new Map();
-
     // Step 2: For each NFT, get the vault address and check if it's a known vault
     for (const nftId of nftIds) {
       try {
@@ -241,13 +242,17 @@ export async function getUserPositions(
             const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
             console.log(`[FLUID] Live borrow rate from resolver (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
+            // Extract oracle price from configs struct
+            const oraclePrice = vaultEntireData.configs.oraclePrice;
+            console.log(`[FLUID] Oracle price (raw): ${oraclePrice.toString()}`);
+
             positions.push({
               nftId,
               supply: userPosition.supply,
               borrow: userPosition.borrow,
             });
 
-            // Use KNOWN_VAULTS for token addresses but LIVE rates from resolver
+            // Use KNOWN_VAULTS for token addresses but LIVE rates and oracle price from resolver
             vaultsData.push({
               vault: vaultAddress,
               supplyToken: knownVault.supplyToken,
@@ -256,6 +261,7 @@ export async function getUserPositions(
               liquidationThreshold: knownVault.liquidationThreshold,
               supplyRate: liveSupplyRate,
               borrowRate: liveBorrowRate,
+              oraclePrice,
             });
 
 
@@ -276,6 +282,7 @@ export async function getUserPositions(
               liquidationThreshold: knownVault.liquidationThreshold,
               supplyRate: knownVault.supplyRate,
               borrowRate: knownVault.borrowRate,
+              oraclePrice: BigInt(0), // Fallback - should fetch from external source
             });
           }
 
@@ -351,13 +358,17 @@ export async function getPositionByNftId(
     const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
     console.log(`[FLUID] getPositionByNftId live borrow rate (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
+    // Extract oracle price from configs struct
+    const oraclePrice = vaultData.configs.oraclePrice;
+    console.log(`[FLUID] getPositionByNftId oracle price (raw): ${oraclePrice.toString()}`);
+
     const position: FluidUserPosition = {
       nftId,
       supply: userPosition.supply,
       borrow: userPosition.borrow,
     };
 
-    // Use KNOWN_VAULTS for token addresses but LIVE rates from resolver
+    // Use KNOWN_VAULTS for token addresses but LIVE rates and oracle price from resolver
     const positionVaultData: FluidVaultData = {
       vault: vaultAddress,
       supplyToken: knownVault.supplyToken,
@@ -366,6 +377,7 @@ export async function getPositionByNftId(
       liquidationThreshold: knownVault.liquidationThreshold,
       supplyRate: liveSupplyRate,
       borrowRate: liveBorrowRate,
+      oraclePrice,
     };
 
     return { position, vaultData: positionVaultData };
@@ -567,6 +579,107 @@ export async function getXautVaultConfig(
   } catch (error) {
     console.error("[FLUID] Error fetching vault config, using fallback:", error);
     return fallbackConfig;
+  }
+}
+
+/**
+ * Convert Fluid's raw oracle price to USD
+ * Fluid uses 27 decimals for oracle prices (price * 10^27)
+ *
+ * @param rawOraclePrice - Oracle price in 27-decimal format
+ * @returns Price in USD as a number
+ */
+export function convertOraclePriceToUsd(rawOraclePrice: bigint): number {
+  return Number(rawOraclePrice) / 10 ** ORACLE_PRICE_DECIMALS;
+}
+
+/**
+ * Get the Fluid oracle price for the XAUT/USDT vault
+ * This is the on-chain price used by Fluid for health calculations
+ *
+ * @param publicClient - The viem PublicClient instance
+ * @returns Oracle price in USD, or null if fetching fails
+ */
+export async function getFluidOraclePrice(
+  publicClient: PublicClient
+): Promise<{ priceUsd: number; rawPrice: bigint } | null> {
+  try {
+    const vaultData = await publicClient.readContract({
+      address: VAULT_RESOLVER_ADDRESS,
+      abi: FLUID_VAULT_RESOLVER_ABI,
+      functionName: "getVaultEntireData",
+      args: [XAUT_USDT_VAULT as Address],
+    });
+
+    const rawOraclePrice = vaultData.configs.oraclePrice;
+    const priceUsd = convertOraclePriceToUsd(rawOraclePrice);
+
+    console.log(`[FLUID] getFluidOraclePrice: raw=${rawOraclePrice.toString()}, USD=${priceUsd.toFixed(2)}`);
+
+    return { priceUsd, rawPrice: rawOraclePrice };
+  } catch (error) {
+    console.error("[FLUID] Error fetching oracle price:", error);
+    return null;
+  }
+}
+
+// ============ Debug Functions for Passkey Withdrawal Investigation ============
+
+/**
+ * Debug function to compare encoding between different operations.
+ * Call this from browser console to verify int256 encoding is correct.
+ */
+export function debugFluidEncoding(
+  nftId: bigint = 9839n,
+  amount: bigint = 4948n,
+  recipient: Address = "0x02Ce834eE022Af1f76b263a600a98c588f8557e" as Address
+): void {
+  console.log("=".repeat(60));
+  console.log("[DEBUG] Comparing Fluid operation encodings");
+  console.log("=".repeat(60));
+  console.log("[DEBUG] NFT ID:", nftId.toString());
+  console.log("[DEBUG] Amount:", amount.toString());
+  console.log("[DEBUG] Recipient:", recipient);
+
+  // Supply (works): positive collateral
+  const supplyData = encodeFluidOperateData(nftId, amount, 0n, recipient);
+  console.log("[DEBUG] SUPPLY colDelta:", "0x" + supplyData.slice(74, 138));
+
+  // Withdraw (fails): negative collateral
+  const withdrawData = encodeFluidOperateData(nftId, -amount, 0n, recipient);
+  console.log("[DEBUG] WITHDRAW colDelta:", "0x" + withdrawData.slice(74, 138));
+
+  // Verify two's complement
+  const maxUint256 = BigInt(2) ** BigInt(256);
+  const negativeVal = BigInt("0x" + withdrawData.slice(74, 138));
+  const expected = maxUint256 - amount;
+  console.log("[DEBUG] Two's complement match:", negativeVal === expected ? "✅" : "❌");
+  console.log("=".repeat(60));
+}
+
+/**
+ * Test withdrawal simulation directly via viem (bypasses Privy).
+ */
+export async function debugWithdrawSimulation(
+  publicClient: PublicClient,
+  nftId: bigint,
+  amount: bigint,
+  userAddress: Address
+): Promise<{ success: boolean; error?: string }> {
+  console.log("[DEBUG] Testing withdrawal via direct viem simulation");
+  try {
+    const result = await publicClient.simulateContract({
+      address: XAUT_USDT_VAULT as Address,
+      abi: FLUID_VAULT_ABI,
+      functionName: "operate",
+      args: [nftId, -amount, 0n, userAddress],
+      account: userAddress,
+    });
+    console.log("[DEBUG] Simulation SUCCESS!", result);
+    return { success: true };
+  } catch (error) {
+    console.error("[DEBUG] Simulation FAILED!", error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 

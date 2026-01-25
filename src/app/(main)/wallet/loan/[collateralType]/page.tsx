@@ -100,6 +100,7 @@ export default function LoanDetailsPage({
         maxLtv,
         liquidationRatio,
         borrowApr,
+        isLoading,
         refetch: refetchLoanData,
     } = loanData;
 
@@ -193,6 +194,98 @@ export default function LoanDetailsPage({
     // Simulator is now available for both WBTC (Compound) and XAUT (Fluid)
     const isSimulatorAvailable = true;
 
+    // Show loading skeleton when data is being fetched
+    if (isLoading) {
+        return (
+            <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
+                <PageHeader title="Loan Details" />
+
+                <div data-testid="loan-loading-skeleton" className="flex flex-col gap-6">
+                    {/* Loan Summary Card Skeleton */}
+                    <div className="relative rounded-2xl p-[1px] bg-gradient-to-r from-amber-500/60 via-amber-600/40 to-purple-600/40">
+                        <Card appearance="container" className="bg-slate-900/95" padding="default">
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="h-4 w-20 bg-white/10 rounded skeleton-shimmer" />
+                                    <div className="h-5 w-16 bg-white/10 rounded-full skeleton-shimmer" />
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <div className="h-10 w-32 bg-white/10 rounded skeleton-shimmer" />
+                                    <div className="h-5 w-16 bg-white/10 rounded skeleton-shimmer" />
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="h-4 w-12 bg-white/10 rounded skeleton-shimmer" />
+                                    <div className="h-6 w-20 bg-white/10 rounded skeleton-shimmer" />
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <div className="h-4 w-32 bg-white/10 rounded skeleton-shimmer" />
+                                        <div className="h-4 w-20 bg-white/10 rounded skeleton-shimmer" />
+                                    </div>
+                                    <div className="h-3 w-full bg-white/10 rounded-full skeleton-shimmer" />
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Collateral Section Skeleton */}
+                    <div>
+                        <div className="h-4 w-24 bg-white/10 rounded skeleton-shimmer mb-3" />
+                        <Card appearance="glassDark" padding="default">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-white/10 skeleton-shimmer" />
+                                    <div className="space-y-2">
+                                        <div className="h-5 w-28 bg-white/10 rounded skeleton-shimmer" />
+                                        <div className="h-4 w-16 bg-white/10 rounded skeleton-shimmer" />
+                                    </div>
+                                </div>
+                                <div className="text-right space-y-2">
+                                    <div className="h-5 w-24 bg-white/10 rounded skeleton-shimmer" />
+                                    <div className="h-4 w-20 bg-white/10 rounded skeleton-shimmer" />
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Action Buttons Skeleton (2x2 grid) */}
+                    <div className="grid grid-cols-2 gap-3">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div
+                                key={i}
+                                className="flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border border-white/10 bg-white/5"
+                            >
+                                <div className="w-12 h-12 rounded-full bg-white/10 skeleton-shimmer" />
+                                <div className="h-4 w-16 bg-white/10 rounded skeleton-shimmer" />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Loan Statistics Skeleton */}
+                    <div>
+                        <div className="h-4 w-28 bg-white/10 rounded skeleton-shimmer mb-3" />
+                        <div className="grid grid-cols-2 gap-3">
+                            {[1, 2, 3, 4].map((i) => (
+                                <Card key={i} appearance="glassDark" padding="default">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-4 h-4 rounded bg-white/10 skeleton-shimmer" />
+                                        <div className="h-4 w-20 bg-white/10 rounded skeleton-shimmer" />
+                                    </div>
+                                    <div className="h-7 w-24 bg-white/10 rounded skeleton-shimmer" />
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* External Link Button Skeleton */}
+                    <div className="pb-8">
+                        <div className="h-12 w-full bg-white/10 rounded-xl skeleton-shimmer" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
             <PageHeader title="Loan Details" />
@@ -205,7 +298,7 @@ export default function LoanDetailsPage({
                     message={
                         <>
                             <Text tone="muted" className="mb-3">
-                                Please confirm the transaction in your wallet.
+                                Processing your transaction.
                             </Text>
                             <Loading />
                         </>

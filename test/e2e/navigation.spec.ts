@@ -10,6 +10,10 @@ test.describe("Navigation", () => {
 
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(createMockAuthScript("embeddedNoLoan"));
+        // Dismiss the EarlyAccessModal by setting localStorage before navigation
+        await page.addInitScript(() => {
+            localStorage.setItem('stackd_early_access_shown', 'true');
+        });
     });
 
     test("should navigate between main pages", async ({ page }) => {
@@ -44,6 +48,10 @@ test.describe("Navigation", () => {
 test.describe("Desktop Navigation", () => {
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(createMockAuthScript("embeddedNoLoan"));
+        // Dismiss the EarlyAccessModal by setting localStorage before navigation
+        await page.addInitScript(() => {
+            localStorage.setItem('stackd_early_access_shown', 'true');
+        });
         // Ensure desktop viewport (768px+)
         await page.setViewportSize({ width: 1280, height: 800 });
     });
@@ -124,6 +132,10 @@ test.describe("Desktop Navigation", () => {
 test.describe("Mobile Navigation", () => {
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(createMockAuthScript("embeddedNoLoan"));
+        // Dismiss the EarlyAccessModal by setting localStorage before navigation
+        await page.addInitScript(() => {
+            localStorage.setItem('stackd_early_access_shown', 'true');
+        });
         // Set mobile viewport (below 768px)
         await page.setViewportSize({ width: 375, height: 812 });
     });

@@ -400,6 +400,18 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       // Disable sponsorship if explicitly requested (e.g., for Ethereum mainnet Fluid operations)
       const shouldSponsor = isEmbeddedWallet && !params.forceNoSponsor;
 
+      // DEBUG: Extra logging for passkey wallet investigations
+      if (isEmbeddedWallet && params.forceNoSponsor) {
+        console.log("[TX DEBUG] ==========================================");
+        console.log("[TX DEBUG] Passkey wallet with forceNoSponsor=true");
+        console.log("[TX DEBUG] This is the case for Fluid mainnet operations");
+        console.log("[TX DEBUG] Calldata length:", params.data?.length || 0);
+        console.log("[TX DEBUG] Calldata:", params.data);
+        console.log("[TX DEBUG] To address:", params.to);
+        console.log("[TX DEBUG] Value:", params.value?.toString() || "0");
+        console.log("[TX DEBUG] ==========================================");
+      }
+
       if (shouldSponsor) {
         // Use Privy's sendTransaction with gas sponsorship for embedded wallets
         console.log("[TX] Using sponsored transaction (embedded wallet)");
@@ -455,6 +467,23 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       const errorMessage =
         err instanceof Error ? err.message : "Unknown transaction error";
       console.error("[TX] Transaction failed:", err);
+
+      // DEBUG: Enhanced error logging for passkey investigations
+      console.error("[TX DEBUG] ==========================================");
+      console.error("[TX DEBUG] Transaction Error Details:");
+      console.error("[TX DEBUG] Error type:", err?.constructor?.name);
+      console.error("[TX DEBUG] Error message:", errorMessage);
+      if (err && typeof err === "object") {
+        console.error("[TX DEBUG] Error keys:", Object.keys(err));
+        // Try to extract more details
+        const errObj = err as Record<string, unknown>;
+        if (errObj.cause) console.error("[TX DEBUG] Cause:", errObj.cause);
+        if (errObj.details) console.error("[TX DEBUG] Details:", errObj.details);
+        if (errObj.shortMessage) console.error("[TX DEBUG] Short message:", errObj.shortMessage);
+        if (errObj.metaMessages) console.error("[TX DEBUG] Meta messages:", errObj.metaMessages);
+      }
+      console.error("[TX DEBUG] ==========================================");
+
       setIsSending(false);
       return { hash: null, error: errorMessage };
     }

@@ -29,8 +29,9 @@ const COINGECKO_IDS: Record<string, string> = {
 
 // Fallback prices when CoinGecko API is unavailable
 // These are updated dynamically on each successful CoinGecko fetch to stay current
+// Updated Jan 2026: Gold rallied to ~$5000/oz
 let fallbackPrices: Record<string, number> = {
-    XAUT: 3200, // Gold price per troy oz (XAUT = 1 oz gold) - updated Jan 2026
+    XAUT: 5000, // Gold price per troy oz (XAUT = 1 oz gold) - updated Jan 2026
     WBTC: 105000, // BTC price - updated Jan 2026
 };
 
