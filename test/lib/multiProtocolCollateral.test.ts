@@ -224,8 +224,8 @@ describe('Live Token Price Fetching', () => {
 
         const prices = await fetchLiveTokenPrices();
 
-        // Should return UPDATED fallback values (not old $2700/$100k)
-        expect(prices.XAUT).toBe(3200);
+        // Should return UPDATED fallback values (Jan 2026: gold ~$5000, BTC ~$105k)
+        expect(prices.XAUT).toBe(5000);
         expect(prices.WBTC).toBe(105000);
     });
 
