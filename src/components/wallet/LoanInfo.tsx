@@ -67,7 +67,7 @@ export default function LoanInfo() {
           message={
             <>
               <Text tone="muted" className="mb-3">
-                Please confirm the transaction in your wallet.
+                Processing your transaction.
               </Text>
               <Loading />
             </>

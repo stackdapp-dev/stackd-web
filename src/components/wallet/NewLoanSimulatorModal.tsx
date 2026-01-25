@@ -692,7 +692,7 @@ export default function NewLoanSimulatorModal({
                             </Text>
                         ) : isProcessing ? (
                             <Text tone="muted">
-                                Please confirm the transaction in your wallet.
+                                Processing your transaction.
                             </Text>
                         ) : isApproving ? (
                             <Text tone="muted">

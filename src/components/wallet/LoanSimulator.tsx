@@ -986,7 +986,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         message={
           isProcessing ? (
             <Text tone="muted">
-              Please confirm the transaction in your wallet.
+              Processing your transaction.
             </Text>
           ) : isApproving ? (
             <Text tone="muted">
