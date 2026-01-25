@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import TokenIcon from "@/components/common/TokenIcon";
 import ConfirmationAmountCard from "./ConfirmationAmountCard";
@@ -17,6 +17,8 @@ export interface LoanConfirmationModalProps {
     tokenSymbol: string;
     currentValue: number;
     newValue: number;
+    /** Token price in USD - required for collateral modes to calculate USD values */
+    tokenPrice?: number;
     currentLtv?: number;
     newLtv?: number;
     maxLtv?: number;
@@ -26,6 +28,8 @@ export interface LoanConfirmationModalProps {
     onConfirm: () => void;
     onApprove: () => void;
     warningText?: string;
+    error?: string | null;
+    onRetry?: () => void;
 }
 
 const modeConfig = {
@@ -38,6 +42,7 @@ const modeConfig = {
         successIcon: true,
         buttonText: "Add Collateral",
         label: "Add Collateral Amount",
+        valueChangeLabel: "Collateral Value",
     },
     withdrawCollateral: {
         title: "Confirm Withdraw Collateral",
@@ -48,6 +53,7 @@ const modeConfig = {
         successIcon: false,
         buttonText: "Withdraw Collateral",
         label: "Withdraw Amount",
+        valueChangeLabel: "Collateral Value",
     },
     borrow: {
         title: "Confirm Borrow",
@@ -56,7 +62,8 @@ const modeConfig = {
         defaultWarning: "This will increase your LTV and the risk of liquidation.",
         successIcon: false,
         buttonText: "Borrow",
-        label: "Borrow Amount",
+        label: "New Borrow Amount",
+        valueChangeLabel: "Current Debt",
     },
     repay: {
         title: "Confirm Repay Loan",
@@ -66,6 +73,7 @@ const modeConfig = {
         successIcon: true,
         buttonText: "Repay Loan",
         label: "Repay Amount",
+        valueChangeLabel: "Current Debt",
     },
 };
 
@@ -88,6 +96,7 @@ export default function LoanConfirmationModal({
     tokenSymbol,
     currentValue,
     newValue,
+    tokenPrice,
     currentLtv,
     newLtv,
     maxLtv,
@@ -97,21 +106,73 @@ export default function LoanConfirmationModal({
     onConfirm,
     onApprove,
     warningText,
+    error,
+    onRetry,
 }: LoanConfirmationModalProps) {
     const config = modeConfig[mode];
     const isInProcessingState = isProcessing || isApproving;
+    const hasError = Boolean(error && error.length > 0);
     const showLtvIndicator =
         currentLtv !== undefined && newLtv !== undefined;
     const displayWarning = warningText ?? config.defaultWarning;
 
+    // Calculate USD values for display
+    // For collateral modes (addCollateral, withdrawCollateral): currentValue and newValue are token amounts
+    // We need to multiply by tokenPrice to get USD values
+    // For borrow/repay modes: currentValue and newValue are already in USD
+    const isCollateralMode = mode === "addCollateral" || mode === "withdrawCollateral";
+    const currentUsdValue = isCollateralMode && tokenPrice
+        ? currentValue * tokenPrice
+        : currentValue;
+    const newUsdValue = isCollateralMode && tokenPrice
+        ? newValue * tokenPrice
+        : newValue;
+
     // Build modal message content
     const renderContent = () => {
+        // Processing state takes priority
         if (isInProcessingState) {
             return (
                 <div className="py-8">
                     <ProcessingState
                         state={isApproving ? "approving" : "processing"}
                     />
+                </div>
+            );
+        }
+
+        // Error state - show error message with retry/cancel options
+        if (hasError) {
+            return (
+                <div className="flex flex-col gap-6">
+                    {/* Error Banner */}
+                    <div
+                        data-testid="error-banner"
+                        className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20"
+                    >
+                        <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                        <span className="text-sm text-white/80">{error}</span>
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 py-3 px-4 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onRetry}
+                            className={cn(
+                                "flex-1 py-3 px-4 rounded-xl font-medium text-white transition-all",
+                                "bg-gradient-to-br from-[#ffa02d] to-[#ff8c00]",
+                                "hover:shadow-[0_0_20px_rgba(255,160,45,0.5)]"
+                            )}
+                        >
+                            Try Again
+                        </button>
+                    </div>
                 </div>
             );
         }
@@ -135,7 +196,7 @@ export default function LoanConfirmationModal({
                     label={config.label}
                     amount={amount}
                     tokenSymbol={tokenSymbol}
-                    usdValue={newValue}
+                    usdValue={newUsdValue}
                     variant={config.variant}
                     displayMode={config.displayMode}
                 />
@@ -143,14 +204,14 @@ export default function LoanConfirmationModal({
                 {/* Summary Section */}
                 <div className="bg-white/5 rounded-xl p-4">
                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-white/60">Value Change</span>
+                        <span className="text-white/60">{config.valueChangeLabel}</span>
                         <div className="flex items-center gap-2">
                             <span className="text-white/60">
-                                {formatCurrency(currentValue)}
+                                {formatCurrency(currentUsdValue)}
                             </span>
                             <span className="text-white/40">→</span>
                             <span className="text-white">
-                                {formatCurrency(newValue)}
+                                {formatCurrency(newUsdValue)}
                             </span>
                         </div>
                     </div>

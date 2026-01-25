@@ -20,15 +20,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import LoanConfirmationModal from "@/components/wallet/LoanConfirmationModal";
 
-// Mock Modal component
+// Mock Modal component - includes close button to test close behavior
 vi.mock("@/components/ui/modal", () => ({
     default: ({
         isOpen,
+        onClose,
         title,
         message,
         icon,
     }: {
         isOpen: boolean;
+        onClose: () => void;
         title: string;
         message: React.ReactNode;
         icon?: React.ReactNode;
@@ -36,6 +38,13 @@ vi.mock("@/components/ui/modal", () => ({
         if (!isOpen) return null;
         return (
             <div data-testid="modal">
+                <button
+                    data-testid="modal-close-button"
+                    aria-label="Close"
+                    onClick={onClose}
+                >
+                    X
+                </button>
                 <div data-testid="modal-title">{title}</div>
                 {icon && <div data-testid="modal-icon">{icon}</div>}
                 <div data-testid="modal-message">{message}</div>
@@ -110,6 +119,7 @@ vi.mock("lucide-react", () => ({
     CheckCircle: () => <span data-testid="check-circle-icon">✓</span>,
     AlertTriangle: () => <span data-testid="alert-triangle-icon">⚠</span>,
     ArrowRight: () => <span data-testid="arrow-right-icon">→</span>,
+    XCircle: () => <span data-testid="x-circle-icon">✕</span>,
 }));
 
 // Mock utils
@@ -576,6 +586,393 @@ describe("LoanConfirmationModal Component", () => {
             );
 
             expect(screen.getByText(/\$1,500\.00/)).toBeInTheDocument();
+        });
+    });
+
+    describe("USD Calculation for Collateral Operations", () => {
+        /**
+         * BUG FIX TEST: For collateral operations (withdrawCollateral, addCollateral),
+         * the modal should display USD values calculated from tokenAmount * tokenPrice,
+         * not just the raw token amounts.
+         *
+         * Previously, currentValue and newValue were passed as token amounts
+         * (e.g., 0.0047 XAUT) which displayed as "$0.00" instead of the actual
+         * USD value (~$23.50 at $5000/oz).
+         *
+         * The fix: LoanConfirmationModal now accepts a tokenPrice prop for collateral modes.
+         * When provided, it multiplies currentValue and newValue by tokenPrice to get USD values.
+         */
+
+        it("should display correct USD value for WBTC withdrawal (tokenPrice prop)", () => {
+            // Given: Withdrawing 0.01 WBTC at $100,000/BTC
+            // Current collateral: 0.05 WBTC (should display as $5,000)
+            // New collateral after withdrawal: 0.04 WBTC (should display as $4,000)
+            const tokenPrice = 100000; // $100,000 per WBTC
+            const currentCollateral = 0.05; // 0.05 WBTC (token amount)
+            const newCollateral = 0.04; // 0.04 WBTC (token amount)
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="withdrawCollateral"
+                    collateralType="WBTC"
+                    tokenSymbol="WBTC"
+                    amount={0.01}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.05 WBTC (token amount)
+                    newValue={newCollateral} // 0.04 WBTC (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.05 * 100000 = $5,000, 0.04 * 100000 = $4,000
+            expect(screen.getByText(/\$5,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$4,000\.00/)).toBeInTheDocument();
+        });
+
+        it("should display correct USD value for XAUT withdrawal (tokenPrice prop)", () => {
+            // Given: Withdrawing 0.0047 XAUT at $5,000/oz
+            // Current collateral: 0.01 XAUT (should display as $50)
+            // New collateral after withdrawal: 0.0053 XAUT (should display as $26.50)
+            const tokenPrice = 5000; // $5,000 per oz
+            const currentCollateral = 0.01; // 0.01 XAUT (token amount)
+            const newCollateral = 0.0053; // 0.0053 XAUT (token amount)
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="withdrawCollateral"
+                    collateralType="XAUT"
+                    tokenSymbol="XAUT"
+                    amount={0.0047}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.01 XAUT (token amount)
+                    newValue={newCollateral} // 0.0053 XAUT (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.01 * 5000 = $50, 0.0053 * 5000 = $26.50
+            expect(screen.getByText(/\$50\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$26\.50/)).toBeInTheDocument();
+        });
+
+        it("should display correct USD value for WBTC addCollateral (tokenPrice prop)", () => {
+            // Given: Adding 0.02 WBTC at $100,000/BTC
+            // Current collateral: 0.03 WBTC (should display as $3,000)
+            // New collateral after adding: 0.05 WBTC (should display as $5,000)
+            const tokenPrice = 100000;
+            const currentCollateral = 0.03; // token amount
+            const newCollateral = 0.05; // token amount
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="addCollateral"
+                    collateralType="WBTC"
+                    tokenSymbol="WBTC"
+                    amount={0.02}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.03 WBTC (token amount)
+                    newValue={newCollateral} // 0.05 WBTC (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.03 * 100000 = $3,000, 0.05 * 100000 = $5,000
+            expect(screen.getByText(/\$3,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$5,000\.00/)).toBeInTheDocument();
+        });
+
+        it("should display correct USD value for XAUT addCollateral (tokenPrice prop)", () => {
+            // Given: Adding 0.01 XAUT at $5,000/oz
+            // Current collateral: 0.005 XAUT (should display as $25)
+            // New collateral after adding: 0.015 XAUT (should display as $75)
+            const tokenPrice = 5000;
+            const currentCollateral = 0.005; // token amount
+            const newCollateral = 0.015; // token amount
+
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="addCollateral"
+                    collateralType="XAUT"
+                    tokenSymbol="XAUT"
+                    amount={0.01}
+                    tokenPrice={tokenPrice}
+                    currentValue={currentCollateral} // 0.005 XAUT (token amount)
+                    newValue={newCollateral} // 0.015 XAUT (token amount)
+                />
+            );
+
+            // Modal calculates USD internally: 0.005 * 5000 = $25, 0.015 * 5000 = $75
+            expect(screen.getByText(/\$25\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$75\.00/)).toBeInTheDocument();
+        });
+
+        it("should handle borrow mode without tokenPrice (values already in USD)", () => {
+            // For borrow mode, currentValue and newValue are already in USD
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="borrow"
+                    tokenSymbol="USDT"
+                    amount={500}
+                    currentValue={1000} // $1,000 current debt (already in USD)
+                    newValue={1500} // $1,500 new debt (already in USD)
+                />
+            );
+
+            // Should display USD values correctly (no conversion needed)
+            expect(screen.getByText(/\$1,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$1,500\.00/)).toBeInTheDocument();
+        });
+
+        it("should handle repay mode without tokenPrice (values already in USD)", () => {
+            // For repay mode, currentValue and newValue are already in USD
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="repay"
+                    tokenSymbol="USDT"
+                    amount={200}
+                    currentValue={1000} // $1,000 current debt (already in USD)
+                    newValue={800} // $800 new debt after repayment (already in USD)
+                />
+            );
+
+            // Should display USD values correctly (no conversion needed)
+            expect(screen.getByText(/\$1,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$800\.00/)).toBeInTheDocument();
+        });
+
+        it("should fallback to raw values when tokenPrice is not provided for collateral mode", () => {
+            // This tests backward compatibility: if tokenPrice is not passed,
+            // currentValue and newValue are displayed as-is
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    mode="withdrawCollateral"
+                    collateralType="WBTC"
+                    tokenSymbol="WBTC"
+                    amount={0.01}
+                    // tokenPrice NOT provided
+                    currentValue={5000} // Pre-calculated USD value
+                    newValue={4000} // Pre-calculated USD value
+                />
+            );
+
+            // Should display the values as-is
+            expect(screen.getByText(/\$5,000\.00/)).toBeInTheDocument();
+            expect(screen.getByText(/\$4,000\.00/)).toBeInTheDocument();
+        });
+    });
+
+    describe("Close Button During Processing States", () => {
+        it("should always render close button (X) even during processing state", () => {
+            render(<LoanConfirmationModal {...defaultProps} isProcessing={true} />);
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            expect(closeButton).toBeInTheDocument();
+        });
+
+        it("should always render close button (X) even during approving state", () => {
+            render(<LoanConfirmationModal {...defaultProps} isApproving={true} />);
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            expect(closeButton).toBeInTheDocument();
+        });
+
+        it("should call onClose when close button is clicked during processing state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should call onClose when close button is clicked during approving state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isApproving={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should call onClose when close button is clicked during both processing and approving state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    isApproving={true}
+                    onClose={onClose}
+                />
+            );
+
+            const closeButton = screen.getByTestId("modal-close-button");
+            fireEvent.click(closeButton);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe("Error State", () => {
+        it("should display error message when error prop is provided", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed: insufficient funds"
+                />
+            );
+
+            expect(screen.getByText("Transaction failed: insufficient funds")).toBeInTheDocument();
+        });
+
+        it("should show error banner with red/error styling when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            const errorBanner = screen.getByTestId("error-banner");
+            expect(errorBanner).toBeInTheDocument();
+            expect(errorBanner).toHaveClass("bg-red-500/10");
+            expect(errorBanner).toHaveClass("border-red-500/20");
+        });
+
+        it("should display XCircle (error) icon in error state", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.getByTestId("x-circle-icon")).toBeInTheDocument();
+        });
+
+        it("should show 'Try Again' button when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.getByText("Try Again")).toBeInTheDocument();
+        });
+
+        it("should call onRetry when 'Try Again' button is clicked", () => {
+            const onRetry = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                    onRetry={onRetry}
+                />
+            );
+
+            fireEvent.click(screen.getByText("Try Again"));
+            expect(onRetry).toHaveBeenCalledTimes(1);
+        });
+
+        it("should still show Cancel button when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.getByText("Cancel")).toBeInTheDocument();
+        });
+
+        it("should call onClose when Cancel button is clicked in error state", () => {
+            const onClose = vi.fn();
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                    onClose={onClose}
+                />
+            );
+
+            fireEvent.click(screen.getByText("Cancel"));
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it("should hide ConfirmationAmountCard when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.queryByTestId("confirmation-amount-card")).not.toBeInTheDocument();
+        });
+
+        it("should hide LTV indicator when error is displayed", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    currentLtv={30}
+                    newLtv={45}
+                    error="Transaction failed"
+                />
+            );
+
+            expect(screen.queryByTestId("ltv-change-indicator")).not.toBeInTheDocument();
+        });
+
+        it("should not show error when error prop is null", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error={null}
+                />
+            );
+
+            expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
+            expect(screen.queryByText("Try Again")).not.toBeInTheDocument();
+        });
+
+        it("should not show error when error prop is empty string", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    error=""
+                />
+            );
+
+            expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
+        });
+
+        it("should prioritize processing state over error state", () => {
+            render(
+                <LoanConfirmationModal
+                    {...defaultProps}
+                    isProcessing={true}
+                    error="Transaction failed"
+                />
+            );
+
+            // Should show processing, not error
+            expect(screen.getByTestId("processing-state")).toBeInTheDocument();
+            expect(screen.queryByTestId("error-banner")).not.toBeInTheDocument();
         });
     });
 });

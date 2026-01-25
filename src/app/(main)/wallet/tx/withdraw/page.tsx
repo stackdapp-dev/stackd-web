@@ -17,7 +17,7 @@ import { parseUnits } from "viem";
 
 export default function WithdrawCollateralPage() {
     const router = useRouter();
-    const [amount, setAmount] = useState(0);
+    const [amount, setAmount] = useState("");  // Empty string for placeholder to show
     const [isProcessing, setIsProcessing] = useState(false);
     const [ackChecked, setAckChecked] = useState(false);
 
@@ -27,20 +27,21 @@ export default function WithdrawCollateralPage() {
     const { refetchLoanData } = useLoanCalculationsContext();
 
     const available = breakdown.availableToWithdrawBtc;
-    const withdrawCheck = canWithdraw(amount);
+    const parsedAmount = parseFloat(amount) || 0;  // Handle empty string as 0
+    const withdrawCheck = canWithdraw(parsedAmount);
 
     // Apply 1% safety buffer to max withdrawal to account for precision differences
     // between JS floating-point calculations and Compound's on-chain uint256 math
     const safeMaxWithdraw = available * 0.99;
 
     const handleMax = useCallback(() => {
-        setAmount(safeMaxWithdraw);
+        setAmount(String(safeMaxWithdraw));
     }, [safeMaxWithdraw]);
 
     const handleAction = useCallback(async () => {
-        if (isProcessing || amount <= 0) return;
+        if (isProcessing || parsedAmount <= 0) return;
 
-        const check = canWithdraw(amount);
+        const check = canWithdraw(parsedAmount);
         if (!check.allowed) {
             console.error("Withdrawal blocked:", check.reason);
             return;
@@ -52,7 +53,7 @@ export default function WithdrawCollateralPage() {
             if (!tokenMeta) throw new Error("WBTC metadata not found");
 
             const tokenAddress = tokenMeta.address as `0x${string}`;
-            const amountBigInt = parseUnits(String(amount), tokenMeta.decimals);
+            const amountBigInt = parseUnits(String(parsedAmount), tokenMeta.decimals);
 
             const result = await withdraw(tokenAddress, amountBigInt);
             if (result.error) throw new Error(result.error);
@@ -64,12 +65,12 @@ export default function WithdrawCollateralPage() {
         } finally {
             setIsProcessing(false);
         }
-    }, [amount, isProcessing, canWithdraw, withdraw, refetchBalances, refetchLoanData, router]);
+    }, [parsedAmount, isProcessing, canWithdraw, withdraw, refetchBalances, refetchLoanData, router]);
 
-    // Button disabled conditions
+    // Button disabled conditions (use parsedAmount for numeric comparisons)
     const isDisabled =
         available <= 0 ||
-        amount <= 0 ||
+        parsedAmount <= 0 ||
         isProcessing ||
         !ackChecked ||
         !withdrawCheck.allowed;
@@ -114,17 +115,17 @@ export default function WithdrawCollateralPage() {
             <div className="flex flex-col gap-2">
                 <InputAmountCard
                     label="Amount"
-                    value={String(amount)}
-                    onChangeText={(value) => setAmount(Number(value))}
+                    value={amount}
+                    onChangeText={setAmount}
                     tokenSymbol="WBTC"
-                    usdValue={amount * (breakdown.totalCollateralUsd / breakdown.totalCollateralBtc || 0)}
+                    usdValue={parsedAmount * (breakdown.totalCollateralUsd / breakdown.totalCollateralBtc || 0)}
                     availableAmount={available}
                     onMaxPress={handleMax}
                     editable={!isProcessing}
                 />
 
                 {/* Error messages */}
-                {!withdrawCheck.allowed && amount > 0 && (
+                {!withdrawCheck.allowed && parsedAmount > 0 && (
                     <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
                         <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                         <p className="text-red-400 text-sm leading-relaxed">{withdrawCheck.reason}</p>
