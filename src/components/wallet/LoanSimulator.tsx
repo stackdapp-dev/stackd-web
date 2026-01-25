@@ -997,29 +997,31 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         />
       </div>
 
-      {/* Confirmation Modal */}
-      <LoanConfirmationModal
-        isOpen={showConfirmModal}
-        onClose={handleModalClose}
-        mode={mode as 'addCollateral' | 'withdrawCollateral' | 'borrow' | 'repay'}
-        collateralType={collateralSymbol as 'WBTC' | 'XAUT'}
-        amount={transactionAmount}
-        tokenSymbol={modeConfig.tokenSymbol}
-        currentValue={mode === 'borrow' || mode === 'repay' ? currentBorrowedAmount : currentCollateralAmount}
-        newValue={mode === 'borrow' || mode === 'repay' ? simulatedBorrow : simulatedCollateral}
-        tokenPrice={mode === 'addCollateral' || mode === 'withdrawCollateral' ? collateralPrice : undefined}
-        currentLtv={currentResult.ltv}
-        newLtv={simulatedResult.ltv}
-        maxLtv={maxLtv}
-        isProcessing={isProcessing}
-        isApproving={isApproving}
-        needsApproval={needsApproval}
-        onConfirm={handleConfirm}
-        onApprove={handleApprove}
-        warningText={modeConfig.warningText}
-        error={error}
-        onRetry={handleRetry}
-      />
+      {/* Confirmation Modal - only render for non-simulate modes */}
+      {mode !== "simulate" && (
+        <LoanConfirmationModal
+          isOpen={showConfirmModal}
+          onClose={handleModalClose}
+          mode={mode as 'addCollateral' | 'withdrawCollateral' | 'borrow' | 'repay'}
+          collateralType={collateralSymbol as 'WBTC' | 'XAUT'}
+          amount={transactionAmount}
+          tokenSymbol={modeConfig.tokenSymbol}
+          currentValue={mode === 'borrow' || mode === 'repay' ? currentBorrowedAmount : currentCollateralAmount}
+          newValue={mode === 'borrow' || mode === 'repay' ? simulatedBorrow : simulatedCollateral}
+          tokenPrice={mode === 'addCollateral' || mode === 'withdrawCollateral' ? collateralPrice : undefined}
+          currentLtv={currentResult.ltv}
+          newLtv={simulatedResult.ltv}
+          maxLtv={maxLtv}
+          isProcessing={isProcessing}
+          isApproving={isApproving}
+          needsApproval={needsApproval}
+          onConfirm={handleConfirm}
+          onApprove={handleApprove}
+          warningText={modeConfig.warningText}
+          error={error}
+          onRetry={handleRetry}
+        />
+      )}
 
       {/* ETH Alert Modal - shown when insufficient ETH for Fluid operations */}
       <Modal

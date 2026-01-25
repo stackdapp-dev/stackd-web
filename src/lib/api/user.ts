@@ -24,37 +24,51 @@ export type UserPaymentMethod = {
 export type UserPaymentMethodInput = Omit<UserPaymentMethod, "id">;
 
 export const getUserProfile = async (accessToken: string) => {
-  const response = await fetch(`${baseUrl}/auth/me`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  try {
+    const response = await fetch(`${baseUrl}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
-  if (!response.ok) {
-    console.error("Failed to fetch user profile:", response);
+    if (!response.ok) {
+      // Use console.warn instead of console.error to avoid triggering Next.js error overlay
+      console.warn("Failed to fetch user profile:", response.status);
+      return null;
+    }
+
+    const json = await response.json();
+
+    return json.user as UserProfile;
+  } catch (error) {
+    // Network errors - use warn to avoid error overlay
+    console.warn("Failed to fetch user profile:", error);
     return null;
   }
-
-  const json = await response.json();
-
-  return json.user as UserProfile;
 };
 
 export const getUserPaymentMethods = async (accessToken: string) => {
-  const response = await fetch(`${baseUrl}/payment-methods`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  try {
+    const response = await fetch(`${baseUrl}/payment-methods`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
-  if (!response.ok) {
-    console.error("Failed to fetch user payment methods:", response);
+    if (!response.ok) {
+      // Use console.warn instead of console.error to avoid triggering Next.js error overlay
+      console.warn("Failed to fetch user payment methods:", response.status);
+      return null;
+    }
+
+    const json = await response.json();
+
+    return json.data as UserPaymentMethod[];
+  } catch (error) {
+    // Network errors - use warn to avoid error overlay
+    console.warn("Failed to fetch user payment methods:", error);
     return null;
   }
-
-  const json = await response.json();
-
-  return json.data as UserPaymentMethod[];
 };
 
 export const addUserPaymentMethod = async (

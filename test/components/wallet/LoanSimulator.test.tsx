@@ -1375,6 +1375,39 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
  * 2. Reset isProcessing/isApproving state when modal is closed
  * 3. Close button (X) should always be clickable
  */
+describe("LoanSimulator - Simulate Mode should not render LoanConfirmationModal", () => {
+    /**
+     * Bug Fix: LoanConfirmationModal crashes when mode="simulate"
+     *
+     * Problem: LoanConfirmationModal's modeConfig doesn't have a "simulate" entry,
+     * so when mode="simulate" is passed, modeConfig[mode] returns undefined,
+     * causing "Cannot read properties of undefined (reading 'title')" error.
+     *
+     * Solution: Don't render LoanConfirmationModal when mode is "simulate"
+     * since simulate mode doesn't have an Apply button anyway.
+     */
+    describe("Implementation verification", () => {
+        it("should NOT render LoanConfirmationModal when mode is simulate", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // The LoanConfirmationModal should only be rendered when mode is NOT "simulate"
+            // Look for a conditional that excludes simulate mode
+            const hasConditionalRendering = componentCode.match(
+                /mode\s*!==\s*["']simulate["'].*LoanConfirmationModal|{.*mode\s*!==\s*["']simulate["'].*&&.*<LoanConfirmationModal/s
+            );
+
+            expect(hasConditionalRendering).toBeTruthy();
+        });
+    });
+});
+
 describe("LoanSimulator - Modal Close Button During Processing States", () => {
     describe("Implementation verification for always-closeable modal", () => {
         it("should NOT have conditional check preventing close during processing", async () => {
