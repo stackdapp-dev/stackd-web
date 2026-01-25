@@ -524,11 +524,12 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
   // Format display values based on mode
   const formatInputDisplay = useCallback((value: number) => {
-    if (mode === "addCollateral") {
-      return `${formatAmount(value, 8)} ${collateralSymbol}`;
+    if (mode === "addCollateral" || mode === "withdrawCollateral") {
+      // For collateral modes, show the USD value (token amount × price)
+      return formatCurrency(value * collateralPrice, 2);
     }
     return formatCurrency(value, 2);
-  }, [mode, collateralSymbol]);
+  }, [mode, collateralPrice]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -1000,7 +1001,11 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                 <p className="text-3xl font-bold text-white">
                   {formatInputDisplay(transactionAmount)}
                 </p>
-                <p className="text-white/40 text-sm mt-1">{modeConfig.tokenSymbol}</p>
+                <p className="text-white/40 text-sm mt-1">
+                  {(mode === "addCollateral" || mode === "withdrawCollateral")
+                    ? `${formatAmount(transactionAmount, 4)} ${modeConfig.tokenSymbol}`
+                    : modeConfig.tokenSymbol}
+                </p>
               </div>
 
               {/* Summary based on mode */}
@@ -1046,12 +1051,10 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
               {mode === "withdrawCollateral" && (
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Current Collateral</span>
-                    <span className="text-white">{formatAmount(currentCollateralAmount, 4)} {collateralSymbol}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-white/50">Remaining Collateral</span>
-                    <span className="text-amber-400 font-semibold">{formatAmount(simulatedCollateral, 4)} {collateralSymbol}</span>
+                    <span className="text-white/50">Collateral Value</span>
+                    <span className="text-white">
+                      {formatCurrency(currentCollateralAmount * collateralPrice, 2)} → <span className="text-amber-400 font-semibold">{formatCurrency(simulatedCollateral * collateralPrice, 2)}</span>
+                    </span>
                   </div>
                 </div>
               )}
