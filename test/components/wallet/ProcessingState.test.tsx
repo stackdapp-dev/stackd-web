@@ -18,7 +18,7 @@ describe('ProcessingState Component', () => {
             const { ProcessingState } = await import('@/components/wallet/ProcessingState');
             render(<ProcessingState state="processing" />);
 
-            expect(screen.getByText('Please confirm the transaction in your wallet.')).toBeInTheDocument();
+            expect(screen.getByText('Processing your transaction.')).toBeInTheDocument();
         });
 
         it('should display correct default message for approving state', async () => {
@@ -43,7 +43,7 @@ describe('ProcessingState Component', () => {
             render(<ProcessingState state="processing" message={customMessage} />);
 
             expect(screen.getByText(customMessage)).toBeInTheDocument();
-            expect(screen.queryByText('Please confirm the transaction in your wallet.')).not.toBeInTheDocument();
+            expect(screen.queryByText('Processing your transaction.')).not.toBeInTheDocument();
         });
 
         it('should use custom message for approving state', async () => {
@@ -107,7 +107,7 @@ describe('ProcessingState Component', () => {
             const { ProcessingState } = await import('@/components/wallet/ProcessingState');
             render(<ProcessingState state="processing" />);
 
-            const textElement = screen.getByText('Please confirm the transaction in your wallet.');
+            const textElement = screen.getByText('Processing your transaction.');
             expect(textElement).toHaveClass('text-center');
             expect(textElement).toHaveClass('text-white/60');
         });
