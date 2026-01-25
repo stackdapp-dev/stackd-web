@@ -36,7 +36,7 @@ const modeConfig = {
     addCollateral: {
         title: "Confirm Add Collateral",
         variant: "success" as const,
-        displayMode: "token" as const,
+        displayMode: "both" as const,
         defaultWarning:
             "This will increase your collateral and reduce liquidation risk.",
         successIcon: true,
@@ -127,6 +127,12 @@ export default function LoanConfirmationModal({
     const newUsdValue = isCollateralMode && tokenPrice
         ? newValue * tokenPrice
         : newValue;
+    // Transaction amount in USD - this is what we're actually transacting
+    // For collateral modes: amount is in tokens, multiply by price
+    // For borrow/repay: amount is already in USD
+    const transactionUsdValue = isCollateralMode && tokenPrice
+        ? amount * tokenPrice
+        : amount;
 
     // Build modal message content
     const renderContent = () => {
@@ -196,7 +202,7 @@ export default function LoanConfirmationModal({
                     label={config.label}
                     amount={amount}
                     tokenSymbol={tokenSymbol}
-                    usdValue={newUsdValue}
+                    usdValue={transactionUsdValue}
                     variant={config.variant}
                     displayMode={config.displayMode}
                 />
