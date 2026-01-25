@@ -384,6 +384,14 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     setShowConfirmModal(true);
   }, []);
 
+  // Handle closing modal - always allow closing, even during processing
+  // This is important for stuck transactions where user needs to dismiss modal
+  const handleModalClose = useCallback(() => {
+    setShowConfirmModal(false);
+    setIsProcessing(false);
+    setIsApproving(false);
+  }, []);
+
   // Handle approval
   const handleApprove = useCallback(async () => {
     if (isApproving) return;
@@ -983,7 +991,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       {/* Confirmation Modal */}
       <LoanConfirmationModal
         isOpen={showConfirmModal}
-        onClose={() => !isProcessing && !isApproving && setShowConfirmModal(false)}
+        onClose={handleModalClose}
         mode={mode as 'addCollateral' | 'withdrawCollateral' | 'borrow' | 'repay'}
         collateralType={collateralSymbol as 'WBTC' | 'XAUT'}
         amount={transactionAmount}
