@@ -5,6 +5,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Mock the config module to avoid env var requirement during tests
+vi.mock('@/lib/api/config', () => ({
+    baseUrl: 'https://test-api.example.com',
+    arbiscanUrl: 'https://arbiscan.io',
+}));
+
 import { getUserPaymentMethods, getUserProfile } from '@/lib/api/user';
 
 // Mock fetch globally
