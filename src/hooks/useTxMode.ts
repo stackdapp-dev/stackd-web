@@ -13,7 +13,7 @@ import { maxUint256, parseUnits } from "viem";
 export type TxMode = "borrow" | "repay";
 
 export function useTxMode(mode: TxMode = "borrow") {
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState("");  // Empty string for placeholder to show
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewAmount, setPreviewAmount] = useState(0);
 
@@ -33,25 +33,28 @@ export function useTxMode(mode: TxMode = "borrow") {
   const maxRepay = Math.min(availableForRepay, borrowedAmount); // Max repayable amount
   const available = mode === "repay" ? maxRepay : availableForBorrow; // Max amount user can transact
 
+  // Parse amount to number for calculations (empty string becomes 0)
+  const parsedAmount = parseFloat(amount) || 0;
+
   useEffect(() => {
     const t = setTimeout(() => {
       if (mode === "repay") {
-        const capped = Math.min(amount, borrowedAmount);
+        const capped = Math.min(parsedAmount, borrowedAmount);
         setPreviewAmount(-capped);
       } else {
-        setPreviewAmount(amount);
+        setPreviewAmount(parsedAmount);
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [amount, mode, borrowedAmount]);
+  }, [parsedAmount, mode, borrowedAmount]);
 
   const handleMax = useCallback(() => {
-    setAmount(available);
+    setAmount(String(available));
     setPreviewAmount(mode === "repay" ? -available : available);
   }, [available, mode]);
 
   const handleAction = useCallback(async () => {
-    if (isProcessing || amount <= 0) return;
+    if (isProcessing || parsedAmount <= 0) return;
 
     setIsProcessing(true);
     try {
@@ -59,7 +62,7 @@ export function useTxMode(mode: TxMode = "borrow") {
       if (!tokenMeta) throw new Error("USDT metadata not found");
 
       const tokenAddress = tokenMeta.address as `0x${string}`;
-      const amountBigInt = parseUnits(String(amount), tokenMeta.decimals);
+      const amountBigInt = parseUnits(String(parsedAmount), tokenMeta.decimals);
 
       if (mode === "repay") {
         const bufferAmount = parseUnits("1", tokenMeta.decimals); // 1 USDT buffer
@@ -73,7 +76,7 @@ export function useTxMode(mode: TxMode = "borrow") {
         }
 
         // Use maxUint256 when repaying max available amount
-        const repayAmount = amount >= available ? maxUint256 : amountBigInt;
+        const repayAmount = parsedAmount >= available ? maxUint256 : amountBigInt;
         const supplyResult = await supply(tokenAddress, repayAmount);
         if (supplyResult.error) throw new Error(supplyResult.error);
       } else {
@@ -89,7 +92,7 @@ export function useTxMode(mode: TxMode = "borrow") {
     } finally {
       setIsProcessing(false);
     }
-  }, [amount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetchLoanData, router, allowance, available]);
+  }, [parsedAmount, isProcessing, mode, approve, supply, withdraw, refetchBalances, refetchLoanData, router, allowance, available]);
 
   useEffect(() => {
     if (!autoAttempted.current) autoAttempted.current = true;

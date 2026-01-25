@@ -83,9 +83,9 @@ export default function NewLoanSimulatorModal({
     const [needsApproval, setNeedsApproval] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
 
-    // Input state
+    // Input state (empty string for placeholder to show)
     const [collateralInput, setCollateralInput] = useState("");
-    const [borrowInput, setBorrowInput] = useState("0");
+    const [borrowInput, setBorrowInput] = useState("");
 
     // Parse inputs for calculations
     const parsedCollateral = parseFloat(collateralInput) || 0;
@@ -183,12 +183,12 @@ export default function NewLoanSimulatorModal({
         void checkAllowance();
     }, [parsedCollateral, collateralDecimals, isXaut, collateralSymbol, fluid.allowance, compound.allowance]);
 
-    // Handle collateral input change
+    // Handle collateral input change (reset borrow to empty for placeholder to show)
     const handleCollateralChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setCollateralInput(e.target.value);
         // Reset borrow when collateral changes significantly
         if (parseFloat(e.target.value) === 0) {
-            setBorrowInput("0");
+            setBorrowInput("");
         }
     }, []);
 
@@ -468,11 +468,11 @@ export default function NewLoanSimulatorModal({
         }
     }, [isProcessing, isValid, parsedCollateral, parsedBorrow, collateralDecimals, isXaut, fluid, compound, refetchBalances, onComplete, onClose, collateralSymbol, publicClient]);
 
-    // Reset state when modal closes
+    // Reset state when modal closes (empty string for placeholder to show)
     useEffect(() => {
         if (!isOpen) {
             setCollateralInput("");
-            setBorrowInput("0");
+            setBorrowInput("");
             setShowConfirmModal(false);
             setIsProcessing(false);
             setIsConfirming(false);

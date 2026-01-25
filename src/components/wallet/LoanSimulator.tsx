@@ -188,8 +188,8 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     }
   }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.availableToWithdrawBtc, collateralSymbol, isXaut, xautAvailableToWithdraw, xautBalance]);
 
-  // Simulator state - store input as string
-  const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "0");
+  // Simulator state - store input as string (empty for placeholder to show)
+  const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "");
 
   // Sandbox mode - custom collateral input (empty string allows placeholder to show)
   const [sandboxCollateral, setSandboxCollateral] = useState("");
@@ -366,9 +366,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     []
   );
 
-  // Reset to initial values
+  // Reset to initial values (empty string for placeholder to show)
   const handleReset = useCallback(() => {
-    setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "0");
+    setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "");
     if (mode === "simulate") {
       setSandboxCollateral("");
     }
@@ -519,11 +519,11 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
       setShowConfirmModal(false);
 
-      // Reset input and call completion callback
+      // Reset input and call completion callback (empty string for placeholder to show)
       if (mode === "borrow") {
         setInputValue(String(parsedInput));
       } else {
-        setInputValue("0");
+        setInputValue("");
       }
 
       onComplete?.();
