@@ -14,6 +14,7 @@ import {
   convertOraclePriceToUsd,
   XAUT_USDT_VAULT,
   ORACLE_PRICE_DECIMALS,
+  FLUID_MIN_AMOUNT_RAW,
   type FluidUserPosition,
   type FluidVaultData,
 } from "@/lib/web3/fluid";
@@ -718,6 +719,17 @@ export function useFluid(): UseFluidResult {
       if (!acct) {
         return { txHash: null, error: "No account connected" };
       }
+      if (!ethereumPublicClient) {
+        return { txHash: null, error: "No public client available" };
+      }
+
+      // Validate minimum amounts - Fluid vault rejects amounts below 10000 raw units
+      if (collateralAmount < FLUID_MIN_AMOUNT_RAW) {
+        return { txHash: null, error: "Minimum collateral is 0.01 XAUT" };
+      }
+      if (borrowAmount < FLUID_MIN_AMOUNT_RAW) {
+        return { txHash: null, error: "Minimum borrow is $0.01 USDT" };
+      }
 
       try {
         // Use existing nftId or 0 to create new position
@@ -729,6 +741,68 @@ export function useFluid(): UseFluidResult {
           borrowAmount: borrowAmount.toString(),
           isNewPosition: positionNftId === BigInt(0),
         });
+
+        // Pre-approval check for external wallets and iOS Safari passkey wallets
+        // The vault needs approval to transfer XAUT from the user
+        const xautAddress = ETHEREUM_TOKEN_ADDRESSES.XAUT as Address;
+        const spender = XAUT_USDT_VAULT as Address;
+
+        // Check current allowance
+        let currentAllowance: bigint;
+        try {
+          const allowanceResult = await ethereumPublicClient.readContract({
+            address: xautAddress,
+            abi: ERC20_ABI,
+            functionName: "allowance",
+            args: [acct as Address, spender],
+          });
+          currentAllowance = allowanceResult as bigint;
+        } catch (err) {
+          console.error("[FLUID] SupplyAndBorrow allowance check failed:", err);
+          currentAllowance = BigInt(0);
+        }
+
+        console.log("[FLUID] SupplyAndBorrow - Current allowance:", currentAllowance.toString());
+        console.log("[FLUID] SupplyAndBorrow - Required collateral amount:", collateralAmount.toString());
+
+        // If allowance is insufficient, approve first
+        if (currentAllowance < collateralAmount) {
+          console.log("[FLUID] SupplyAndBorrow - Approving XAUT for vault...");
+          const approveData = encodeApproveData(spender, collateralAmount);
+          const approvalResult = await sendSponsoredTransaction({
+            to: xautAddress,
+            data: approveData,
+            chainId: mainnet.id,
+            forceNoSponsor: true, // Disable sponsorship for Ethereum mainnet Fluid operations
+          });
+
+          if (approvalResult.error) {
+            return { txHash: null, error: `Approval failed: ${approvalResult.error}` };
+          }
+
+          console.log("[FLUID] SupplyAndBorrow - Approval tx submitted:", approvalResult.hash);
+          // Wait for approval to be processed before the main transaction
+          // Ethereum mainnet blocks are ~12 seconds, so wait a bit for the tx to be included
+          await new Promise(resolve => setTimeout(resolve, 3000));
+
+          // Re-check allowance to ensure approval was processed
+          try {
+            const newAllowance = await ethereumPublicClient.readContract({
+              address: xautAddress,
+              abi: ERC20_ABI,
+              functionName: "allowance",
+              args: [acct as Address, spender],
+            });
+            console.log("[FLUID] SupplyAndBorrow - New allowance after approval:", (newAllowance as bigint).toString());
+            if ((newAllowance as bigint) < collateralAmount) {
+              console.log("[FLUID] SupplyAndBorrow - Allowance still insufficient, waiting longer...");
+              // Wait additional time for the approval to be mined
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+          } catch (err) {
+            console.error("[FLUID] SupplyAndBorrow - Error re-checking allowance:", err);
+          }
+        }
 
         const data = encodeFluidSupplyAndBorrow(
           positionNftId,
@@ -754,7 +828,7 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [nftId, acct, sendSponsoredTransaction]
+    [nftId, acct, ethereumPublicClient, sendSponsoredTransaction]
   );
 
   return {

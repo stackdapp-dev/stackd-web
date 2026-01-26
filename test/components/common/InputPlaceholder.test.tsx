@@ -76,8 +76,9 @@ describe("Input Placeholder Behavior - Priority 1 (Decimal/Amount inputs)", () =
         it("should have placeholder on collateral input", () => {
             const code = readComponentFile("src/components/wallet/NewLoanSimulatorModal.tsx");
 
-            // Collateral input should have placeholder="0"
-            expect(code).toMatch(/placeholder\s*=\s*["']0["']/);
+            // Collateral input should have placeholder (static "0" for WBTC or dynamic "Min: X" for XAUT)
+            // The pattern is: placeholder={isXaut ? `Min: ${minCollateral}` : "0"}
+            expect(code).toMatch(/placeholder\s*=\s*\{isXaut\s*\?\s*`Min:/);
         });
 
         it("should reset borrowInput to empty string when modal closes", () => {

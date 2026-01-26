@@ -7,10 +7,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
 
-// Mock the fluid library functions
-vi.mock("@/lib/web3/fluid", () => ({
-    getUserPositions: vi.fn(),
-}));
+// Mock the fluid library functions while preserving constants
+vi.mock("@/lib/web3/fluid", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@/lib/web3/fluid")>();
+    return {
+        ...actual,
+        getUserPositions: vi.fn(),
+    };
+});
 
 // Import after mocking
 import { getUserPositions } from "@/lib/web3/fluid";
@@ -462,6 +466,70 @@ describe("useFluid - Transaction Functions", () => {
             // Supply, withdraw, borrow, repay all need nftId
             // Look for nftId validation in transaction functions
             expect(hookCode).toMatch(/if\s*\(\s*!nftId\s*\)/);
+        });
+    });
+
+    describe("Minimum Amount Validation", () => {
+        it("should have FLUID_MIN_AMOUNT_RAW constant defined", async () => {
+            const { FLUID_MIN_AMOUNT_RAW } = await import("@/lib/web3/fluid");
+            expect(FLUID_MIN_AMOUNT_RAW).toBe(BigInt(10000));
+        });
+
+        it("should have FLUID_MIN_COLLATERAL_XAUT constant defined as 0.01", async () => {
+            const { FLUID_MIN_COLLATERAL_XAUT } = await import("@/lib/web3/fluid");
+            expect(FLUID_MIN_COLLATERAL_XAUT).toBe(0.01);
+        });
+
+        it("should have FLUID_MIN_BORROW_USDT constant defined as 0.01", async () => {
+            const { FLUID_MIN_BORROW_USDT } = await import("@/lib/web3/fluid");
+            expect(FLUID_MIN_BORROW_USDT).toBe(0.01);
+        });
+
+        it("supplyAndBorrow should validate minimum collateral amount in hook code", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should import FLUID_MIN_AMOUNT_RAW
+            expect(hookCode).toContain("FLUID_MIN_AMOUNT_RAW");
+
+            // Should check collateral amount against minimum
+            expect(hookCode).toMatch(/collateralAmount\s*<\s*FLUID_MIN_AMOUNT_RAW/);
+        });
+
+        it("supplyAndBorrow should validate minimum borrow amount in hook code", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should check borrow amount against minimum
+            expect(hookCode).toMatch(/borrowAmount\s*<\s*FLUID_MIN_AMOUNT_RAW/);
+        });
+
+        it("should return error message mentioning minimum when collateral is below threshold", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have error message about minimum collateral
+            expect(hookCode).toMatch(/Minimum collateral|minimum.*0\.01.*XAUT/i);
+        });
+
+        it("should return error message mentioning minimum when borrow is below threshold", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should have error message about minimum borrow
+            expect(hookCode).toMatch(/Minimum borrow|minimum.*0\.01.*USDT/i);
         });
     });
 });

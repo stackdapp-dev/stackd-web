@@ -24,7 +24,8 @@ import {
     checkTransactionStatus,
     isAbortError,
 } from "@/lib/web3/transactionConfirmation";
-import { X, AlertTriangle, CheckCircle } from "lucide-react";
+import { X, AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { FLUID_MIN_COLLATERAL_XAUT, FLUID_MIN_BORROW_USDT } from "@/lib/web3/fluid";
 import ConfirmationAmountCard from "@/components/wallet/ConfirmationAmountCard";
 import { ProcessingState } from "@/components/wallet/ProcessingState";
 import { parseUnits } from "viem";
@@ -124,8 +125,16 @@ export default function NewLoanSimulatorModal({
         });
     }, [collateralPrice, maxLtv, liquidationRatio, borrowApr]);
 
-    // Check if form is valid
-    const isValid = parsedCollateral > 0 && parsedBorrow > 0 && parsedBorrow <= maxBorrow;
+    // Check minimum amounts for XAUT (Fluid vault requires min 10000 raw units = 0.01)
+    const minCollateral = isXaut ? FLUID_MIN_COLLATERAL_XAUT : 0.00001; // WBTC has lower practical minimum
+    const minBorrow = isXaut ? FLUID_MIN_BORROW_USDT : 0.01;
+
+    // Validation messages for minimum amounts
+    const collateralBelowMinimum = parsedCollateral > 0 && parsedCollateral < minCollateral;
+    const borrowBelowMinimum = parsedBorrow > 0 && parsedBorrow < minBorrow;
+
+    // Check if form is valid (including minimum amount requirements)
+    const isValid = parsedCollateral >= minCollateral && parsedBorrow >= minBorrow && parsedBorrow <= maxBorrow;
 
     // Check allowance for collateral token
     useEffect(() => {
@@ -554,7 +563,7 @@ export default function NewLoanSimulatorModal({
                                     "focus:outline-none focus:border-purple-500/50",
                                     "placeholder:text-white/30"
                                 )}
-                                placeholder="0"
+                                placeholder={isXaut ? `Min: ${minCollateral}` : "0"}
                                 data-testid="collateral-input"
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">
@@ -564,6 +573,12 @@ export default function NewLoanSimulatorModal({
                         <p className="text-white/40 text-xs mt-1 text-right">
                             ≈ {formatCurrency(parsedCollateral * collateralPrice)}
                         </p>
+                        {collateralBelowMinimum && isXaut && (
+                            <div className="flex items-center gap-2 mt-2 text-amber-400 text-xs">
+                                <Info className="w-3 h-3" />
+                                <span>Minimum collateral is {minCollateral} XAUT</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Borrow Amount Slider */}
@@ -622,14 +637,25 @@ export default function NewLoanSimulatorModal({
                                 data-testid="borrow-slider"
                             />
                             <div className="flex justify-between text-white/40 text-xs mt-2">
-                                <span>$0</span>
+                                <span>{isXaut ? `Min: $${minBorrow.toFixed(2)}` : "$0"}</span>
                                 <span>{formatCurrency(maxBorrow, 0, "$", false)}</span>
                             </div>
+                            {isXaut && (
+                                <p className="text-white/40 text-xs mt-2 text-center">
+                                    Fluid vault requires minimum {minCollateral} XAUT collateral and ${minBorrow.toFixed(2)} borrow
+                                </p>
+                            )}
                         </div>
                         {maxBorrow <= 0 && parsedCollateral === 0 && (
                             <p className="text-white/40 text-xs mt-2 text-center">
                                 Enter collateral amount to enable borrowing
                             </p>
+                        )}
+                        {borrowBelowMinimum && isXaut && (
+                            <div className="flex items-center justify-center gap-2 mt-2 text-amber-400 text-xs">
+                                <Info className="w-3 h-3" />
+                                <span>Minimum borrow is ${minBorrow.toFixed(2)} USDT</span>
+                            </div>
                         )}
                     </div>
                 </Card>
