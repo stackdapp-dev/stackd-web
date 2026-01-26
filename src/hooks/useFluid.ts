@@ -14,6 +14,7 @@ import {
   convertOraclePriceToUsd,
   XAUT_USDT_VAULT,
   ORACLE_PRICE_DECIMALS,
+  FLUID_MIN_AMOUNT_RAW,
   type FluidUserPosition,
   type FluidVaultData,
 } from "@/lib/web3/fluid";
@@ -720,6 +721,14 @@ export function useFluid(): UseFluidResult {
       }
       if (!ethereumPublicClient) {
         return { txHash: null, error: "No public client available" };
+      }
+
+      // Validate minimum amounts - Fluid vault rejects amounts below 10000 raw units
+      if (collateralAmount < FLUID_MIN_AMOUNT_RAW) {
+        return { txHash: null, error: "Minimum collateral is 0.01 XAUT" };
+      }
+      if (borrowAmount < FLUID_MIN_AMOUNT_RAW) {
+        return { txHash: null, error: "Minimum borrow is $0.01 USDT" };
       }
 
       try {

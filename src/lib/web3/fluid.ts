@@ -98,6 +98,13 @@ export interface FluidVaultData {
 // Fluid uses 27 decimals for oracle prices (scaled by 1e27)
 export const ORACLE_PRICE_DECIMALS = 27;
 
+// Fluid vault minimum amount requirement (10000 raw units)
+// The vault rejects amounts between -10000 and 10000 (exclusive)
+// Both XAUT and USDT have 6 decimals, so minimum = 10000 / 10^6 = 0.01
+export const FLUID_MIN_AMOUNT_RAW = BigInt(10000);
+export const FLUID_MIN_COLLATERAL_XAUT = 0.01; // 0.01 XAUT minimum
+export const FLUID_MIN_BORROW_USDT = 0.01;     // $0.01 USDT minimum
+
 export interface FluidPositionWithVault {
   position: FluidUserPosition;
   vaultData: FluidVaultData;
