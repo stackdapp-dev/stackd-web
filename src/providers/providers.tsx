@@ -12,6 +12,7 @@ import { arbitrum, mainnet } from "viem/chains";
 import { TokenPriceProvider } from "./TokenPriceProvider";
 import { UserProvider } from "./UserProvider";
 import { Web3Provider } from "./Web3Provider";
+import { DeveloperModeProvider } from "./developerMode";
 
 // Create a stable QueryClient instance outside the component
 const queryClient = new QueryClient({
@@ -52,6 +53,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <TooltipProvider>
           <TokenPriceProvider>
             <Web3Provider>
+              <DeveloperModeProvider>
               <UserProvider>
                 <InstallBanner />
                 <ServiceWorkerUpdater />
@@ -78,6 +80,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 />
 
               </UserProvider>
+              </DeveloperModeProvider>
             </Web3Provider>
           </TokenPriceProvider>
         </TooltipProvider>

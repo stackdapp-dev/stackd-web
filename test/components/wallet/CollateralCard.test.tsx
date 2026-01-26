@@ -106,6 +106,23 @@ vi.mock("@/providers/TokenPriceProvider", () => ({
     useGetTokenPrice: () => mockGetTokenPrice,
 }));
 
+// Mock developer mode - default to false (XAUT visible)
+vi.mock("@/providers/developerMode", () => ({
+    useDeveloperMode: () => ({
+        developerMode: false,
+        setDeveloperMode: vi.fn(),
+        toggle: vi.fn(),
+    }),
+}));
+
+// Mock hasXautPosition - default to false
+vi.mock("@/hooks/useHasXautPosition", () => ({
+    useHasXautPosition: () => ({
+        hasXautPosition: false,
+        isLoading: false,
+    }),
+}));
+
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
     Lock: () => <span data-testid="lock-icon">Lock</span>,

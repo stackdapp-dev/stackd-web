@@ -15,6 +15,8 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { parseUnits, isAddress, encodeFunctionData } from "viem";
 import { arbitrum, mainnet } from "viem/chains";
 import { toast } from "react-toastify";
+import { useDeveloperMode } from "@/providers/developerMode";
+import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 // Available tokens for sending
 const SENDABLE_TOKENS = ["WBTC", "USDT", "XAUT"] as const;
@@ -53,6 +55,18 @@ export default function SendPage() {
     const router = useRouter();
     const { sendSponsoredTransaction, isSendingTransaction, switchToNetwork, isExternalWallet } = useWeb3();
     const { assets, refetchBalances, chainBalances } = useWalletBalanceContext();
+
+    // Developer mode and XAUT position detection for conditional hiding
+    const { developerMode } = useDeveloperMode();
+    const { hasXautPosition } = useHasXautPosition();
+    // Show XAUT if developerMode=false OR hasXautPosition=true
+    // Hide XAUT if developerMode=true AND hasXautPosition=false
+    const shouldShowXaut = !developerMode || hasXautPosition;
+
+    // Dynamically filter sendable tokens based on shouldShowXaut
+    const sendableTokens = shouldShowXaut
+        ? SENDABLE_TOKENS
+        : SENDABLE_TOKENS.filter((t) => t !== "XAUT");
 
     const [selectedToken, setSelectedToken] = useState<SendableToken>("USDT");
     const [recipientAddress, setRecipientAddress] = useState("");
@@ -283,7 +297,7 @@ export default function SendPage() {
                     {showTokenDropdown && (
                         <div className="absolute top-full left-0 right-0 mt-2 z-10">
                             <Card appearance="glassDark" padding="none">
-                                {SENDABLE_TOKENS.map((token) => {
+                                {sendableTokens.map((token) => {
                                     const balance =
                                         assets.find((a) => a.symbol === token)?.amount || 0;
                                     return (

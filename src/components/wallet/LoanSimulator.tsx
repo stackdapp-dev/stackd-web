@@ -24,6 +24,8 @@ import { parseUnits, formatUnits } from "viem";
 import { showSuccessToast } from "@/components/ui/custom-toast";
 import { useRouter } from "next/navigation";
 import { useWeb3 } from "@/providers/Web3Provider";
+import { useDeveloperMode } from "@/providers/developerMode";
+import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 export type SimulatorMode = "borrow" | "addCollateral" | "repay" | "withdrawCollateral" | "simulate";
 export type CollateralType = "WBTC" | "XAUT";
@@ -56,6 +58,13 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const fluid = useFluid();
   const { xautBalance } = useXautBalance();
   const { breakdown } = useCollateralBreakdown();
+
+  // Developer mode and XAUT position detection for conditional hiding
+  const { developerMode } = useDeveloperMode();
+  const { hasXautPosition } = useHasXautPosition();
+  // Show XAUT if developerMode=false OR hasXautPosition=true
+  // Hide XAUT if developerMode=true AND hasXautPosition=false
+  const shouldShowXaut = !developerMode || hasXautPosition;
 
   // Determine which protocol to use based on collateralType
   const isXaut = collateralType === "XAUT";
@@ -587,6 +596,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                   <TokenIcon symbol="WBTC" width={20} height={20} />
                   <span className="text-white/80 text-sm font-medium">WBTC</span>
                 </button>
+                {shouldShowXaut && (
                 <button
                   type="button"
                   onClick={() => setSandboxCollateralType("XAUT")}
@@ -600,6 +610,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                   <TokenIcon symbol="XAUT" width={20} height={20} />
                   <span className="text-white/80 text-sm font-medium">XAUT</span>
                 </button>
+                )}
               </div>
 
               {/* Collateral Input */}
