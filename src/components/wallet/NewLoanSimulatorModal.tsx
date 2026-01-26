@@ -563,7 +563,7 @@ export default function NewLoanSimulatorModal({
                                     "focus:outline-none focus:border-purple-500/50",
                                     "placeholder:text-white/30"
                                 )}
-                                placeholder="0"
+                                placeholder={isXaut ? `Min: ${minCollateral}` : "0"}
                                 data-testid="collateral-input"
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">
@@ -637,9 +637,14 @@ export default function NewLoanSimulatorModal({
                                 data-testid="borrow-slider"
                             />
                             <div className="flex justify-between text-white/40 text-xs mt-2">
-                                <span>$0</span>
+                                <span>{isXaut ? `Min: $${minBorrow.toFixed(2)}` : "$0"}</span>
                                 <span>{formatCurrency(maxBorrow, 0, "$", false)}</span>
                             </div>
+                            {isXaut && (
+                                <p className="text-white/40 text-xs mt-2 text-center">
+                                    Fluid vault requires minimum {minCollateral} XAUT collateral and ${minBorrow.toFixed(2)} borrow
+                                </p>
+                            )}
                         </div>
                         {maxBorrow <= 0 && parsedCollateral === 0 && (
                             <p className="text-white/40 text-xs mt-2 text-center">
