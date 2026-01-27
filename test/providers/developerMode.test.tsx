@@ -23,22 +23,51 @@ import React from "react";
 
 describe("DeveloperModeProvider", () => {
   // Mock localStorage
-  let localStorageMock: Record<string, string>;
+  let localStorageMock: Record<string, string | null>;
+  let originalLocalStorage: Storage;
 
   beforeEach(() => {
+    // Reset module cache so each test gets a fresh import
+    vi.resetModules();
     localStorageMock = {};
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(
-      (key: string) => localStorageMock[key] ?? null
-    );
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(
-      (key: string, value: string) => {
+
+    // Save original localStorage
+    originalLocalStorage = window.localStorage;
+
+    // Create a mock localStorage object
+    const mockStorage = {
+      getItem: (key: string) => localStorageMock[key] ?? null,
+      setItem: (key: string, value: string) => {
         localStorageMock[key] = value;
-      }
-    );
+      },
+      removeItem: (key: string) => {
+        delete localStorageMock[key];
+      },
+      clear: () => {
+        localStorageMock = {};
+      },
+      key: (index: number) => Object.keys(localStorageMock)[index] ?? null,
+      get length() {
+        return Object.keys(localStorageMock).length;
+      },
+    };
+
+    // Replace window.localStorage
+    Object.defineProperty(window, "localStorage", {
+      value: mockStorage,
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    // Restore original localStorage
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      writable: true,
+      configurable: true,
+    });
   });
 
   describe("Default State", () => {
@@ -233,8 +262,20 @@ describe("DeveloperModeProvider", () => {
 
   describe("localStorage Error Handling", () => {
     it("should gracefully handle localStorage.getItem errors", async () => {
-      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-        throw new Error("localStorage access denied");
+      // Override localStorage.getItem to throw
+      Object.defineProperty(window, "localStorage", {
+        value: {
+          getItem: () => {
+            throw new Error("localStorage access denied");
+          },
+          setItem: () => {},
+          removeItem: () => {},
+          clear: () => {},
+          key: () => null,
+          length: 0,
+        },
+        writable: true,
+        configurable: true,
       });
 
       const { DeveloperModeProvider, useDeveloperMode } = await import(
@@ -252,8 +293,20 @@ describe("DeveloperModeProvider", () => {
     });
 
     it("should gracefully handle localStorage.setItem errors", async () => {
-      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new Error("localStorage is full");
+      // Override localStorage.setItem to throw
+      Object.defineProperty(window, "localStorage", {
+        value: {
+          getItem: () => null,
+          setItem: () => {
+            throw new Error("localStorage is full");
+          },
+          removeItem: () => {},
+          clear: () => {},
+          key: () => null,
+          length: 0,
+        },
+        writable: true,
+        configurable: true,
       });
 
       const { DeveloperModeProvider, useDeveloperMode } = await import(
