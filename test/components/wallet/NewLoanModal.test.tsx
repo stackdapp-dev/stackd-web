@@ -68,6 +68,23 @@ vi.mock("@/hooks/useFluid", () => ({
     })),
 }));
 
+// Mock developer mode - default to false (XAUT visible)
+vi.mock("@/providers/developerMode", () => ({
+    useDeveloperMode: () => ({
+        developerMode: false,
+        setDeveloperMode: vi.fn(),
+        toggle: vi.fn(),
+    }),
+}));
+
+// Mock hasXautPosition - default to false
+vi.mock("@/hooks/useHasXautPosition", () => ({
+    useHasXautPosition: () => ({
+        hasXautPosition: false,
+        isLoading: false,
+    }),
+}));
+
 describe("NewLoanModal", () => {
     beforeEach(() => {
         vi.clearAllMocks();

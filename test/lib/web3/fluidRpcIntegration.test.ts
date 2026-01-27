@@ -9,6 +9,10 @@
  * If these tests fail, it likely means the ABI definition doesn't match
  * the on-chain contract structure (like the bug we fixed where borrowRateVault
  * was being misread due to incorrect struct definitions).
+ *
+ * NOTE: These tests are skipped in CI by default because they depend on
+ * external RPC endpoints which can be unreliable. Set ETHEREUM_RPC_URL
+ * environment variable to run these tests with a dedicated RPC endpoint.
  */
 import { describe, it, expect } from 'vitest';
 import { createPublicClient, http } from 'viem';
@@ -25,14 +29,21 @@ import {
 // XAUT/USDT vault on Ethereum mainnet
 const XAUT_USDT_VAULT = '0xEce156BeD5aF2621b80b87ff4fE8fD3A929E3644';
 
+// Skip these tests in CI unless a dedicated RPC URL is provided
+// Public RPC endpoints are unreliable and can cause flaky test failures
+const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL;
+const shouldSkip = process.env.CI === 'true' && !ETHEREUM_RPC_URL;
+
 // Create a public client for Ethereum mainnet
-// Uses the default public RPC endpoint
 const publicClient = createPublicClient({
   chain: mainnet,
-  transport: http(),
+  transport: http(ETHEREUM_RPC_URL),
 });
 
-describe('Fluid VaultResolver RPC Integration', () => {
+// Use describe.skipIf to conditionally skip in CI without dedicated RPC
+const describeIntegration = shouldSkip ? describe.skip : describe;
+
+describeIntegration('Fluid VaultResolver RPC Integration', () => {
   describe('getVaultEntireData', () => {
     it('should successfully call getVaultEntireData and extract borrowRateVault', async () => {
       // This test makes a LIVE RPC call to Ethereum mainnet

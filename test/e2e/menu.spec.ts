@@ -86,9 +86,11 @@ test.describe('Menu Page', () => {
 
     test('menu items have correct icons', async ({ page }) => {
         // Each menu item should have an icon in a rounded container
-        const menuItems = page.locator('li .w-10.h-10.rounded-full');
+        // Scope the selector to the menu's ul element to avoid matching elements from other page components
+        const menuList = page.locator('ul.flex.flex-col.gap-4');
+        const menuItems = menuList.locator('li .w-10.h-10.rounded-full');
 
-        // Should have 6 menu items total (Withdraw, Contact Us, Profile, Website, Terms of Service, Privacy Policy)
-        await expect(menuItems).toHaveCount(6);
+        // Should have 7 menu items total (Withdraw, Contact Us, Profile, Website, Terms of Service, Privacy Policy, Hide Beta Features)
+        await expect(menuItems).toHaveCount(7);
     });
 });

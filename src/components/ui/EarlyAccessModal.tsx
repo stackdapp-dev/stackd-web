@@ -66,6 +66,15 @@ export default function EarlyAccessModal() {
                         button at the lower right of your screen.
                     </p>
 
+                    {/* XAUT Warning */}
+                    <p className="text-white/70 leading-relaxed">
+                        XAUT is in beta testing for passkey and email logins. Enable it
+                        in the Menu page by clicking the 3 dot button on the upper right.
+                        If there are bugs blocking deposit or withdrawal, you may manage
+                        your position on Fluid by clicking &quot;View Position on Fluid&quot; at
+                        the bottom of the Loan page.
+                    </p>
+
                     {/* Action button */}
                     <Button
                         onClick={handleDismiss}

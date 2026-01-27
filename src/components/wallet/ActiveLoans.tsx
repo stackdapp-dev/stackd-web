@@ -6,6 +6,8 @@ import { formatPercent, maskString, MASK_SHORT } from "@/lib/utils";
 import { useVisibility } from "@/providers/visibility";
 import { useRouter } from "next/navigation";
 import { useMultiLoan } from "@/providers/MultiLoanProvider";
+import { useDeveloperMode } from "@/providers/developerMode";
+import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 // Helper to get display name for loan
 function getLoanDisplayName(collateralToken: string, borrowToken: string): string {
@@ -25,6 +27,19 @@ export default function ActiveLoans() {
   const router = useRouter();
   const visibility = useVisibility();
   const { allPositions, hasActiveLoans, isLoading } = useMultiLoan();
+
+  // Developer mode and XAUT position detection for conditional hiding
+  const { developerMode } = useDeveloperMode();
+  const { hasXautPosition } = useHasXautPosition();
+  // Show XAUT if developerMode=false OR hasXautPosition=true
+  // Hide XAUT if developerMode=true AND hasXautPosition=false
+  const shouldShowXaut = !developerMode || hasXautPosition;
+
+  // Filter positions based on shouldShowXaut
+  const displayPositions = shouldShowXaut
+    ? allPositions
+    : allPositions.filter((p) => p.collateralToken !== "XAUT");
+  const hasDisplayableLoans = displayPositions.length > 0;
 
   return (
     <div className="px-4">
@@ -53,9 +68,9 @@ export default function ActiveLoans() {
             <div className="h-4 w-16 bg-white/10 rounded skeleton-shimmer mt-1" />
           </div>
         </Card>
-      ) : hasActiveLoans ? (
+      ) : hasDisplayableLoans ? (
         <div className="space-y-3">
-          {allPositions.map((position) => {
+          {displayPositions.map((position) => {
             const ltvPercent = Math.min(position.ltv, position.maxLtv);
             const ltvBarWidth = position.maxLtv > 0 ? (ltvPercent / position.maxLtv) * 100 : 0;
 
