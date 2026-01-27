@@ -24,11 +24,11 @@ describe("EarlyAccessModal", () => {
     });
 
     describe("XAUT Warning Text", () => {
-        it("should display the XAUT hidden warning text", () => {
+        it("should display the XAUT beta testing warning text", () => {
             render(<EarlyAccessModal />);
 
             const warningText = screen.getByText(
-                /XAUT is hidden for passkey and email logins/i
+                /XAUT is in beta testing for passkey and email logins/i
             );
             expect(warningText).toBeInTheDocument();
         });
@@ -40,6 +40,15 @@ describe("EarlyAccessModal", () => {
                 /Enable it in the Menu page by clicking the 3 dot button/i
             );
             expect(instructionText).toBeInTheDocument();
+        });
+
+        it("should display Fluid fallback instructions", () => {
+            render(<EarlyAccessModal />);
+
+            const fluidText = screen.getByText(
+                /View Position on Fluid/i
+            );
+            expect(fluidText).toBeInTheDocument();
         });
     });
 
