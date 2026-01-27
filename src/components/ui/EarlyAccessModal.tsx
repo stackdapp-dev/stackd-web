@@ -68,8 +68,8 @@ export default function EarlyAccessModal() {
 
                     {/* XAUT Warning */}
                     <p className="text-white/70 leading-relaxed">
-                        XAUT Ethereum is not yet supported on email or passkey wallets.
-                        For XAUT positions, please login using the External Wallet option.
+                        XAUT is hidden for passkey and email logins. Enable it in the
+                        Menu page by clicking the 3 dot button on the upper right.
                     </p>
 
                     {/* Action button */}

@@ -10,7 +10,7 @@ import {
   GlobeIcon,
   FileTextIcon,
   ShieldCheckIcon,
-  CodeIcon,
+  EyeOffIcon,
 } from "lucide-react";
 
 const Menu = () => {
@@ -106,10 +106,10 @@ const Menu = () => {
             href="#"
             leading={
               <div className="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center">
-                <CodeIcon className="h-5 w-5 text-amber-500" />
+                <EyeOffIcon className="h-5 w-5 text-amber-500" />
               </div>
             }
-            label="Developer Mode"
+            label="Hide Beta Features"
             trailing={
               <Switch
                 checked={developerMode}

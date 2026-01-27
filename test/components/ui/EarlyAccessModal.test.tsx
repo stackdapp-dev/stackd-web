@@ -24,20 +24,20 @@ describe("EarlyAccessModal", () => {
     });
 
     describe("XAUT Warning Text", () => {
-        it("should display the XAUT Ethereum wallet warning text", () => {
+        it("should display the XAUT hidden warning text", () => {
             render(<EarlyAccessModal />);
 
             const warningText = screen.getByText(
-                /XAUT Ethereum is not yet supported on email or passkey wallets/i
+                /XAUT is hidden for passkey and email logins/i
             );
             expect(warningText).toBeInTheDocument();
         });
 
-        it("should display instruction to use External Wallet option", () => {
+        it("should display instruction to enable via Menu", () => {
             render(<EarlyAccessModal />);
 
             const instructionText = screen.getByText(
-                /For XAUT positions, please login using the External Wallet option/i
+                /Enable it in the Menu page by clicking the 3 dot button/i
             );
             expect(instructionText).toBeInTheDocument();
         });
