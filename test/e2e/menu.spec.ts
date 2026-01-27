@@ -90,7 +90,7 @@ test.describe('Menu Page', () => {
         const menuList = page.locator('ul.flex.flex-col.gap-4');
         const menuItems = menuList.locator('li .w-10.h-10.rounded-full');
 
-        // Should have 6 menu items total (Withdraw, Contact Us, Profile, Website, Terms of Service, Privacy Policy)
-        await expect(menuItems).toHaveCount(6);
+        // Should have 7 menu items total (Withdraw, Contact Us, Profile, Website, Terms of Service, Privacy Policy, Developer Mode)
+        await expect(menuItems).toHaveCount(7);
     });
 });
