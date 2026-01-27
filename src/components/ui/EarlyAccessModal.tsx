@@ -66,6 +66,12 @@ export default function EarlyAccessModal() {
                         button at the lower right of your screen.
                     </p>
 
+                    {/* XAUT Warning */}
+                    <p className="text-white/70 leading-relaxed">
+                        XAUT Ethereum is not yet supported on email or passkey wallets.
+                        For XAUT positions, please login using the External Wallet option.
+                    </p>
+
                     {/* Action button */}
                     <Button
                         onClick={handleDismiss}

@@ -1,6 +1,8 @@
 "use client";
 
 import MenuItem from "@/components/common/MenuItem";
+import { Switch } from "@/components/ui/switch";
+import { useDeveloperMode } from "@/providers/developerMode";
 import {
   CircleDollarSignIcon,
   MessageSquareIcon,
@@ -8,9 +10,12 @@ import {
   GlobeIcon,
   FileTextIcon,
   ShieldCheckIcon,
+  CodeIcon,
 } from "lucide-react";
 
 const Menu = () => {
+  const { developerMode, toggle } = useDeveloperMode();
+
   const handleContactUs = () => {
     (window as any).OpenWidget?.call("maximize");
   };
@@ -94,6 +99,24 @@ const Menu = () => {
             }
             label="Privacy Policy"
             onClick={() => handleOpenExternal("https://www.stackdapp.co/privacy")}
+          />
+        </li>
+        <li>
+          <MenuItem
+            href="#"
+            leading={
+              <div className="w-10 h-10 rounded-full border-2 border-amber-500 flex items-center justify-center">
+                <CodeIcon className="h-5 w-5 text-amber-500" />
+              </div>
+            }
+            label="Developer Mode"
+            trailing={
+              <Switch
+                checked={developerMode}
+                onCheckedChange={toggle}
+              />
+            }
+            onClick={() => {}}
           />
         </li>
       </ul>

@@ -7,12 +7,26 @@ import { useWeb3 } from "@/providers/Web3Provider";
 import { QRCodeSVG } from "qrcode.react";
 import React, { useState } from "react";
 import { arbitrum } from "viem/chains";
+import { useDeveloperMode } from "@/providers/developerMode";
+import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 type TabType = "crypto" | "otc";
 
 export default function CashInPage() {
     const { walletClient, activeWalletAddress } = useWeb3();
     const [activeTab, setActiveTab] = useState<TabType>("crypto");
+
+    // Developer mode and XAUT position detection for conditional hiding
+    const { developerMode } = useDeveloperMode();
+    const { hasXautPosition } = useHasXautPosition();
+    // Show XAUT if developerMode=false OR hasXautPosition=true
+    // Hide XAUT if developerMode=true AND hasXautPosition=false
+    const shouldShowXaut = !developerMode || hasXautPosition;
+
+    // Conditional warning text based on shouldShowXaut
+    const warningText = shouldShowXaut
+        ? "Send only WBTC, ETH, XAUT and USDT to this address. Sending any other asset may result in permanent loss."
+        : "Send only WBTC, ETH and USDT to this address. Sending any other asset may result in permanent loss.";
 
     const address = walletClient?.account?.address || activeWalletAddress;
 
@@ -78,7 +92,7 @@ export default function CashInPage() {
                     <div className="flex gap-3 p-4 rounded-xl bg-white/5">
                         <span className="text-amber-500 text-lg">●</span>
                         <p className="text-white/60 text-sm">
-                            Send only WBTC, ETH, XAUT and USDT to this address. Sending any other asset may result in permanent loss.
+                            {warningText}
                         </p>
                     </div>
 

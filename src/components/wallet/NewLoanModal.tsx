@@ -12,6 +12,8 @@ import { useXautBalance } from "@/hooks/useXautBalance";
 import { useCompound } from "@/hooks/useCompound";
 import { useFluid } from "@/hooks/useFluid";
 import NewLoanSimulatorModal, { type CollateralType } from "@/components/wallet/NewLoanSimulatorModal";
+import { useDeveloperMode } from "@/providers/developerMode";
+import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 // Token logo paths
 const TOKEN_LOGOS: Record<string, string> = {
@@ -34,6 +36,18 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Developer mode and XAUT position detection for conditional hiding
+  const { developerMode } = useDeveloperMode();
+  const { hasXautPosition } = useHasXautPosition();
+  // Show XAUT if developerMode=false OR hasXautPosition=true
+  // Hide XAUT if developerMode=true AND hasXautPosition=false
+  const shouldShowXaut = !developerMode || hasXautPosition;
+
+  // Filter collateral options based on shouldShowXaut
+  const filteredCollateralOptions = shouldShowXaut
+    ? COLLATERAL_OPTIONS
+    : COLLATERAL_OPTIONS.filter((o) => o.type !== "XAUT");
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -211,7 +225,7 @@ export default function NewLoanModal({ isOpen, onClose }: NewLoanModalProps) {
                 WebkitBackdropFilter: 'blur(40px)',
               }}
             >
-              {COLLATERAL_OPTIONS.map((option) => (
+              {filteredCollateralOptions.map((option) => (
                 <button
                   key={option.type}
                   onClick={() => {

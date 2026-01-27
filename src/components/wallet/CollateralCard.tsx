@@ -14,6 +14,8 @@ import TokenIcon from "../common/TokenIcon";
 import NetworkIcon from "../common/NetworkIcon";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { Badge } from "@/components/ui/badge";
+import { useDeveloperMode } from "@/providers/developerMode";
+import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 interface AssetItem {
     symbol: string;
@@ -55,6 +57,13 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
     const [isExpanded, setIsExpanded] = useState(false);
     const [isXautExpanded, setIsXautExpanded] = useState(false);
     const [isUsdtExpanded, setIsUsdtExpanded] = useState(false);
+
+    // Developer mode and XAUT position detection for conditional hiding
+    const { developerMode } = useDeveloperMode();
+    const { hasXautPosition } = useHasXautPosition();
+    // Show XAUT if developerMode=false OR hasXautPosition=true
+    // Hide XAUT if developerMode=true AND hasXautPosition=false
+    const shouldShowXaut = !developerMode || hasXautPosition;
 
     // XAUT price for calculations
     const xautPrice = getTokenPrice("XAUT");
@@ -424,7 +433,8 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                     )}
                 </Card>
 
-                {/* XAUT Collateral Card - Always shown (like WBTC) */}
+                {/* XAUT Collateral Card - Conditionally shown based on developer mode */}
+                {shouldShowXaut && (
                 <Card appearance="glassDark" padding="compact">
                     {/* XAUT Header Row - Clickable when has locked collateral */}
                     <button
@@ -535,6 +545,7 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                         </div>
                     )}
                 </Card>
+                )}
             </div>
         </div>
     );
