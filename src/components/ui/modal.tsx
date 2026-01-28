@@ -79,7 +79,7 @@ export default function Modal({
                 </button>
               )}
               {primaryButtonText && (
-                <Button className="flex-1 rounded-xl" onClick={primaryButtonAction}>
+                <Button className="flex-1 rounded-xl text-sm truncate" onClick={primaryButtonAction}>
                   {primaryButtonText}
                 </Button>
               )}

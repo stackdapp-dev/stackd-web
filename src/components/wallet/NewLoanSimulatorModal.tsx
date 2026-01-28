@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
@@ -33,6 +33,24 @@ import type { Address, Hash } from "viem";
 import { toast } from "react-toastify";
 
 export type CollateralType = "WBTC" | "XAUT";
+
+/**
+ * Helper to round down a number to specified decimal places
+ * Used to fix "Arithmetic overflow or underflow" errors from smart contracts
+ */
+function roundDownToDecimals(value: number, decimals: number): number {
+    const factor = Math.pow(10, decimals);
+    return Math.floor(value * factor) / factor;
+}
+
+/**
+ * Checks if an error message indicates arithmetic overflow/underflow
+ */
+function isArithmeticOverflowError(errorMessage: string): boolean {
+    const lowerCaseError = errorMessage.toLowerCase();
+    return lowerCaseError.includes("arithmetic") &&
+           (lowerCaseError.includes("overflow") || lowerCaseError.includes("underflow"));
+}
 
 interface NewLoanSimulatorModalProps {
     isOpen: boolean;
@@ -83,6 +101,10 @@ export default function NewLoanSimulatorModal({
     const [isConfirming, setIsConfirming] = useState(false);
     const [needsApproval, setNeedsApproval] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
+    const [showDismissOption, setShowDismissOption] = useState(false);
+
+    // Track if we've already attempted auto-rounding to prevent infinite retries
+    const hasAttemptedRounding = useRef(false);
 
     // Input state (empty string for placeholder to show)
     const [collateralInput, setCollateralInput] = useState("");
@@ -377,6 +399,23 @@ export default function NewLoanSimulatorModal({
 
                 // Only show error if we truly have an error with no hash (tx wasn't submitted)
                 if (result?.error) {
+                    // Check for arithmetic overflow error and auto-round if not already tried
+                    if (isArithmeticOverflowError(result.error) && !hasAttemptedRounding.current) {
+                        console.log("[NEW LOAN] Arithmetic overflow detected, rounding amounts and retrying...");
+                        hasAttemptedRounding.current = true;
+                        const roundedCollateral = roundDownToDecimals(parsedCollateral, 3);
+                        const roundedBorrow = roundDownToDecimals(parsedBorrow, 2);
+                        setCollateralInput(String(roundedCollateral));
+                        setBorrowInput(String(roundedBorrow));
+                        toast.info("Amount adjusted to avoid precision error. Retrying...", { autoClose: 3000 });
+                        // Reset processing to allow retry
+                        setIsProcessing(false);
+                        // Schedule retry after state update
+                        setTimeout(() => {
+                            void handleConfirm();
+                        }, 100);
+                        return;
+                    }
                     toast.error(`Transaction failed: ${result.error}`);
                     return;
                 }
@@ -434,6 +473,23 @@ export default function NewLoanSimulatorModal({
 
                 // Normal error handling (no hash or not an AbortError)
                 if (result?.error) {
+                    // Check for arithmetic overflow error and auto-round if not already tried
+                    if (isArithmeticOverflowError(result.error) && !hasAttemptedRounding.current) {
+                        console.log("[NEW LOAN] Arithmetic overflow detected, rounding amounts and retrying...");
+                        hasAttemptedRounding.current = true;
+                        const roundedCollateral = roundDownToDecimals(parsedCollateral, 3);
+                        const roundedBorrow = roundDownToDecimals(parsedBorrow, 2);
+                        setCollateralInput(String(roundedCollateral));
+                        setBorrowInput(String(roundedBorrow));
+                        toast.info("Amount adjusted to avoid precision error. Retrying...", { autoClose: 3000 });
+                        // Reset processing to allow retry
+                        setIsProcessing(false);
+                        // Schedule retry after state update
+                        setTimeout(() => {
+                            void handleConfirm();
+                        }, 100);
+                        return;
+                    }
                     toast.error(`Transaction failed: ${result.error}`);
                     return;
                 }
@@ -470,6 +526,24 @@ export default function NewLoanSimulatorModal({
                 }
             }
 
+            // Check for arithmetic overflow error and auto-round if not already tried
+            if (isArithmeticOverflowError(errorMessage) && !hasAttemptedRounding.current) {
+                console.log("[NEW LOAN] Arithmetic overflow detected in catch, rounding amounts and retrying...");
+                hasAttemptedRounding.current = true;
+                const roundedCollateral = roundDownToDecimals(parsedCollateral, 3);
+                const roundedBorrow = roundDownToDecimals(parsedBorrow, 2);
+                setCollateralInput(String(roundedCollateral));
+                setBorrowInput(String(roundedBorrow));
+                toast.info("Amount adjusted to avoid precision error. Retrying...", { autoClose: 3000 });
+                // Reset processing to allow retry
+                setIsProcessing(false);
+                // Schedule retry after state update
+                setTimeout(() => {
+                    void handleConfirm();
+                }, 100);
+                return;
+            }
+
             toast.error(`Transaction failed: ${errorMessage}`);
         } finally {
             setIsProcessing(false);
@@ -487,8 +561,23 @@ export default function NewLoanSimulatorModal({
             setIsConfirming(false);
             setNeedsApproval(false);
             setIsApproving(false);
+            setShowDismissOption(false);
+            hasAttemptedRounding.current = false;
         }
     }, [isOpen]);
+
+    // Show dismiss option after 30 seconds of processing (for hung transactions)
+    useEffect(() => {
+        if (isProcessing || isApproving || isConfirming) {
+            setShowDismissOption(false);
+            const timer = setTimeout(() => {
+                setShowDismissOption(true);
+            }, 30000);
+            return () => clearTimeout(timer);
+        } else {
+            setShowDismissOption(false);
+        }
+    }, [isProcessing, isApproving, isConfirming]);
 
     if (!isOpen) return null;
 
@@ -597,10 +686,37 @@ export default function NewLoanSimulatorModal({
                                 Max: {formatCurrency(maxBorrow, 0, "$", false)}
                             </button>
                         </div>
-                        <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-center mb-3">
-                            <span className="text-white font-semibold text-2xl">
-                                {formatCurrency(parsedBorrow, 0, "$", false)}
-                            </span>
+                        <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 mb-3 flex items-center justify-center">
+                            <span className="text-white/50 text-2xl mr-1">$</span>
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={borrowInput}
+                                onChange={(e) => {
+                                    // Remove any non-numeric characters except decimal
+                                    const cleaned = e.target.value.replace(/[^0-9.]/g, '');
+                                    // Ensure only one decimal point
+                                    const parts = cleaned.split('.');
+                                    const sanitized = parts.length > 2
+                                        ? parts[0] + '.' + parts.slice(1).join('')
+                                        : cleaned;
+                                    const numValue = parseFloat(sanitized) || 0;
+                                    // Cap at maxBorrow
+                                    if (numValue > maxBorrow && maxBorrow > 0) {
+                                        setBorrowInput(String(Math.floor(maxBorrow)));
+                                    } else {
+                                        setBorrowInput(sanitized);
+                                    }
+                                }}
+                                placeholder="0"
+                                disabled={maxBorrow <= 0}
+                                className={cn(
+                                    "bg-transparent text-white font-semibold text-2xl text-center w-24 outline-none",
+                                    "placeholder:text-white/30",
+                                    "disabled:opacity-50"
+                                )}
+                                data-testid="borrow-input"
+                            />
                         </div>
                         <div className="px-1">
                             <input
@@ -708,7 +824,7 @@ export default function NewLoanSimulatorModal({
                     }
                     icon={
                         isProcessing || isApproving || isConfirming ? (
-                            <Loading />
+                            undefined
                         ) : (
                             <TokenIcon symbol={collateralSymbol} width={56} height={56} />
                         )
@@ -772,13 +888,13 @@ export default function NewLoanSimulatorModal({
                                 : isApproving
                                     ? "Approving..."
                                     : needsApproval
-                                        ? "Approve & Create Loan"
+                                        ? "Approve & Create"
                                         : "Create Loan"
                     }
                     primaryButtonAction={needsApproval ? handleApprove : handleConfirm}
                     secondaryButtonText="Cancel"
                     secondaryButtonAction={() => setShowConfirmModal(false)}
-                    showCloseButton={!isProcessing && !isApproving && !isConfirming}
+                    showCloseButton={(!isProcessing && !isApproving && !isConfirming) || showDismissOption}
                     showActionButtons={!isProcessing && !isApproving && !isConfirming}
                 />
             </div>
