@@ -88,7 +88,7 @@ export default function ActiveLoans() {
                         {getLoanDisplayName(position.collateralToken, position.borrowToken)}
                       </h3>
                       {position.collateralToken === "XAUT" && (
-                        <Badge variant="beta" showDot dotColor="#f59e0b" className="py-0.5 px-2 text-[10px]">BETA</Badge>
+                        <Badge variant="beta" showDot dotColor="#f59e0b" className="py-0.5 px-2 text-[10px]">ALPHA</Badge>
                       )}
                     </div>
                     <p className="text-white/50 text-sm">

@@ -24,11 +24,11 @@ describe("EarlyAccessModal", () => {
     });
 
     describe("XAUT Warning Text", () => {
-        it("should display the XAUT beta testing warning text", () => {
+        it("should display the XAUT alpha testing warning text", () => {
             render(<EarlyAccessModal />);
 
             const warningText = screen.getByText(
-                /XAUT is in beta testing for passkey and email logins/i
+                /XAUT is in alpha testing for passkey and email logins/i
             );
             expect(warningText).toBeInTheDocument();
         });
@@ -59,11 +59,11 @@ describe("EarlyAccessModal", () => {
             expect(screen.getByText("Early Access Campaign")).toBeInTheDocument();
         });
 
-        it("should still display the beta testing description", () => {
+        it("should still display the alpha testing description", () => {
             render(<EarlyAccessModal />);
 
             expect(
-                screen.getByText(/Stack'd is in Beta testing before our full launch/i)
+                screen.getByText(/Stack'd is in Alpha testing before our full launch/i)
             ).toBeInTheDocument();
         });
 

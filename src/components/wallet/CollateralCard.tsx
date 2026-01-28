@@ -448,7 +448,7 @@ export default function CollateralCard({ otherAssets = [], isLoading = false }: 
                             <div className="flex flex-col text-left">
                                 <div className="flex items-center gap-2">
                                     <span className="text-white font-semibold">Tether Gold</span>
-                                    <Badge variant="beta" showDot dotColor="#f59e0b" className="py-0.5 px-2 text-[10px]">BETA</Badge>
+                                    <Badge variant="beta" showDot dotColor="#f59e0b" className="py-0.5 px-2 text-[10px]">ALPHA</Badge>
                                 </div>
                                 <span className="text-white/50 text-xs">
                                     {maskString(formatAmount(xautBreakdown.totalXaut, 4), visibility.visible, MASK_SHORT)}
