@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { History, Menu, Wallet, Sparkles, LucideIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 
 interface NavItem {
   href: string;
@@ -38,6 +38,43 @@ const navItems: NavItem[] = [
 const BottomNav = () => {
   const pathname = usePathname();
   const router = useRouter();
+  const [bottomPadding, setBottomPadding] = useState(8);
+
+  // Detect iOS Chrome and adjust bottom padding
+  // iOS Chrome doesn't properly support env(safe-area-inset-bottom)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Detect iOS Chrome (Chrome on iOS uses WebKit but identifies differently)
+    const isIOSChrome = /CriOS/.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    if (isIOS && isIOSChrome) {
+      // iOS Chrome needs extra bottom padding to account for the browser toolbar
+      // Use visualViewport API for more accurate positioning
+      const updatePadding = () => {
+        if (window.visualViewport) {
+          const viewportHeight = window.visualViewport.height;
+          const windowHeight = window.innerHeight;
+          // If visualViewport is smaller than window, browser UI is visible
+          const browserUIHeight = windowHeight - viewportHeight;
+          setBottomPadding(Math.max(8, browserUIHeight + 8));
+        } else {
+          // Fallback: assume browser toolbar is ~50px
+          setBottomPadding(58);
+        }
+      };
+
+      updatePadding();
+      window.visualViewport?.addEventListener('resize', updatePadding);
+      window.visualViewport?.addEventListener('scroll', updatePadding);
+
+      return () => {
+        window.visualViewport?.removeEventListener('resize', updatePadding);
+        window.visualViewport?.removeEventListener('scroll', updatePadding);
+      };
+    }
+  }, []);
 
   // Prefetch all main routes on mount for faster navigation
   useEffect(() => {
@@ -78,7 +115,12 @@ const BottomNav = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+8px)] px-4 pointer-events-none">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
+      style={{
+        paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${bottomPadding}px)`,
+      }}
+    >
       {/* Liquid Glass Floating Pill */}
       <div
         className="pointer-events-auto flex items-center justify-around gap-1 px-4 py-2 rounded-[24px] border border-white/20"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
 import Text from "@/components/ui/text";
@@ -29,6 +29,24 @@ import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 export type SimulatorMode = "borrow" | "addCollateral" | "repay" | "withdrawCollateral" | "simulate";
 export type CollateralType = "WBTC" | "XAUT";
+
+/**
+ * Helper to round down a number to specified decimal places
+ * Used to fix "Arithmetic overflow or underflow" errors from smart contracts
+ */
+function roundDownToDecimals(value: number, decimals: number): number {
+    const factor = Math.pow(10, decimals);
+    return Math.floor(value * factor) / factor;
+}
+
+/**
+ * Checks if an error message indicates arithmetic overflow/underflow
+ */
+function isArithmeticOverflowError(errorMessage: string): boolean {
+    const lowerCaseError = errorMessage.toLowerCase();
+    return lowerCaseError.includes("arithmetic") &&
+           (lowerCaseError.includes("overflow") || lowerCaseError.includes("underflow"));
+}
 
 interface LoanSimulatorProps {
   mode?: SimulatorMode;
@@ -87,6 +105,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const [isApproving, setIsApproving] = useState(false);
   const [showEthAlert, setShowEthAlert] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Track if we've already attempted auto-rounding to prevent infinite retries
+  const hasAttemptedRounding = useRef(false);
 
   // Web3 for ETH balance check
   const { ethereumPublicClient, activeWalletAddress } = useWeb3();
@@ -401,11 +422,13 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     setShowConfirmModal(false);
     setIsProcessing(false);
     setIsApproving(false);
+    hasAttemptedRounding.current = false;
   }, []);
 
   // Handle retry after error
   const handleRetry = useCallback(() => {
     setError(null); // Clear error and allow user to try again
+    hasAttemptedRounding.current = false;
   }, []);
 
   // Handle approval
@@ -551,6 +574,23 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     } catch (err) {
       console.error(`${operationMode} failed:`, err);
       const errorMessage = err instanceof Error ? err.message : "Transaction failed";
+
+      // Check for arithmetic overflow error and auto-round if not already tried
+      if (isArithmeticOverflowError(errorMessage) && !hasAttemptedRounding.current) {
+        console.log("[LOAN SIMULATOR] Arithmetic overflow detected, rounding amount and retrying...");
+        hasAttemptedRounding.current = true;
+        const roundedAmount = roundDownToDecimals(transactionAmount, 3);
+        setInputValue(String(roundedAmount));
+        showSuccessToast("Amount adjusted to avoid precision error. Retrying...");
+        // Reset processing to allow retry
+        setIsProcessing(false);
+        // Schedule retry after state update
+        setTimeout(() => {
+          void handleConfirm();
+        }, 100);
+        return;
+      }
+
       setError(errorMessage);
     } finally {
       setIsProcessing(false);
