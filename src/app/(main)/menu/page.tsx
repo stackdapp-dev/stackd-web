@@ -109,7 +109,7 @@ const Menu = () => {
                 <EyeOffIcon className="h-5 w-5 text-amber-500" />
               </div>
             }
-            label="Hide Beta Features"
+            label="Hide Alpha Features"
             trailing={
               <Switch
                 checked={developerMode}

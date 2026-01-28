@@ -16,13 +16,13 @@ test.describe("Login Screen - UI Elements", () => {
         });
     });
 
-    test("should display the BETA badge at the top", async ({ page }) => {
+    test("should display the ALPHA badge at the top", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("domcontentloaded");
 
         const betaBadge = page.getByTestId("login-beta-badge");
         await expect(betaBadge).toBeVisible();
-        await expect(betaBadge).toContainText("BETA");
+        await expect(betaBadge).toContainText("ALPHA");
     });
 
     test("should display the Stack'd logo", async ({ page }) => {

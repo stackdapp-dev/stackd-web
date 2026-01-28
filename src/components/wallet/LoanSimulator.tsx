@@ -1047,7 +1047,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         message={
           <div className="flex flex-col gap-4">
             <Text tone="muted">
-              ETH balance required during Beta testing. Gas sponsorship is temporarily disabled for Ethereum mainnet operations.
+              ETH balance required during Alpha testing. Gas sponsorship is temporarily disabled for Ethereum mainnet operations.
             </Text>
             <div className="rounded-xl px-4 py-3 bg-amber-500/10 border border-amber-500/30">
               <p className="text-amber-400 text-sm">

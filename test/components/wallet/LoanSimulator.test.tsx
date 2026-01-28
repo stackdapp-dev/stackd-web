@@ -1252,7 +1252,7 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
             expect(componentCode).toMatch(/isOpen\s*=\s*\{?\s*showEthAlert\s*\}?/);
         });
 
-        it("should display message about ETH required during Beta testing", async () => {
+        it("should display message about ETH required during Alpha testing", async () => {
             const fs = await import("fs");
             const path = await import("path");
 
@@ -1262,8 +1262,8 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
             );
             const componentCode = fs.readFileSync(componentPath, "utf-8");
 
-            // Should have message about ETH balance required during Beta testing
-            expect(componentCode).toMatch(/ETH.*balance.*required|ETH.*required.*Beta/i);
+            // Should have message about ETH balance required during Alpha testing
+            expect(componentCode).toMatch(/ETH.*balance.*required|ETH.*required.*Alpha/i);
         });
 
         it("should have button to redirect to Cash In page at correct route /wallet/cash-in", async () => {
@@ -1338,9 +1338,9 @@ describe("LoanSimulator - ETH Alert Modal (Bug #3)", () => {
             expect(expectedTitleContent).toContain("ETH");
         });
 
-        it("should explain why ETH is needed (Beta testing, sponsorship disabled)", () => {
-            const expectedMessage = "ETH balance required during Beta testing";
-            expect(expectedMessage).toContain("Beta");
+        it("should explain why ETH is needed (Alpha testing, sponsorship disabled)", () => {
+            const expectedMessage = "ETH balance required during Alpha testing";
+            expect(expectedMessage).toContain("Alpha");
             expect(expectedMessage).toContain("ETH");
         });
 

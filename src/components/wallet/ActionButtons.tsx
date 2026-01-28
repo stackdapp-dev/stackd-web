@@ -31,7 +31,7 @@ function ActionButton({ icon, label, onClick, disabled, showBetaBadge }: ActionB
                         dotColor="#f59e0b"
                         className="absolute -top-2.5 left-1/2 -translate-x-1/2 py-0.5 px-2 text-[10px] z-10"
                     >
-                        BETA
+                        ALPHA
                     </Badge>
                 )}
                 <div
