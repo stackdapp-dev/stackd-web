@@ -26,7 +26,7 @@ const LoginScreen = () => {
           dotColor="#f59e0b"
           className="mb-8"
         >
-          BETA
+          ALPHA
         </Badge>
 
         {/* Stack'd Logo - sized to match button container width (max-w-xs = 320px) */}

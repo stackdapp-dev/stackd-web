@@ -61,14 +61,14 @@ export default function EarlyAccessModal() {
 
                     {/* Description */}
                     <p className="text-white/70 leading-relaxed">
-                        Stack&apos;d is in Beta testing before our full launch. Please report
+                        Stack&apos;d is in Alpha testing before our full launch. Please report
                         any bugs via the Menu → Contact Us page or by clicking the ?
                         button at the lower right of your screen.
                     </p>
 
                     {/* XAUT Warning */}
                     <p className="text-white/70 leading-relaxed">
-                        XAUT is in beta testing for passkey and email logins. Enable it
+                        XAUT is in alpha testing for passkey and email logins. Enable it
                         in the Menu page by clicking the 3 dot button on the upper right.
                         If there are bugs blocking deposit or withdrawal, you may manage
                         your position on Fluid by clicking &quot;View Position on Fluid&quot; at
