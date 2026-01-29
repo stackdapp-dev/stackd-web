@@ -23,30 +23,16 @@ import { RotateCcw, AlertTriangle } from "lucide-react";
 import { parseUnits, formatUnits } from "viem";
 import { showSuccessToast } from "@/components/ui/custom-toast";
 import { useRouter } from "next/navigation";
+import {
+    roundAmountForTransaction,
+    isArithmeticOverflowError,
+} from "@/lib/tokenPrecision";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { useDeveloperMode } from "@/providers/developerMode";
 import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 export type SimulatorMode = "borrow" | "addCollateral" | "repay" | "withdrawCollateral" | "simulate";
 export type CollateralType = "WBTC" | "XAUT";
-
-/**
- * Helper to round down a number to specified decimal places
- * Used to fix "Arithmetic overflow or underflow" errors from smart contracts
- */
-function roundDownToDecimals(value: number, decimals: number): number {
-    const factor = Math.pow(10, decimals);
-    return Math.floor(value * factor) / factor;
-}
-
-/**
- * Checks if an error message indicates arithmetic overflow/underflow
- */
-function isArithmeticOverflowError(errorMessage: string): boolean {
-    const lowerCaseError = errorMessage.toLowerCase();
-    return lowerCaseError.includes("arithmetic") &&
-           (lowerCaseError.includes("overflow") || lowerCaseError.includes("underflow"));
-}
 
 interface LoanSimulatorProps {
   mode?: SimulatorMode;
@@ -513,7 +499,16 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       if (!tokenMeta) throw new Error(`${modeConfig.tokenSymbol} metadata not found`);
 
       const tokenAddress = tokenMeta.address as `0x${string}`;
-      const amountBigInt = parseUnits(String(transactionAmount), tokenMeta.decimals);
+
+      // Pre-emptive rounding to avoid arithmetic overflow/underflow errors
+      // This rounds amounts to a safe precision BEFORE sending to the smart contract
+      const safeAmount = roundAmountForTransaction(transactionAmount, tokenMeta.decimals);
+      const amountBigInt = parseUnits(String(safeAmount), tokenMeta.decimals);
+
+      // Log if rounding was applied (for debugging)
+      if (safeAmount !== transactionAmount) {
+        console.log(`[LOAN SIMULATOR] Pre-emptive rounding applied: ${transactionAmount} → ${safeAmount}`);
+      }
 
       let result;
 
@@ -544,12 +539,12 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
 
       await Promise.all([refetchBalances(), refetchLoanData(), isXaut ? fluid.refetch() : Promise.resolve()]);
 
-      // Show success toast based on mode
+      // Show success toast based on mode (use safeAmount to reflect actual transaction)
       const successMessages: Record<SimulatorMode, string> = {
-        borrow: `Successfully borrowed ${formatCurrency(transactionAmount)}`,
-        addCollateral: `Successfully added ${formatAmount(transactionAmount, 6)} ${collateralSymbol}`,
-        repay: `Successfully repaid ${formatCurrency(transactionAmount)}`,
-        withdrawCollateral: `Successfully withdrew ${formatAmount(transactionAmount, 6)} ${collateralSymbol}`,
+        borrow: `Successfully borrowed ${formatCurrency(safeAmount)}`,
+        addCollateral: `Successfully added ${formatAmount(safeAmount, 6)} ${collateralSymbol}`,
+        repay: `Successfully repaid ${formatCurrency(safeAmount)}`,
+        withdrawCollateral: `Successfully withdrew ${formatAmount(safeAmount, 6)} ${collateralSymbol}`,
         simulate: "",
       };
       if (successMessages[mode]) {
@@ -575,12 +570,15 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       console.error(`${operationMode} failed:`, err);
       const errorMessage = err instanceof Error ? err.message : "Transaction failed";
 
-      // Check for arithmetic overflow error and auto-round if not already tried
+      // Fallback: If overflow still occurs despite pre-emptive rounding, try more aggressive rounding
+      // This should rarely trigger since we already apply pre-emptive rounding
       if (isArithmeticOverflowError(errorMessage) && !hasAttemptedRounding.current) {
-        console.log("[LOAN SIMULATOR] Arithmetic overflow detected, rounding amount and retrying...");
+        console.log("[LOAN SIMULATOR] Overflow despite pre-emptive rounding, trying more aggressive rounding...");
         hasAttemptedRounding.current = true;
-        const roundedAmount = roundDownToDecimals(transactionAmount, 3);
-        setInputValue(String(roundedAmount));
+        // Use very aggressive rounding (3 decimals) as last resort
+        const factor = Math.pow(10, 3);
+        const aggressiveRoundedAmount = Math.floor(transactionAmount * factor) / factor;
+        setInputValue(String(aggressiveRoundedAmount));
         showSuccessToast("Amount adjusted to avoid precision error. Retrying...");
         // Reset processing to allow retry
         setIsProcessing(false);

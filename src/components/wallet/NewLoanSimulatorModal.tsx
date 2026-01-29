@@ -31,26 +31,12 @@ import { ProcessingState } from "@/components/wallet/ProcessingState";
 import { parseUnits } from "viem";
 import type { Address, Hash } from "viem";
 import { toast } from "react-toastify";
+import {
+    roundAmountForTransaction,
+    isArithmeticOverflowError,
+} from "@/lib/tokenPrecision";
 
 export type CollateralType = "WBTC" | "XAUT";
-
-/**
- * Helper to round down a number to specified decimal places
- * Used to fix "Arithmetic overflow or underflow" errors from smart contracts
- */
-function roundDownToDecimals(value: number, decimals: number): number {
-    const factor = Math.pow(10, decimals);
-    return Math.floor(value * factor) / factor;
-}
-
-/**
- * Checks if an error message indicates arithmetic overflow/underflow
- */
-function isArithmeticOverflowError(errorMessage: string): boolean {
-    const lowerCaseError = errorMessage.toLowerCase();
-    return lowerCaseError.includes("arithmetic") &&
-           (lowerCaseError.includes("overflow") || lowerCaseError.includes("underflow"));
-}
 
 interface NewLoanSimulatorModalProps {
     isOpen: boolean;
@@ -367,8 +353,19 @@ export default function NewLoanSimulatorModal({
         setIsProcessing(true);
         try {
             console.log("[NEW LOAN] Starting transaction for", collateralSymbol);
-            const collateralAmount = parseUnits(String(parsedCollateral), collateralDecimals);
-            const borrowAmount = parseUnits(String(parsedBorrow), 6); // USDT has 6 decimals
+
+            // Pre-emptive rounding to avoid arithmetic overflow/underflow errors
+            // This rounds amounts to a safe precision BEFORE sending to the smart contract
+            const safeCollateral = roundAmountForTransaction(parsedCollateral, collateralDecimals);
+            const safeBorrow = roundAmountForTransaction(parsedBorrow, 6); // USDT has 6 decimals
+
+            // Log if rounding was applied (for debugging)
+            if (safeCollateral !== parsedCollateral || safeBorrow !== parsedBorrow) {
+                console.log(`[NEW LOAN] Pre-emptive rounding applied: collateral ${parsedCollateral} → ${safeCollateral}, borrow ${parsedBorrow} → ${safeBorrow}`);
+            }
+
+            const collateralAmount = parseUnits(String(safeCollateral), collateralDecimals);
+            const borrowAmount = parseUnits(String(safeBorrow), 6);
 
             let result;
             if (isXaut) {
@@ -399,14 +396,15 @@ export default function NewLoanSimulatorModal({
 
                 // Only show error if we truly have an error with no hash (tx wasn't submitted)
                 if (result?.error) {
-                    // Check for arithmetic overflow error and auto-round if not already tried
+                    // Fallback: If overflow still occurs despite pre-emptive rounding, try more aggressive rounding
                     if (isArithmeticOverflowError(result.error) && !hasAttemptedRounding.current) {
-                        console.log("[NEW LOAN] Arithmetic overflow detected, rounding amounts and retrying...");
+                        console.log("[NEW LOAN] Overflow despite pre-emptive rounding, trying more aggressive rounding...");
                         hasAttemptedRounding.current = true;
-                        const roundedCollateral = roundDownToDecimals(parsedCollateral, 3);
-                        const roundedBorrow = roundDownToDecimals(parsedBorrow, 2);
-                        setCollateralInput(String(roundedCollateral));
-                        setBorrowInput(String(roundedBorrow));
+                        // Use very aggressive rounding (3 decimals for collateral, 2 for borrow) as last resort
+                        const aggressiveCollateral = Math.floor(parsedCollateral * 1000) / 1000;
+                        const aggressiveBorrow = Math.floor(parsedBorrow * 100) / 100;
+                        setCollateralInput(String(aggressiveCollateral));
+                        setBorrowInput(String(aggressiveBorrow));
                         toast.info("Amount adjusted to avoid precision error. Retrying...", { autoClose: 3000 });
                         // Reset processing to allow retry
                         setIsProcessing(false);
@@ -473,14 +471,15 @@ export default function NewLoanSimulatorModal({
 
                 // Normal error handling (no hash or not an AbortError)
                 if (result?.error) {
-                    // Check for arithmetic overflow error and auto-round if not already tried
+                    // Fallback: If overflow still occurs despite pre-emptive rounding, try more aggressive rounding
                     if (isArithmeticOverflowError(result.error) && !hasAttemptedRounding.current) {
-                        console.log("[NEW LOAN] Arithmetic overflow detected, rounding amounts and retrying...");
+                        console.log("[NEW LOAN] Overflow despite pre-emptive rounding, trying more aggressive rounding...");
                         hasAttemptedRounding.current = true;
-                        const roundedCollateral = roundDownToDecimals(parsedCollateral, 3);
-                        const roundedBorrow = roundDownToDecimals(parsedBorrow, 2);
-                        setCollateralInput(String(roundedCollateral));
-                        setBorrowInput(String(roundedBorrow));
+                        // Use very aggressive rounding (3 decimals for collateral, 2 for borrow) as last resort
+                        const aggressiveCollateral = Math.floor(parsedCollateral * 1000) / 1000;
+                        const aggressiveBorrow = Math.floor(parsedBorrow * 100) / 100;
+                        setCollateralInput(String(aggressiveCollateral));
+                        setBorrowInput(String(aggressiveBorrow));
                         toast.info("Amount adjusted to avoid precision error. Retrying...", { autoClose: 3000 });
                         // Reset processing to allow retry
                         setIsProcessing(false);
@@ -526,14 +525,15 @@ export default function NewLoanSimulatorModal({
                 }
             }
 
-            // Check for arithmetic overflow error and auto-round if not already tried
+            // Fallback: If overflow still occurs despite pre-emptive rounding, try more aggressive rounding
             if (isArithmeticOverflowError(errorMessage) && !hasAttemptedRounding.current) {
-                console.log("[NEW LOAN] Arithmetic overflow detected in catch, rounding amounts and retrying...");
+                console.log("[NEW LOAN] Overflow in catch block, trying more aggressive rounding...");
                 hasAttemptedRounding.current = true;
-                const roundedCollateral = roundDownToDecimals(parsedCollateral, 3);
-                const roundedBorrow = roundDownToDecimals(parsedBorrow, 2);
-                setCollateralInput(String(roundedCollateral));
-                setBorrowInput(String(roundedBorrow));
+                // Use very aggressive rounding (3 decimals for collateral, 2 for borrow) as last resort
+                const aggressiveCollateral = Math.floor(parsedCollateral * 1000) / 1000;
+                const aggressiveBorrow = Math.floor(parsedBorrow * 100) / 100;
+                setCollateralInput(String(aggressiveCollateral));
+                setBorrowInput(String(aggressiveBorrow));
                 toast.info("Amount adjusted to avoid precision error. Retrying...", { autoClose: 3000 });
                 // Reset processing to allow retry
                 setIsProcessing(false);
