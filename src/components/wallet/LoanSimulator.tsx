@@ -183,8 +183,9 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           tokenSymbol: collateralSymbol,
           actionButtonText: "Withdraw",
           // Use XAUT available for XAUT, or BTC breakdown for WBTC
-          // Note: 1% LTV buffer is now applied in collateralCalculations, no additional multiplier needed
-          maxValue: isXaut ? xautAvailableToWithdraw : breakdown.availableToWithdrawBtc,
+          // Note: Use withdrawableFromDepositedBtc (not availableToWithdrawBtc) because users can only
+          // withdraw collateral that is actually deposited in Compound, not their idle wallet balance
+          maxValue: isXaut ? xautAvailableToWithdraw : breakdown.withdrawableFromDepositedBtc,
           isRiskReducing: false,
           warningText: "This will reduce your collateral and increase liquidation risk.",
           successIcon: false,
@@ -203,7 +204,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           useSlider: true, // Enable slider for borrow mode
         };
     }
-  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.availableToWithdrawBtc, collateralSymbol, isXaut, xautAvailableToWithdraw, xautBalance]);
+  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.withdrawableFromDepositedBtc, collateralSymbol, isXaut, xautAvailableToWithdraw, xautBalance]);
 
   // Simulator state - store input as string (empty for placeholder to show)
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "");
