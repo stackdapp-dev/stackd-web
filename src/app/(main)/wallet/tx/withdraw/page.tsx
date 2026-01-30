@@ -10,6 +10,7 @@ import { useCompound } from "@/hooks/useCompound";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { useLoanCalculationsContext } from "@/providers/LoanCalculationsProvider";
 import { formatAmount, formatCurrency } from "@/lib/utils";
+import { roundAmountForTransaction } from "@/lib/tokenPrecision";
 import { AlertTriangle, Lock, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -53,7 +54,10 @@ export default function WithdrawCollateralPage() {
             if (!tokenMeta) throw new Error("WBTC metadata not found");
 
             const tokenAddress = tokenMeta.address as `0x${string}`;
-            const amountBigInt = parseUnits(String(parsedAmount), tokenMeta.decimals);
+            // Round amount to safe precision to prevent arithmetic overflow errors
+            // from floating-point precision artifacts in smart contract calculations
+            const roundedAmount = roundAmountForTransaction(parsedAmount, tokenMeta.decimals);
+            const amountBigInt = parseUnits(String(roundedAmount), tokenMeta.decimals);
 
             const result = await withdraw(tokenAddress, amountBigInt);
             if (result.error) throw new Error(result.error);
