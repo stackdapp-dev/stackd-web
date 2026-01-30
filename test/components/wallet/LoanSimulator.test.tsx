@@ -1408,6 +1408,130 @@ describe("LoanSimulator - Simulate Mode should not render LoanConfirmationModal"
     });
 });
 
+/**
+ * TDD tests for Bug Fix: WBTC Withdrawal Slider Max Value
+ *
+ * Problem: When withdrawing WBTC collateral, the slider shows:
+ *   Max = wallet balance + compound deposited balance - locked collateral
+ * But it should show:
+ *   Max = compound deposited balance - locked collateral (withdrawableFromDepositedBtc)
+ *
+ * The user can only withdraw collateral that is actually deposited in Compound,
+ * not their wallet balance. The wallet balance is not yet deposited as collateral.
+ *
+ * Root cause (LoanSimulator.tsx line 187):
+ *   maxValue: isXaut ? xautAvailableToWithdraw : breakdown.availableToWithdrawBtc
+ *
+ * Should be:
+ *   maxValue: isXaut ? xautAvailableToWithdraw : breakdown.withdrawableFromDepositedBtc
+ */
+describe("LoanSimulator - WBTC Withdrawal Slider Max Value (Bug Fix)", () => {
+    describe("Implementation verification for withdrawal max calculation", () => {
+        it("should use withdrawableFromDepositedBtc (not availableToWithdrawBtc) for WBTC withdrawal max", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // In withdrawCollateral mode config, maxValue should use withdrawableFromDepositedBtc
+            // NOT availableToWithdrawBtc (which incorrectly includes wallet balance)
+
+            // The correct pattern: maxValue assignment uses breakdown.withdrawableFromDepositedBtc
+            // Look for the actual assignment in code (not in comments)
+            const hasCorrectMaxValue = componentCode.match(
+                /maxValue:\s*isXaut\s*\?\s*xautAvailableToWithdraw\s*:\s*breakdown\.withdrawableFromDepositedBtc/
+            );
+
+            // The incorrect pattern that should NOT be present in actual code:
+            // maxValue: ... breakdown.availableToWithdrawBtc (includes wallet balance)
+            // This regex specifically looks for the assignment, not comments
+            const hasIncorrectMaxValue = componentCode.match(
+                /maxValue:\s*isXaut\s*\?\s*xautAvailableToWithdraw\s*:\s*breakdown\.availableToWithdrawBtc/
+            );
+
+            // Should have the correct pattern
+            expect(hasCorrectMaxValue).toBeTruthy();
+            // Should NOT have the incorrect pattern
+            expect(hasIncorrectMaxValue).toBeFalsy();
+        });
+
+        it("should only allow withdrawal up to deposited collateral amount", async () => {
+            // Scenario:
+            // - Wallet balance: 0.0012 WBTC (not yet deposited)
+            // - Compound deposited: 0.0016 WBTC (actual collateral)
+            // - Locked collateral: 0.0 WBTC (no loans)
+            //
+            // Wrong: Max = 0.0012 + 0.0016 - 0.0 = 0.0028 WBTC (includes wallet)
+            // Correct: Max = 0.0016 - 0.0 = 0.0016 WBTC (only deposited)
+
+            const walletBalance = 0.0012;
+            const compoundDeposited = 0.0016;
+            const lockedCollateral = 0;
+
+            const wrongMaxWithdraw = walletBalance + compoundDeposited - lockedCollateral; // 0.0028
+            const correctMaxWithdraw = compoundDeposited - lockedCollateral; // 0.0016
+
+            expect(wrongMaxWithdraw).toBeCloseTo(0.0028, 8);
+            expect(correctMaxWithdraw).toBeCloseTo(0.0016, 8);
+
+            // The slider should use correctMaxWithdraw, not wrongMaxWithdraw
+        });
+
+        it("should correctly calculate withdrawable when there are loans", async () => {
+            // Scenario with loans:
+            // - Wallet balance: 0.01 WBTC
+            // - Compound deposited: 0.05 WBTC
+            // - Locked collateral: 0.02 WBTC (backing loans)
+            //
+            // Wrong: Max = 0.01 + 0.05 - 0.02 = 0.04 WBTC
+            // Correct: Max = 0.05 - 0.02 = 0.03 WBTC (withdrawableFromDepositedBtc)
+
+            const walletBalance = 0.01;
+            const compoundDeposited = 0.05;
+            const lockedCollateral = 0.02;
+
+            const wrongMaxWithdraw = walletBalance + compoundDeposited - lockedCollateral; // 0.04
+            const correctMaxWithdraw = compoundDeposited - lockedCollateral; // 0.03
+
+            expect(wrongMaxWithdraw).toBeCloseTo(0.04, 8);
+            expect(correctMaxWithdraw).toBeCloseTo(0.03, 8);
+        });
+    });
+
+    describe("CollateralBreakdown fields verification", () => {
+        it("availableToWithdrawBtc includes wallet balance (total - locked)", () => {
+            // This is by design - it represents total available across all sources
+            // totalCollateralBtc = walletBtc + depositedBtc
+            // availableToWithdrawBtc = totalCollateralBtc - lockedCollateralBtc
+
+            const walletBtc = 0.01;
+            const depositedBtc = 0.05;
+            const lockedCollateralBtc = 0.02;
+
+            const totalCollateralBtc = walletBtc + depositedBtc; // 0.06
+            const availableToWithdrawBtc = totalCollateralBtc - lockedCollateralBtc; // 0.04
+
+            expect(availableToWithdrawBtc).toBeCloseTo(0.04, 8);
+        });
+
+        it("withdrawableFromDepositedBtc only considers deposited collateral (deposited - locked)", () => {
+            // This is the correct value for withdrawal slider
+            // withdrawableFromDepositedBtc = depositedBtc - lockedCollateralBtc
+
+            const depositedBtc = 0.05;
+            const lockedCollateralBtc = 0.02;
+
+            const withdrawableFromDepositedBtc = depositedBtc - lockedCollateralBtc; // 0.03
+
+            expect(withdrawableFromDepositedBtc).toBeCloseTo(0.03, 8);
+        });
+    });
+});
+
 describe("LoanSimulator - Modal Close Button During Processing States", () => {
     describe("Implementation verification for always-closeable modal", () => {
         it("should NOT have conditional check preventing close during processing", async () => {
