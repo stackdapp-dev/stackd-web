@@ -143,6 +143,16 @@ describe("LoginScreen Component", () => {
         });
     });
 
+    describe("Alpha Badge at Top", () => {
+        it("should display 'Alpha - Invite Only Testing' text in the alpha badge", () => {
+            render(<LoginScreen />);
+            const alphaBadge = screen.getByTestId("login-beta-badge");
+
+            expect(alphaBadge).toBeInTheDocument();
+            expect(alphaBadge).toHaveTextContent("Alpha - Invite Only Testing");
+        });
+    });
+
     describe("BETA Badges on Dropdown Options", () => {
         it("should show BETA badge on Email option when expanded", async () => {
             render(<LoginScreen />);
