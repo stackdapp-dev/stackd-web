@@ -212,9 +212,16 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   // Sandbox mode - custom collateral input (empty string allows placeholder to show)
   const [sandboxCollateral, setSandboxCollateral] = useState("");
 
+  // Sandbox mode - custom collateral price (empty string uses live API price)
+  const [sandboxCollateralPrice, setSandboxCollateralPrice] = useState("");
+
   // Parse input value for calculations
   const parsedInput = parseFloat(inputValue) || 0;
   const parsedSandboxCollateral = parseFloat(sandboxCollateral) || 0;
+  const parsedSandboxCollateralPrice = parseFloat(sandboxCollateralPrice) || 0;
+
+  // Effective price for simulate mode: use custom price if provided, else live API price
+  const simulateModeCollateralPrice = parsedSandboxCollateralPrice > 0 ? parsedSandboxCollateralPrice : effectiveCollateralPrice;
 
   // Calculate simulated values based on mode
   const { simulatedCollateral, simulatedBorrow } = useMemo(() => {
@@ -254,7 +261,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       return simulateLoan({
         collateralWbtc: 0,
         borrowedUsd: 0,
-        btcPrice: effectiveCollateralPrice,
+        btcPrice: simulateModeCollateralPrice,
         maxLtv: effectiveMaxLtv,
         liquidationRatio: effectiveLiquidationRatio,
         borrowApr: effectiveBorrowApr,
@@ -268,16 +275,16 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       liquidationRatio,
       borrowApr,
     });
-  }, [mode, currentCollateralAmount, currentBorrowedAmount, collateralPrice, maxLtv, liquidationRatio, borrowApr, effectiveCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
+  }, [mode, currentCollateralAmount, currentBorrowedAmount, collateralPrice, maxLtv, liquidationRatio, borrowApr, simulateModeCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
 
   // Calculate simulated result
   const simulatedResult = useMemo((): SimulationResult => {
-    // In simulate mode, use effective (sandbox-selected) values
+    // In simulate mode, use effective (sandbox-selected) values and custom price if provided
     if (mode === "simulate") {
       return simulateLoan({
         collateralWbtc: simulatedCollateral,
         borrowedUsd: simulatedBorrow,
-        btcPrice: effectiveCollateralPrice,
+        btcPrice: simulateModeCollateralPrice,
         maxLtv: effectiveMaxLtv,
         liquidationRatio: effectiveLiquidationRatio,
         borrowApr: effectiveBorrowApr,
@@ -291,7 +298,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       liquidationRatio,
       borrowApr,
     });
-  }, [mode, simulatedCollateral, simulatedBorrow, collateralPrice, maxLtv, liquidationRatio, borrowApr, effectiveCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
+  }, [mode, simulatedCollateral, simulatedBorrow, collateralPrice, maxLtv, liquidationRatio, borrowApr, simulateModeCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
 
   // Calculate max borrow with safety buffer for borrow mode
   const maxBorrow = useMemo(() => {
@@ -299,12 +306,12 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       return simulatedResult.borrowCapacity * 0.99;
     }
     if (mode === "simulate") {
-      // Max borrow based on sandbox collateral value - use EFFECTIVE price/LTV for sandbox mode
-      const collateralUsd = parsedSandboxCollateral * effectiveCollateralPrice;
+      // Max borrow based on sandbox collateral value - use custom price if provided
+      const collateralUsd = parsedSandboxCollateral * simulateModeCollateralPrice;
       return collateralUsd * (effectiveMaxLtv / 100) * 0.99;
     }
     return modeConfig.maxValue;
-  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue, parsedSandboxCollateral, effectiveCollateralPrice, effectiveMaxLtv]);
+  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue, parsedSandboxCollateral, simulateModeCollateralPrice, effectiveMaxLtv]);
 
   // Check if value has changed
   const hasChanges = useMemo(() => {
@@ -389,6 +396,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "");
     if (mode === "simulate") {
       setSandboxCollateral("");
+      setSandboxCollateralPrice("");
     }
   }, [mode, currentBorrowedAmount]);
 
@@ -678,7 +686,34 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">{effectiveCollateralSymbol}</span>
                 </div>
                 <p className="text-white/40 text-xs mt-1 text-right">
-                  ≈ {formatCurrency(parsedSandboxCollateral * getPrice(effectiveCollateralSymbol))}
+                  ≈ {formatCurrency(parsedSandboxCollateral * simulateModeCollateralPrice)}
+                </p>
+              </div>
+
+              {/* Collateral Price (USD) Input */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white/70 text-sm">Collateral Price (USD)</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">$</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={sandboxCollateralPrice}
+                    onChange={(e) => setSandboxCollateralPrice(e.target.value)}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-lg pl-8",
+                      "bg-white/5 border border-white/10",
+                      "text-white font-semibold text-right pr-4",
+                      "focus:outline-none focus:border-purple-500/50",
+                      "placeholder:text-white/30"
+                    )}
+                    placeholder={formatAmount(effectiveCollateralPrice, 0)}
+                  />
+                </div>
+                <p className="text-white/40 text-xs mt-1 text-right">
+                  Live price: {formatCurrency(effectiveCollateralPrice)}
                 </p>
               </div>
 
