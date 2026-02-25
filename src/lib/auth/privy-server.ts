@@ -53,14 +53,9 @@ export async function verifyAuthToken(request: Request): Promise<AuthenticatedUs
     try {
         // Verify the token with Privy
         const verifiedClaims = await privy.verifyAuthToken(token);
-        console.log('[Auth] Token verified for userId:', verifiedClaims.userId);
 
         // Get user data to find wallet address
         const user = await privy.getUser(verifiedClaims.userId);
-
-        // Debug: log the user object structure
-        console.log('[Auth] User wallet:', user.wallet?.address);
-        console.log('[Auth] LinkedAccounts types:', user.linkedAccounts?.map((a: any) => a.type));
 
         // Find the wallet address (check multiple sources)
         let walletAddress: string | null = null;
@@ -68,7 +63,6 @@ export async function verifyAuthToken(request: Request): Promise<AuthenticatedUs
         // 1. Check user.wallet (standard wallet)
         if (user.wallet?.address) {
             walletAddress = user.wallet.address;
-            console.log('[Auth] Found wallet via user.wallet:', walletAddress);
         }
         // 2. Check linkedAccounts for various wallet types
         else if (user.linkedAccounts) {
@@ -78,7 +72,6 @@ export async function verifyAuthToken(request: Request): Promise<AuthenticatedUs
             );
             if (embeddedWallet && 'address' in embeddedWallet) {
                 walletAddress = embeddedWallet.address as string;
-                console.log('[Auth] Found wallet via embedded_wallet:', walletAddress);
             } else {
                 // Fall back to regular wallet type
                 const walletAccount = user.linkedAccounts.find(
@@ -86,13 +79,8 @@ export async function verifyAuthToken(request: Request): Promise<AuthenticatedUs
                 );
                 if (walletAccount && 'address' in walletAccount) {
                     walletAddress = walletAccount.address as string;
-                    console.log('[Auth] Found wallet via linkedAccounts wallet:', walletAddress);
                 }
             }
-        }
-
-        if (!walletAddress) {
-            console.log('[Auth] No wallet address found for user');
         }
 
         return {
@@ -100,7 +88,7 @@ export async function verifyAuthToken(request: Request): Promise<AuthenticatedUs
             walletAddress,
         };
     } catch (error) {
-        console.error('[Auth] Token verification failed:', error);
+        console.error('[Auth] Token verification failed');
         return null;
     }
 }

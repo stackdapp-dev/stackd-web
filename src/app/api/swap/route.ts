@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 
         console.error("[Swap API] Quote error:", error);
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Failed to fetch quote" },
+            { error: "Failed to fetch quote" },
             { status: 500 }
         );
     }
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("[Swap API] Submit error:", error);
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Failed to submit swap" },
+            { error: "Failed to submit swap" },
             { status: 500 }
         );
     }

@@ -42,7 +42,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
     const fetchUserResources = async () => {
       const accessToken = await getAccessToken();
-      console.log("Access token:", accessToken);
       if (!accessToken) {
         console.error("Failed to fetch Privy access token");
         return;

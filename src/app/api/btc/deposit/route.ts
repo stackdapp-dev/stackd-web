@@ -18,21 +18,16 @@ const depositRequestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const isDev = process.env.NODE_ENV === 'development';
-
-  // Authenticate user
-  let evmAddressFromAuth: string | null = null;
-
-  if (isPrivyServerConfigured()) {
-    const authUser = await verifyAuthToken(request);
-    if (authUser) {
-      evmAddressFromAuth = authUser.walletAddress;
-    } else if (!isDev) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  } else if (!isDev) {
+  // Authenticate user - fail closed regardless of environment
+  if (!isPrivyServerConfigured()) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const authUser = await verifyAuthToken(request);
+  if (!authUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const evmAddressFromAuth = authUser.walletAddress;
 
   try {
     // Parse request body

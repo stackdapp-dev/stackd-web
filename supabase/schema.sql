@@ -66,17 +66,34 @@ CREATE INDEX IF NOT EXISTS idx_earnings_unclaimed ON public.referral_earnings(re
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.referral_earnings ENABLE ROW LEVEL SECURITY;
 
--- Users can read their own data
+-- Users can read their own data (by wallet address match)
+-- Note: Service role key bypasses RLS, so server-side code is unaffected
 CREATE POLICY "Users can view own data" ON public.users
-    FOR SELECT USING (true);  -- Public read for now, restrict when auth is added
+    FOR SELECT USING (
+        auth.uid() IS NOT NULL
+        AND wallet_address = LOWER(auth.jwt() ->> 'wallet_address')
+    );
 
 -- Users can update their own data
 CREATE POLICY "Users can update own data" ON public.users
-    FOR UPDATE USING (true);  -- Will add auth check later
+    FOR UPDATE USING (
+        auth.uid() IS NOT NULL
+        AND wallet_address = LOWER(auth.jwt() ->> 'wallet_address')
+    );
+
+-- Allow insert for new user registration (server-side via service role)
+CREATE POLICY "Service can insert users" ON public.users
+    FOR INSERT WITH CHECK (true);
 
 -- Earnings are readable by the referrer
 CREATE POLICY "Referrers can view earnings" ON public.referral_earnings
-    FOR SELECT USING (true);  -- Public read for now
+    FOR SELECT USING (
+        auth.uid() IS NOT NULL
+        AND referrer_id IN (
+            SELECT id FROM public.users
+            WHERE wallet_address = LOWER(auth.jwt() ->> 'wallet_address')
+        )
+    );
 
 -- =============================================================================
 -- HELPER FUNCTIONS

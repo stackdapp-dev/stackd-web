@@ -16,7 +16,7 @@ import { getTopAthDepositors, getAthByWallet } from '@/lib/db/depositAthDb';
 // Create Supabase client with service role key for server-side operations (bypasses RLS)
 // Only create if env vars are present (prevents CI/CD failures)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: SupabaseClient<any, "public", any> | null = null;
 if (supabaseUrl && supabaseServiceKey) {

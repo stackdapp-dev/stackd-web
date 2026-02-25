@@ -65,20 +65,10 @@ export async function GET(request: NextRequest) {
             const errorText = await response.text();
             console.error("[0x] Quote error:", response.status, errorText);
 
-            // Try to parse the error for better messaging
-            let parsedError = errorText;
-            try {
-                const errorJson = JSON.parse(errorText);
-                parsedError = errorJson.reason || errorJson.description || errorJson.message || errorText;
-            } catch {
-                // Keep original text
-            }
-
             return NextResponse.json(
                 {
-                    error: `0x API error: ${response.status} - ${parsedError}`,
+                    error: `0x API error: ${response.status}`,
                     status: response.status,
-                    details: errorText
                 },
                 { status: response.status }
             );
@@ -111,12 +101,10 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
-        // Enhanced logging for debugging signature issues - JSON stringify to avoid truncation
         console.log("[0x] Submit request:", JSON.stringify({
             chainId: body.chainId,
             tradeType: body.trade?.type,
-            tradeSig: body.trade?.signature ? { v: body.trade.signature.v, r: body.trade.signature.r?.slice(0, 10), s: body.trade.signature.s?.slice(0, 10), signatureType: body.trade.signature.signatureType } : null,
-            approvalSig: body.approval?.signature ? { v: body.approval.signature.v, signatureType: body.approval.signature.signatureType } : null,
+            hasApproval: !!body.approval,
         }));
 
         const response = await fetch(`${OX_API_URL}/gasless/submit`, {
@@ -129,15 +117,12 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(body),
         });
 
-        // Log response status immediately
-        console.log("[0x] Submit response status:", response.status);
-
         const responseText = await response.text();
-        console.log("[0x] Submit response body:", responseText.slice(0, 500));
 
         if (!response.ok) {
+            console.error("[0x] Submit error:", response.status, responseText);
             return NextResponse.json(
-                { error: `0x API error: ${response.status} - ${responseText}` },
+                { error: `0x API error: ${response.status}` },
                 { status: response.status }
             );
         }

@@ -6,6 +6,7 @@ import {
 } from "@/lib/config/abis";
 import { formatAddress } from "@/lib/utils";
 import { ETHEREUM_TOKEN_ADDRESSES } from "@/constants/addresses";
+import { verifyAuthToken, isPrivyServerConfigured } from "@/lib/auth/privy-server";
 
 const VAULT_RESOLVER_ADDRESS = formatAddress(FLUID_VAULT_RESOLVER_ADDR);
 const VAULT_FACTORY_ADDRESS = "0x324c5dc1fc42c7a4d43d92df1eba58a54d13bf2d" as const; // FluidVaultFactory
@@ -197,16 +198,21 @@ const RESOLVER_POSITION_WITH_VAULT_ABI = [
 ] as const;
 
 export async function GET(request: Request) {
+  // Require authentication
+  if (!isPrivyServerConfigured()) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await verifyAuthToken(request);
+  if (!authUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address");
 
   if (!address) {
     return NextResponse.json({ error: "Missing address parameter" }, { status: 400 });
   }
-
-  console.log("[DEBUG FLUID] Testing Fluid position for:", address);
-  console.log("[DEBUG FLUID] Using resolver:", VAULT_RESOLVER_ADDRESS);
-  console.log("[DEBUG FLUID] XAUT Vault:", XAUT_VAULT_ADDRESS);
 
   try {
     const publicClient = createPublicClient({

@@ -42,7 +42,7 @@ describe('POST /api/referrals/join', () => {
         // Act
         const request = createRequest({
             code: 'STACK123',
-            walletAddress: '0xnewuser',
+            walletAddress: '0x1234567890123456789012345678901234567890',
         });
         const response = await POST(request);
         const data = await response.json();
@@ -51,7 +51,7 @@ describe('POST /api/referrals/join', () => {
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
         expect(mockJoinReferral).toHaveBeenCalledWith(
-            '0xnewuser',
+            '0x1234567890123456789012345678901234567890',
             'STACK123'
         );
     });
@@ -63,13 +63,13 @@ describe('POST /api/referrals/join', () => {
         // Act
         const request = createRequest({
             code: 'STACKREF',
-            walletAddress: '0xreferee',
+            walletAddress: '0xABCDEF1234567890ABCDEF1234567890ABCDEF12',
         });
         await POST(request);
 
         // Assert
         expect(mockJoinReferral).toHaveBeenCalledWith(
-            '0xreferee',
+            '0xABCDEF1234567890ABCDEF1234567890ABCDEF12',
             'STACKREF'
         );
     });
@@ -81,7 +81,7 @@ describe('POST /api/referrals/join', () => {
         // Act
         const request = createRequest({
             code: 'BADCODE',
-            walletAddress: '0xuser',
+            walletAddress: '0xDEADBEEF12345678DEADBEEF12345678DEADBEEF',
         });
         const response = await POST(request);
         const data = await response.json();
@@ -98,7 +98,7 @@ describe('POST /api/referrals/join', () => {
         // Act
         const request = createRequest({
             code: 'STACK123',
-            walletAddress: '0xalreadyreferred',
+            walletAddress: '0xAAAABBBBCCCCDDDD1111222233334444AAAABBBB',
         });
         const response = await POST(request);
         const data = await response.json();
@@ -111,7 +111,7 @@ describe('POST /api/referrals/join', () => {
     it('returns 400 when code is missing', async () => {
         // Act
         const request = createRequest({
-            walletAddress: '0xuser',
+            walletAddress: '0xDEADBEEF12345678DEADBEEF12345678DEADBEEF',
         });
         const response = await POST(request);
         const data = await response.json();
@@ -152,7 +152,7 @@ describe('POST /api/referrals/join', () => {
         // Act
         const request = createRequest({
             code: 'STACK123',
-            walletAddress: '0xuser',
+            walletAddress: '0xDEADBEEF12345678DEADBEEF12345678DEADBEEF',
         });
         const response = await POST(request);
         const data = await response.json();

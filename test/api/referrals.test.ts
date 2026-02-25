@@ -153,42 +153,19 @@ describe('GET /api/referrals', () => {
         vi.unstubAllEnvs();
     });
 
-    it('returns mock stats in development without auth', async () => {
-        // Arrange
+    it('returns 401 in development without auth (fail closed)', async () => {
+        // Arrange - auth bypass in dev mode has been removed
         vi.stubEnv('NODE_ENV', 'development');
         mockVerifyAuthToken.mockResolvedValue(null);
-
-        const mockUser = {
-            id: 'dev_user',
-            wallet_address: '0xdev123abc',
-            referral_code: 'STACKDEV',
-            created_at: new Date().toISOString(),
-        };
-        const mockStats = {
-            tier: 'BRONZE' as const,
-            total_earnings: 0,
-            total_invites: 0,
-            network_volume: 0,
-            network_size: 0,
-            inflation_avoided: 0,
-            interest_saved: 0,
-            next_tier_progress: 0,
-            next_tier_remaining: '0/3 Referrals',
-            recent_invites: [],
-        };
-
-        mockGetOrCreateUser.mockResolvedValue(mockUser);
-        mockGetReferralStats.mockResolvedValue(mockStats);
-        mockGetUnclaimedEarnings.mockResolvedValue(0);
 
         // Act
         const request = createRequest(); // No Authorization header
         const response = await GET(request);
         const data = await response.json();
 
-        // Assert
-        expect(response.status).toBe(200);
-        expect(data.referral_code).toBeDefined();
+        // Assert - should be 401 even in development
+        expect(response.status).toBe(401);
+        expect(data.error).toBe('Unauthorized');
 
         // Cleanup
         vi.unstubAllEnvs();

@@ -7,6 +7,9 @@ import { referralDb } from '@/lib/db/referralDb';
  * 
  * Body: { code: string, walletAddress: string }
  */
+// Validate EVM wallet address format
+const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
 export async function POST(req: Request) {
     try {
         const { code, walletAddress } = await req.json();
@@ -14,6 +17,14 @@ export async function POST(req: Request) {
         if (!code || !walletAddress) {
             return NextResponse.json(
                 { error: 'Missing code or wallet address' },
+                { status: 400 }
+            );
+        }
+
+        // Validate wallet address format
+        if (!EVM_ADDRESS_REGEX.test(walletAddress)) {
+            return NextResponse.json(
+                { error: 'Invalid wallet address format' },
                 { status: 400 }
             );
         }

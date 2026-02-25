@@ -11,25 +11,18 @@ export async function GET(req: Request) {
     let userId = 'user_123';
     let walletAddress: string | null = null;
     let referralCode: string | null = null;
-    const isDev = process.env.NODE_ENV === 'development';
 
-    if (isPrivyServerConfigured()) {
-        // Try to authenticate with Privy
-        const authUser = await verifyAuthToken(req);
-        if (authUser) {
-            userId = authUser.userId;
-            walletAddress = authUser.walletAddress;
-        } else if (!isDev) {
-            // Production: require authentication
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        } else {
-            // Development: use mock wallet when no auth token
-            walletAddress = '0xdev123abc';
-        }
-    } else {
-        // Privy not configured: use mock wallet
-        walletAddress = '0xdev123abc';
+    // Require authentication - fail closed regardless of environment
+    if (!isPrivyServerConfigured()) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const authUser = await verifyAuthToken(req);
+    if (!authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    userId = authUser.userId;
+    walletAddress = authUser.walletAddress;
 
     try {
         // Get or create user in database by wallet (auto-generates referral code)
@@ -84,19 +77,6 @@ export async function POST(req: Request) {
         }
     }
 
-    // Development fallback (no Privy configured)
-    const MOCK_WALLET = '0x123abc';
-    try {
-        const user = await referralDb.getOrCreateUser(MOCK_WALLET);
-        if (!user) {
-            return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-        }
-        return NextResponse.json({
-            code: user.referral_code,
-            user_id: user.id,
-        });
-    } catch (error) {
-        console.error('[API/referrals] Error creating code:', error);
-        return NextResponse.json({ error: 'Failed to create referral code' }, { status: 500 });
-    }
+    // Privy not configured - fail closed
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 }

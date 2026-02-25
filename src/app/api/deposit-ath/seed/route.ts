@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server';
 import { seedAllUsersAth, CollateralData } from '@/lib/db/depositAthDb';
 import { getTotalCollateralByAddress } from '@/lib/collateral/multiProtocolCollateral';
+import { verifyAuthToken, isPrivyServerConfigured } from '@/lib/auth/privy-server';
 
 /**
  * POST /api/deposit-ath/seed
  *
- * One-time admin endpoint to seed ATH records for all existing users.
- * Populates the deposit_ath table with current (or historical) collateral values.
+ * Admin endpoint to seed ATH records for all existing users.
+ * Requires authentication.
  *
  * Body params:
  * - hoursAgo (optional): Seed with data from N hours ago (for historical seeding)
- *
- * This endpoint should be protected in production and run only once.
  */
 export async function POST(req: Request) {
+    // Require authentication
+    if (!isPrivyServerConfigured()) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const authUser = await verifyAuthToken(req);
+    if (!authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         // Parse request body
         let hoursAgo: number | undefined;

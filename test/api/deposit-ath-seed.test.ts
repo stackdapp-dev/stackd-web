@@ -3,6 +3,7 @@
  *
  * Tests for the one-time seeding endpoint that populates ATH records
  * for all existing users with their current (or historical) collateral.
+ * Now requires authentication.
  *
  * @vitest-environment node
  */
@@ -14,10 +15,14 @@ const {
     mockSeedAllUsersAth,
     mockGetAllUsers,
     mockGetTotalCollateralByAddress,
+    mockVerifyAuthToken,
+    mockIsPrivyServerConfigured,
 } = vi.hoisted(() => ({
     mockSeedAllUsersAth: vi.fn(),
     mockGetAllUsers: vi.fn(),
     mockGetTotalCollateralByAddress: vi.fn(),
+    mockVerifyAuthToken: vi.fn(),
+    mockIsPrivyServerConfigured: vi.fn(),
 }));
 
 // Mock the depositAthDb module
@@ -35,9 +40,33 @@ vi.mock('@/lib/collateral/multiProtocolCollateral', () => ({
     getTotalCollateralByAddress: mockGetTotalCollateralByAddress,
 }));
 
+// Mock auth
+vi.mock('@/lib/auth/privy-server', () => ({
+    verifyAuthToken: mockVerifyAuthToken,
+    isPrivyServerConfigured: mockIsPrivyServerConfigured,
+}));
+
+// Helper to create authenticated request
+function createAuthenticatedRequest(body: object = {}) {
+    return new Request('http://localhost:3000/api/deposit-ath/seed', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer valid_token',
+        },
+        body: JSON.stringify(body),
+    });
+}
+
 describe('POST /api/deposit-ath/seed', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Default: auth is configured and valid
+        mockIsPrivyServerConfigured.mockReturnValue(true);
+        mockVerifyAuthToken.mockResolvedValue({
+            userId: 'admin_user',
+            walletAddress: '0x1234567890123456789012345678901234567890',
+        });
     });
 
     afterEach(() => {
@@ -54,14 +83,7 @@ describe('POST /api/deposit-ath/seed', () => {
         // Import the route handler
         const { POST } = await import('@/app/api/deposit-ath/seed/route');
 
-        // Create a mock request
-        const request = new Request('http://localhost:3000/api/deposit-ath/seed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-        });
+        const request = createAuthenticatedRequest({});
 
         const response = await POST(request);
         const data = await response.json();
@@ -81,13 +103,7 @@ describe('POST /api/deposit-ath/seed', () => {
 
         const { POST } = await import('@/app/api/deposit-ath/seed/route');
 
-        const request = new Request('http://localhost:3000/api/deposit-ath/seed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-        });
+        const request = createAuthenticatedRequest({});
 
         const response = await POST(request);
         const data = await response.json();
@@ -106,13 +122,7 @@ describe('POST /api/deposit-ath/seed', () => {
 
         const { POST } = await import('@/app/api/deposit-ath/seed/route');
 
-        const request = new Request('http://localhost:3000/api/deposit-ath/seed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ hoursAgo: 1 }),
-        });
+        const request = createAuthenticatedRequest({ hoursAgo: 1 });
 
         const response = await POST(request);
         const data = await response.json();
@@ -123,25 +133,30 @@ describe('POST /api/deposit-ath/seed', () => {
         expect(data.hoursAgo).toBe(1);
     });
 
-    it('should require admin key for authorization', async () => {
-        // Import the route handler
+    it('should return 401 when no auth token is provided', async () => {
+        mockVerifyAuthToken.mockResolvedValue(null);
+
         const { POST } = await import('@/app/api/deposit-ath/seed/route');
 
-        // Create request without admin key
         const request = new Request('http://localhost:3000/api/deposit-ath/seed', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}),
         });
 
-        // Should still work in test environment, but verify the route handles auth
         const response = await POST(request);
+        expect(response.status).toBe(401);
+    });
 
-        // In production this would return 401, but test env may allow it
-        // The important thing is the endpoint exists and handles requests
-        expect(response.status).toBeDefined();
+    it('should return 401 when Privy is not configured', async () => {
+        mockIsPrivyServerConfigured.mockReturnValue(false);
+
+        const { POST } = await import('@/app/api/deposit-ath/seed/route');
+
+        const request = createAuthenticatedRequest({});
+
+        const response = await POST(request);
+        expect(response.status).toBe(401);
     });
 
     it('should handle errors gracefully', async () => {
@@ -150,13 +165,7 @@ describe('POST /api/deposit-ath/seed', () => {
 
         const { POST } = await import('@/app/api/deposit-ath/seed/route');
 
-        const request = new Request('http://localhost:3000/api/deposit-ath/seed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-        });
+        const request = createAuthenticatedRequest({});
 
         const response = await POST(request);
         const data = await response.json();
