@@ -14,6 +14,7 @@ import {
   createPublicClient,
   createWalletClient,
   custom,
+  fallback,
   http,
 } from "viem";
 import { arbitrum, mainnet } from "viem/chains";
@@ -70,7 +71,7 @@ const SUPPORTED_CHAINS = {
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { wallets: privyWallets, ready } = useWallets();
+  const { wallets: privyWallets } = useWallets();
   const { authenticated: privyAuthenticated } = usePrivy();
 
   // Test mode support for E2E testing - use state to allow re-render after script injection
@@ -124,13 +125,19 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   // Ethereum mainnet public client
-  // Uses NEXT_PUBLIC_ETHEREUM_RPC_URL if set, falls back to Cloudflare public RPC
+  // Uses NEXT_PUBLIC_ETHEREUM_RPC_URL if set, falls back to public RPCs
+  // Note: Cloudflare ETH RPC cannot handle complex contract calls (Fluid resolver),
+  // so we use LlamaRPC with publicnode as fallback
   const [ethereumPublicClient] = useState<PublicClient>(() =>
     createPublicClient({
       chain: mainnet,
-      transport: http(
-        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || "https://cloudflare-eth.com"
-      ),
+      transport: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL
+        ? http(process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL)
+        : fallback([
+            http("https://eth.llamarpc.com"),
+            http("https://ethereum-rpc.publicnode.com"),
+            http("https://1rpc.io/eth"),
+          ]),
     })
   );
 
@@ -152,33 +159,21 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const activeWallet = useMemo(() => {
-    // Debug: log all conditions
-    console.log("[WALLET] Checking conditions - ready:", ready, "wallets.length:", wallets.length, "authenticated:", authenticated);
+    // Must be authenticated to have an active wallet
+    if (!authenticated) return null;
 
-    // Only set active wallet if user is authenticated
-    if (!ready || wallets.length === 0 || !authenticated) {
-      console.log("[WALLET] Conditions not met, returning null");
-      return null;
-    }
+    // If wallets are available, use them (don't wait for ready flag).
+    // The ready flag from useWallets() can lag behind for external/injected
+    // wallets (Rabby, MetaMask), causing a race condition where
+    // authenticated is true but ready is still false.
+    if (wallets.length === 0) return null;
 
     // there's an already saved wallet address
     if (savedActiveWallet) {
-      console.log(
-        "[WALLET] checking for saved active wallet:",
-        savedActiveWallet
-      );
-      console.log("[WALLET] wallets:", wallets);
       const matchingWallet = wallets.find(
         (w) => w.address === savedActiveWallet
       );
-      if (matchingWallet) {
-        console.log("[WALLET] active wallet found:", matchingWallet.address);
-        return matchingWallet;
-      } else {
-        console.log(
-          "[WALLET] active wallet not found, defaulting to first wallet"
-        );
-      }
+      if (matchingWallet) return matchingWallet;
     }
 
     // no saved wallet address, or saved wallet address has no match
@@ -186,9 +181,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       // save persistently if more than 1 wallet
       localStorage.setItem(ACTIVE_WALLET_KEY, wallets[0].address);
     }
-    console.log("[WALLET] active wallet is first wallet:", wallets[0].address);
     return wallets[0];
-  }, [ready, wallets, savedActiveWallet, authenticated]);
+  }, [wallets, savedActiveWallet, authenticated]);
 
   useEffect(() => {
     const initWalletClient = async () => {
@@ -392,28 +386,13 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
       setIsSending(true);
       await ensureNetworkForTransaction(targetChainId);
 
-      console.log("[TX] Sending transaction:", params);
-      console.log("[TX] Using wallet address:", activeWallet.address);
-      console.log("[TX] Wallet client type:", activeWallet.walletClientType);
-      console.log("[TX] Target chain ID:", targetChainId);
+      console.log("[TX] Sending transaction to:", params.to, "chain:", targetChainId);
 
       // Check if this is an embedded wallet (supports gas sponsorship)
       const isEmbeddedWallet = activeWallet.walletClientType === "privy";
 
       // Disable sponsorship if explicitly requested (e.g., for Ethereum mainnet Fluid operations)
       const shouldSponsor = isEmbeddedWallet && !params.forceNoSponsor;
-
-      // DEBUG: Extra logging for passkey wallet investigations
-      if (isEmbeddedWallet && params.forceNoSponsor) {
-        console.log("[TX DEBUG] ==========================================");
-        console.log("[TX DEBUG] Passkey wallet with forceNoSponsor=true");
-        console.log("[TX DEBUG] This is the case for Fluid mainnet operations");
-        console.log("[TX DEBUG] Calldata length:", params.data?.length || 0);
-        console.log("[TX DEBUG] Calldata:", params.data);
-        console.log("[TX DEBUG] To address:", params.to);
-        console.log("[TX DEBUG] Value:", params.value?.toString() || "0");
-        console.log("[TX DEBUG] ==========================================");
-      }
 
       if (shouldSponsor) {
         // Use Privy's sendTransaction with gas sponsorship for embedded wallets
@@ -437,7 +416,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
           }
         );
 
-        console.log("[TX] Sponsored transaction hash:", txReceipt.hash);
+        console.log("[TX] Sponsored tx hash:", txReceipt.hash);
         setIsSending(false);
         return { hash: txReceipt.hash, error: null };
       } else {
@@ -462,31 +441,14 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
           }
         );
 
-        console.log("[TX] External wallet transaction hash:", txReceipt.hash);
+        console.log("[TX] External wallet tx hash:", txReceipt.hash);
         setIsSending(false);
         return { hash: txReceipt.hash, error: null };
       }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown transaction error";
-      console.error("[TX] Transaction failed:", err);
-
-      // DEBUG: Enhanced error logging for passkey investigations
-      console.error("[TX DEBUG] ==========================================");
-      console.error("[TX DEBUG] Transaction Error Details:");
-      console.error("[TX DEBUG] Error type:", err?.constructor?.name);
-      console.error("[TX DEBUG] Error message:", errorMessage);
-      if (err && typeof err === "object") {
-        console.error("[TX DEBUG] Error keys:", Object.keys(err));
-        // Try to extract more details
-        const errObj = err as Record<string, unknown>;
-        if (errObj.cause) console.error("[TX DEBUG] Cause:", errObj.cause);
-        if (errObj.details) console.error("[TX DEBUG] Details:", errObj.details);
-        if (errObj.shortMessage) console.error("[TX DEBUG] Short message:", errObj.shortMessage);
-        if (errObj.metaMessages) console.error("[TX DEBUG] Meta messages:", errObj.metaMessages);
-      }
-      console.error("[TX DEBUG] ==========================================");
-
+      console.error("[TX] Transaction failed:", errorMessage);
       setIsSending(false);
       return { hash: null, error: errorMessage };
     }

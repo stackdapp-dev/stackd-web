@@ -154,9 +154,9 @@ describeIntegration('Fluid VaultResolver RPC Integration', () => {
       expect(vaultData.constantVariables.supplyToken).toBeDefined();
       expect(vaultData.constantVariables.borrowToken).toBeDefined();
 
-      // Token addresses should be valid (not zero address or malformed)
-      const supplyToken = vaultData.constantVariables.supplyToken;
-      const borrowToken = vaultData.constantVariables.borrowToken;
+      // v2 resolver: tokens are tuples with token0/token1 (for smart col/debt support)
+      const supplyToken = vaultData.constantVariables.supplyToken.token0;
+      const borrowToken = vaultData.constantVariables.borrowToken.token0;
 
       // Should be valid Ethereum addresses (42 chars including 0x)
       expect(supplyToken.length).toBe(42);

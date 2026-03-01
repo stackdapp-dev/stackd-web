@@ -248,7 +248,7 @@ export async function getUserPositions(
               const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
               console.log(`[FLUID] Live borrow rate from resolver (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
-              oraclePrice = vaultEntireData.configs.oraclePrice;
+              oraclePrice = vaultEntireData.configs.oraclePriceOperate;
               console.log(`[FLUID] Oracle price (raw): ${oraclePrice.toString()}`);
             } catch (vaultDataError) {
               console.warn(`[FLUID] Failed to get vault rate data for NFT ${nftId}, using fallback rates`, vaultDataError);
@@ -349,8 +349,8 @@ export async function getPositionByNftId(
     const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
     console.log(`[FLUID] getPositionByNftId live borrow rate (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
-    // Extract oracle price from configs struct
-    const oraclePrice = vaultData.configs.oraclePrice;
+    // Extract oracle price from configs struct (v2: oraclePriceOperate)
+    const oraclePrice = vaultData.configs.oraclePriceOperate;
     console.log(`[FLUID] getPositionByNftId oracle price (raw): ${oraclePrice.toString()}`);
 
     const position: FluidUserPosition = {
@@ -486,18 +486,26 @@ export function encodeFluidBorrow(
   return encodeFluidOperateData(nftId, BigInt(0), amount, recipient);
 }
 
+// Fluid vault sentinel value: passing type(int256).min as newDebt_ triggers
+// full debt repayment, computing the exact payback amount on-chain.
+// This avoids Vault__UserDebtTooLow (31027) errors when repaying near-full debt.
+const INT256_MIN = -(2n ** 255n);
+
 /**
  * Encode a repay debt operation
  * @param nftId - Position NFT ID
  * @param amount - Amount to repay (positive value, will be negated)
  * @param recipient - Address (typically the user's address)
+ * @param isMaxRepay - If true, uses type(int256).min to repay all debt exactly
  */
 export function encodeFluidRepay(
   nftId: bigint,
   amount: bigint,
-  recipient: Address
+  recipient: Address,
+  isMaxRepay: boolean = false
 ): Hex {
-  return encodeFluidOperateData(nftId, BigInt(0), -amount, recipient);
+  const debtDelta = isMaxRepay ? INT256_MIN : -amount;
+  return encodeFluidOperateData(nftId, BigInt(0), debtDelta, recipient);
 }
 
 /**
@@ -602,7 +610,7 @@ export async function getFluidOraclePrice(
       args: [XAUT_USDT_VAULT as Address],
     });
 
-    const rawOraclePrice = vaultData.configs.oraclePrice;
+    const rawOraclePrice = vaultData.configs.oraclePriceOperate;
     const priceUsd = convertOraclePriceToUsd(rawOraclePrice);
 
     console.log(`[FLUID] getFluidOraclePrice: raw=${rawOraclePrice.toString()}, USD=${priceUsd.toFixed(2)}`);

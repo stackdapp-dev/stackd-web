@@ -68,7 +68,7 @@ function buildMockClient(overrides: {
               vault: VAULT_ADDRESS,
               constantVariables: {},
               configs: {
-                oraclePrice: BigInt("2800000000000000000000000000000"), // ~$2800
+                oraclePriceOperate: BigInt("2800000000000000000000000000000"), // ~$2800
                 collateralFactor: BigInt(7500),
                 liquidationThreshold: BigInt(8000),
               },
