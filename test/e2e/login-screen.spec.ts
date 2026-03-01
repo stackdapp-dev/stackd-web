@@ -182,4 +182,36 @@ test.describe("Login Screen - Layout", () => {
         await expect(loginContainer).toHaveCSS("flex-direction", "column");
         await expect(loginContainer).toHaveCSS("align-items", "center");
     });
+
+    test("email and passkey buttons should not overflow container bounds on hover", async ({ page }) => {
+        await page.goto("/");
+        await page.waitForLoadState("domcontentloaded");
+
+        // Open "Other Login Options"
+        await page.getByTestId("login-other-options-button").click();
+        // Wait for expand animation to settle
+        await page.waitForTimeout(300);
+
+        const container = page.getByTestId("login-buttons-container");
+        const containerBox = await container.boundingBox();
+        expect(containerBox).not.toBeNull();
+
+        // Hover email button and verify it stays within container bounds
+        const emailButton = page.getByTestId("login-email-button");
+        await emailButton.hover();
+        await page.waitForTimeout(350); // wait for transition-all duration-300
+        const emailBox = await emailButton.boundingBox();
+        expect(emailBox).not.toBeNull();
+        expect(emailBox!.x).toBeGreaterThanOrEqual(containerBox!.x - 1);
+        expect(emailBox!.x + emailBox!.width).toBeLessThanOrEqual(containerBox!.x + containerBox!.width + 1);
+
+        // Hover passkey button and verify it stays within container bounds
+        const passkeyButton = page.getByTestId("login-passkey-button");
+        await passkeyButton.hover();
+        await page.waitForTimeout(350);
+        const passkeyBox = await passkeyButton.boundingBox();
+        expect(passkeyBox).not.toBeNull();
+        expect(passkeyBox!.x).toBeGreaterThanOrEqual(containerBox!.x - 1);
+        expect(passkeyBox!.x + passkeyBox!.width).toBeLessThanOrEqual(containerBox!.x + containerBox!.width + 1);
+    });
 });
