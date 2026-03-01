@@ -533,3 +533,135 @@ describe("useFluid - Transaction Functions", () => {
         });
     });
 });
+
+/**
+ * TDD tests for repay pre-flight USDT balance validation
+ *
+ * Bug: FluidSafeTransferError (71001) occurs when the vault's safeTransferFrom
+ * fails pulling USDT from the user during max repay. Root cause: when isMaxRepay
+ * is true, INT256_MIN tells the vault to compute exact on-chain debt (including
+ * accrued interest). If user's USDT balance < computed debt, transfer fails.
+ *
+ * Fix: Add pre-flight USDT balance check in the repay() callback before submitting
+ * the operate transaction when isMaxRepay is true.
+ */
+describe("useFluid - Repay Pre-flight Balance Validation", () => {
+    describe("repay() should check USDT balance before max repay", () => {
+        it("should read USDT balanceOf on-chain when isMaxRepay is true", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // The repay function should check USDT balance before submitting
+            expect(hookCode).toContain("balanceOf");
+            // Should reference USDT address for balance check
+            expect(hookCode).toContain("ETHEREUM_TOKEN_ADDRESSES.USDT");
+        });
+
+        it("should compare user USDT balance against borrowRaw in repay callback", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should compare balance against borrowRaw (the last-fetched debt amount)
+            expect(hookCode).toMatch(/usdtBalance\s*<\s*borrowRaw/);
+        });
+
+        it("should return an error with insufficient balance message instead of reverting on-chain", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should return a user-friendly error about insufficient USDT
+            expect(hookCode).toMatch(/Insufficient USDT to repay full debt/);
+        });
+
+        it("should include borrowRaw in repay callback dependency array", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Extract the repay useCallback dependency array
+            // Find the repay callback's closing bracket with its deps
+            const repayMatch = hookCode.match(/const repay\s*=\s*useCallback\([\s\S]*?\[([^\]]+)\]\s*\)/);
+            expect(repayMatch).not.toBeNull();
+            const deps = repayMatch![1];
+            expect(deps).toContain("borrowRaw");
+            expect(deps).toContain("ethereumPublicClient");
+        });
+
+        it("should only perform balance check when isMaxRepay is true", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // The balance check should be gated behind isMaxRepay
+            expect(hookCode).toMatch(/if\s*\(\s*isMaxRepay\s*&&\s*ethereumPublicClient\s*\)/);
+        });
+
+        it("should gracefully handle balance check failures without blocking repay", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useFluid.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // Should catch errors from balance check and continue
+            expect(hookCode).toMatch(/Pre-flight USDT balance check failed, proceeding/);
+        });
+    });
+});
+
+/**
+ * TDD tests for LoanSimulator repay max value capping
+ *
+ * The repay slider's maxValue should be capped at the user's USDT balance,
+ * not just the current borrowed amount. This prevents users from attempting
+ * full repay when they don't have enough USDT.
+ */
+describe("LoanSimulator - Repay Max Value Capping", () => {
+    it("should cap repay maxValue to min(currentBorrowedAmount, effective USDT balance)", async () => {
+        const fs = await import("fs");
+        const path = await import("path");
+
+        const componentPath = path.resolve(process.cwd(), "src/components/wallet/LoanSimulator.tsx");
+        const code = fs.readFileSync(componentPath, "utf-8");
+
+        // Repay mode maxValue should use Math.min to cap at the effective USDT balance
+        // For XAUT (Fluid on Ethereum mainnet), uses chainBalances.ethereum.USDT
+        // For WBTC (Compound on Arbitrum), uses combined usdtBalance
+        expect(code).toMatch(/Math\.min\(\s*currentBorrowedAmount\s*,\s*isXaut/);
+    });
+
+    it("should check USDT balance before max repay in handleConfirm", async () => {
+        const fs = await import("fs");
+        const path = await import("path");
+
+        const componentPath = path.resolve(process.cwd(), "src/components/wallet/LoanSimulator.tsx");
+        const code = fs.readFileSync(componentPath, "utf-8");
+
+        // Should have a pre-flight balance check for max repay
+        expect(code).toMatch(/isMaxRepay\s*&&\s*usdtBalance\s*<\s*currentBorrowedAmount/);
+    });
+
+    it("should show insufficient USDT error message in LoanSimulator", async () => {
+        const fs = await import("fs");
+        const path = await import("path");
+
+        const componentPath = path.resolve(process.cwd(), "src/components/wallet/LoanSimulator.tsx");
+        const code = fs.readFileSync(componentPath, "utf-8");
+
+        // Should show a user-friendly error about insufficient USDT
+        expect(code).toMatch(/Insufficient USDT to repay full debt/);
+    });
+});

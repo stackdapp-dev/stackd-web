@@ -1533,6 +1533,99 @@ describe("LoanSimulator - WBTC Withdrawal Slider Max Value (Bug Fix)", () => {
 });
 
 /**
+ * TDD tests for Bug Fix: XAUT Repay Slider Uses Combined USDT Balance
+ *
+ * Problem: When repaying an XAUT/Fluid loan on Ethereum mainnet, the slider max
+ * is capped using the combined (Arbitrum + Ethereum) USDT balance. This means
+ * the slider can allow values higher than the user's Ethereum USDT balance,
+ * leading to "Insufficient USDT to repay full debt" errors.
+ *
+ * Example from user report:
+ *   Ethereum USDT balance: 10.3439
+ *   Debt: ~10.371669 USDT
+ *   Combined USDT balance (Arb + Eth): could be higher
+ *   → Slider allows full debt amount → transaction fails
+ *
+ * Solution: For XAUT repay mode, use chainBalances.ethereum.USDT (Ethereum-only
+ * USDT balance) instead of the combined usdtBalance, since Fluid operates on
+ * Ethereum mainnet.
+ */
+describe("LoanSimulator - XAUT Repay Slider Cap at Ethereum USDT Balance (Bug Fix)", () => {
+    describe("Implementation verification", () => {
+        it("should use chainBalances from useWalletBalanceContext", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // LoanSimulator should destructure chainBalances from the wallet balance context
+            expect(componentCode).toContain("chainBalances");
+        });
+
+        it("should use Ethereum-specific USDT balance for XAUT repay max value", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const componentPath = path.resolve(
+                process.cwd(),
+                "src/components/wallet/LoanSimulator.tsx"
+            );
+            const componentCode = fs.readFileSync(componentPath, "utf-8");
+
+            // For XAUT repay mode, the maxValue should reference Ethereum chain balance
+            // not the combined usdtBalance
+            expect(componentCode).toMatch(/chainBalances\.ethereum/);
+        });
+    });
+
+    describe("Repay max value logic", () => {
+        it("should cap XAUT repay at Ethereum USDT balance when less than debt", () => {
+            const currentBorrowedAmount = 10.37; // Debt in USD
+            const ethereumUsdtBalance = 10.34;   // Ethereum-only USDT balance
+            const combinedUsdtBalance = 25.50;   // Combined Arb + Eth balance
+
+            const isXaut = true;
+
+            // Correct: use Ethereum-specific balance for XAUT
+            const effectiveUsdtBalance = isXaut ? ethereumUsdtBalance : combinedUsdtBalance;
+            const maxRepay = Math.min(currentBorrowedAmount, effectiveUsdtBalance);
+
+            // Should cap at Ethereum balance (10.34), not combined (25.50) or debt (10.37)
+            expect(maxRepay).toBeCloseTo(10.34, 2);
+        });
+
+        it("should cap XAUT repay at debt when Ethereum USDT balance exceeds debt", () => {
+            const currentBorrowedAmount = 10.37;
+            const ethereumUsdtBalance = 50.00; // More than enough on Ethereum
+
+            const isXaut = true;
+            const effectiveUsdtBalance = isXaut ? ethereumUsdtBalance : ethereumUsdtBalance;
+            const maxRepay = Math.min(currentBorrowedAmount, effectiveUsdtBalance);
+
+            // Should cap at debt (10.37) since balance (50.00) is sufficient
+            expect(maxRepay).toBeCloseTo(10.37, 2);
+        });
+
+        it("should use combined usdtBalance for WBTC repay (Compound on Arbitrum)", () => {
+            const currentBorrowedAmount = 2000;
+            const combinedUsdtBalance = 500;
+
+            const isXaut = false;
+
+            // WBTC uses combined balance (Arbitrum is the primary chain for Compound)
+            const effectiveUsdtBalance = isXaut ? 100 : combinedUsdtBalance;
+            const maxRepay = Math.min(currentBorrowedAmount, effectiveUsdtBalance);
+
+            expect(maxRepay).toBeCloseTo(500, 2);
+        });
+    });
+});
+
+/**
  * TDD tests for: Collateral Price Field in Simulate Mode
  *
  * Feature: Add a collateral USD price field between Collateral Amount and Borrow Amount

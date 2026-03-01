@@ -18,6 +18,7 @@ import {
   http,
 } from "viem";
 import { arbitrum, mainnet } from "viem/chains";
+import { boostGasFees } from "@/lib/web3/gasBoost";
 
 declare global {
   interface Window {
@@ -388,6 +389,16 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
 
       console.log("[TX] Sending transaction to:", params.to, "chain:", targetChainId);
 
+      // Boost gas fees by 1.5x for faster confirmation
+      const targetClient = getPublicClient(targetChainId);
+      const boostedGas = await boostGasFees(targetClient);
+      if (boostedGas.maxFeePerGas) {
+        console.log("[TX] Boosted gas fees:", {
+          maxFeePerGas: boostedGas.maxFeePerGas.toString(),
+          maxPriorityFeePerGas: boostedGas.maxPriorityFeePerGas?.toString(),
+        });
+      }
+
       // Check if this is an embedded wallet (supports gas sponsorship)
       const isEmbeddedWallet = activeWallet.walletClientType === "privy";
 
@@ -403,6 +414,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
             data: params.data,
             value: params.value ? BigInt(params.value) : undefined,
             chainId: targetChainId,
+            maxFeePerGas: boostedGas.maxFeePerGas,
+            maxPriorityFeePerGas: boostedGas.maxPriorityFeePerGas,
           },
           {
             // Enable gas sponsorship (requires dashboard configuration)
@@ -429,6 +442,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
             data: params.data,
             value: params.value ? BigInt(params.value) : undefined,
             chainId: targetChainId,
+            maxFeePerGas: boostedGas.maxFeePerGas,
+            maxPriorityFeePerGas: boostedGas.maxPriorityFeePerGas,
           },
           {
             // No sponsorship for external wallets - user pays gas
