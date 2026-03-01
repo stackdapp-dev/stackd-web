@@ -3,9 +3,9 @@
 ## Approval Levels
 
 ### Auto-executable (Level 1)
-- Style adjustments
+- Style adjustments (no logic change)
 - Adding comments
-- Minor bug fixes
+- Minor bug fixes **— TDD cycle still applies; write a failing test first**
 
 ### Requires approval (Level 3)
 - Multiple file changes
@@ -13,11 +13,53 @@
 - Dependency changes
 
 ## Workflow Rules
-- Always run tests before committing
-- Use TDD methodology
+- **Follow the TDD Mandate below — tests before implementation, always**
+- Always run the full test suite before committing (`pnpm test`)
 - Think hard before complex changes
 - Always run all tests and build locally and successfully before pushing commits to remote
 - Run tasks in parallel by spinning off sub agents when possible
+
+## TDD Mandate (applies to ALL code changes, solo or agent-spawned)
+
+**No implementation code may be written until tests are written and confirmed failing.**
+
+### The Cycle (mandatory for every functional change)
+1. **INVESTIGATE** — Read existing code and understand the current state
+2. **WRITE TESTS** — Write tests describing the expected behavior
+3. **VERIFY FAIL** — Run the tests. They MUST fail. Show the failure output.
+   - If they pass before implementation: your tests don't test new behavior — rewrite them
+4. **IMPLEMENT** — Write the minimal code to make the failing tests pass
+5. **VERIFY PASS** — Run the new tests. They MUST pass.
+6. **REGRESSION** — Run the FULL test suite (`pnpm test`). Nothing else should break.
+7. **COMMIT** — Only commit after all tests are green
+
+### Applies to
+- Bug fixes (even "minor" ones)
+- New features
+- Refactors
+- Hook/component/utility changes
+
+### Test commands
+- Unit tests: `pnpm test:unit`
+- Full suite: `pnpm test`
+- Coverage: `pnpm test:coverage`
+
+### Hard rules
+- Do NOT commit source changes without a corresponding test change
+- Do NOT skip VERIFY FAIL — a test that passes before you write code is not testing the right thing
+- Changing tests to make them pass without fixing the implementation is FORBIDDEN
+
+## TDD Anti-Patterns (FORBIDDEN)
+
+| Pattern | Why Forbidden |
+|---------|---------------|
+| Writing implementation before tests | Core TDD violation — behavior is untested |
+| Skipping VERIFY FAIL step | Can't prove the test captures new behavior |
+| Changing tests to fix a failing suite | Hides bugs; only change tests with user approval |
+| Committing without running full suite | Regressions compound; broken windows accumulate |
+| Treating "minor" bugs as exempt from TDD | All behavior changes need test coverage |
+
+---
 
 ## Forbidden Actions
 - Do not modify production configs

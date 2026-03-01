@@ -539,6 +539,28 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: "No account connected" };
       }
 
+      // When doing max repay, vault computes exact on-chain debt (including accrued
+      // interest) via INT256_MIN and pulls that amount via safeTransferFrom.
+      // Pre-flight check: verify user has enough USDT to avoid FluidSafeTransferError (71001).
+      if (isMaxRepay && ethereumPublicClient) {
+        try {
+          const usdtBalance = await ethereumPublicClient.readContract({
+            address: ETHEREUM_TOKEN_ADDRESSES.USDT as Address,
+            abi: ERC20_ABI,
+            functionName: "balanceOf",
+            args: [acct as Address],
+          }) as bigint;
+          if (usdtBalance < borrowRaw && borrowRaw > 0n) {
+            return {
+              txHash: null,
+              error: `Insufficient USDT to repay full debt. Balance: ${formatUnits(usdtBalance, 6)} USDT, Debt: ~${formatUnits(borrowRaw, 6)} USDT. Repay a partial amount or add more USDT.`,
+            };
+          }
+        } catch (err) {
+          console.warn("[FLUID] Pre-flight USDT balance check failed, proceeding:", err);
+        }
+      }
+
       try {
         const data = encodeFluidRepay(nftId, amount, acct as Address, isMaxRepay);
         const result = await sendSponsoredTransaction({
@@ -558,7 +580,7 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [nftId, acct, sendSponsoredTransaction]
+    [nftId, acct, sendSponsoredTransaction, ethereumPublicClient, borrowRaw]
   );
 
   const approve = useCallback(
@@ -572,6 +594,36 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
+        // USDT on Ethereum mainnet has a non-standard approve() that reverts if
+        // currentAllowance > 0 and newAmount > 0. Reset to 0 first if needed.
+        const isUSDT = token.toLowerCase() === ETHEREUM_TOKEN_ADDRESSES.USDT.toLowerCase();
+        if (isUSDT && ethereumPublicClient && amount > 0n) {
+          const currentAllowance = await ethereumPublicClient.readContract({
+            address: token,
+            abi: ERC20_ABI,
+            functionName: "allowance",
+            args: [acct as Address, spender],
+          }) as bigint;
+
+          if (currentAllowance > 0n) {
+            console.log("[FLUID] USDT: existing allowance detected, resetting to 0 first...");
+            const resetData = encodeApproveData(spender, 0n);
+            const resetResult = await sendSponsoredTransaction({
+              to: token,
+              data: resetData,
+              chainId: mainnet.id,
+              forceNoSponsor: true,
+            });
+            if (resetResult.error) {
+              return { txHash: null, error: `USDT allowance reset failed: ${resetResult.error}` };
+            }
+            // Wait for reset to be mined before sending the real approval
+            if (resetResult.hash) {
+              await ethereumPublicClient.waitForTransactionReceipt({ hash: resetResult.hash as Hex });
+            }
+          }
+        }
+
         const data = encodeApproveData(spender, amount);
         const result = await sendSponsoredTransaction({
           to: token,
@@ -590,7 +642,7 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [acct, sendSponsoredTransaction]
+    [acct, sendSponsoredTransaction, ethereumPublicClient]
   );
 
   const allowance = useCallback(
