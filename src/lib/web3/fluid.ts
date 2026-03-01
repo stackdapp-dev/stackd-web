@@ -214,7 +214,7 @@ export async function getUserPositions(
           console.log(`[FLUID] NFT ${nftId} is in known vault: ${vaultAddress}`);
 
           try {
-            // Call 1: Use POSITION_BY_NFT_ABI for correct supply/borrow values
+            // Call 1 (critical): fetch actual position supply/borrow — must succeed
             const userPosition = await publicClient.readContract({
               address: VAULT_RESOLVER_ADDRESS,
               abi: POSITION_BY_NFT_ABI,
@@ -227,31 +227,32 @@ export async function getUserPositions(
               borrow: userPosition.borrow.toString(),
             });
 
-            // Call 2: Use getVaultEntireData to get live borrow rate
-            // FLUID_VAULT_RESOLVER_ABI is configured for getVaultEntireData function
-            const vaultEntireData = await publicClient.readContract({
-              address: VAULT_RESOLVER_ADDRESS,
-              abi: FLUID_VAULT_RESOLVER_ABI,
-              functionName: "getVaultEntireData",
-              args: [vaultAddress],
-            });
+            // Call 2 (optional): fetch live vault rates — use fallback if it fails
+            let liveBorrowRate = knownVault.borrowRate;
+            let liveSupplyRate = knownVault.supplyRate;
+            let oraclePrice = BigInt(0);
 
-            // Extract borrowRateVault from exchangePricesAndRates nested struct
-            // borrowRateVault is in basis points (10000 = 100%, so 515 = 5.15%)
-            const liveBorrowRateBps = vaultEntireData.exchangePricesAndRates.borrowRateVault;
-            const liveSupplyRateBps = vaultEntireData.exchangePricesAndRates.supplyRateVault;
+            try {
+              const vaultEntireData = await publicClient.readContract({
+                address: VAULT_RESOLVER_ADDRESS,
+                abi: FLUID_VAULT_RESOLVER_ABI,
+                functionName: "getVaultEntireData",
+                args: [vaultAddress],
+              });
 
-            // Convert basis points to per-second rate scaled by 1e18 (to match our rateToApr function)
-            const liveBorrowRate = bpsRateToPerSecondRate(liveBorrowRateBps);
-            const liveSupplyRate = bpsRateToPerSecondRate(liveSupplyRateBps);
+              const liveBorrowRateBps = vaultEntireData.exchangePricesAndRates.borrowRateVault;
+              const liveSupplyRateBps = vaultEntireData.exchangePricesAndRates.supplyRateVault;
+              liveBorrowRate = bpsRateToPerSecondRate(liveBorrowRateBps);
+              liveSupplyRate = bpsRateToPerSecondRate(liveSupplyRateBps);
 
-            // Calculate APR for logging (directly from basis points)
-            const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
-            console.log(`[FLUID] Live borrow rate from resolver (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
+              const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
+              console.log(`[FLUID] Live borrow rate from resolver (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
-            // Extract oracle price from configs struct
-            const oraclePrice = vaultEntireData.configs.oraclePrice;
-            console.log(`[FLUID] Oracle price (raw): ${oraclePrice.toString()}`);
+              oraclePrice = vaultEntireData.configs.oraclePrice;
+              console.log(`[FLUID] Oracle price (raw): ${oraclePrice.toString()}`);
+            } catch (vaultDataError) {
+              console.warn(`[FLUID] Failed to get vault rate data for NFT ${nftId}, using fallback rates`, vaultDataError);
+            }
 
             positions.push({
               nftId,
@@ -259,7 +260,7 @@ export async function getUserPositions(
               borrow: userPosition.borrow,
             });
 
-            // Use KNOWN_VAULTS for token addresses but LIVE rates and oracle price from resolver
+            // Use KNOWN_VAULTS for token addresses and live (or fallback) rates
             vaultsData.push({
               vault: vaultAddress,
               supplyToken: knownVault.supplyToken,
@@ -271,26 +272,9 @@ export async function getUserPositions(
               oraclePrice,
             });
 
-
           } catch (positionError) {
+            // Position fetch failed — skip this NFT entirely rather than pushing zeros
             console.error(`[FLUID] Error fetching position data for NFT ${nftId}:`, positionError);
-            // Fallback to hardcoded values if the resolver call fails
-            positions.push({
-              nftId,
-              supply: BigInt(0),
-              borrow: BigInt(0),
-            });
-
-            vaultsData.push({
-              vault: vaultAddress,
-              supplyToken: knownVault.supplyToken,
-              borrowToken: knownVault.borrowToken,
-              collateralFactor: knownVault.collateralFactor,
-              liquidationThreshold: knownVault.liquidationThreshold,
-              supplyRate: knownVault.supplyRate,
-              borrowRate: knownVault.borrowRate,
-              oraclePrice: BigInt(0), // Fallback - should fetch from external source
-            });
           }
 
         } else {
