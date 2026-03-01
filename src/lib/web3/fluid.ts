@@ -248,7 +248,7 @@ export async function getUserPositions(
               const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
               console.log(`[FLUID] Live borrow rate from resolver (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
-              oraclePrice = vaultEntireData.configs.oraclePrice;
+              oraclePrice = vaultEntireData.configs.oraclePriceOperate;
               console.log(`[FLUID] Oracle price (raw): ${oraclePrice.toString()}`);
             } catch (vaultDataError) {
               console.warn(`[FLUID] Failed to get vault rate data for NFT ${nftId}, using fallback rates`, vaultDataError);
@@ -349,8 +349,8 @@ export async function getPositionByNftId(
     const aprPercent = bpsRateToAprPercentage(liveBorrowRateBps);
     console.log(`[FLUID] getPositionByNftId live borrow rate (bps): ${liveBorrowRateBps.toString()} (${aprPercent.toFixed(2)}% APR)`);
 
-    // Extract oracle price from configs struct
-    const oraclePrice = vaultData.configs.oraclePrice;
+    // Extract oracle price from configs struct (v2: oraclePriceOperate)
+    const oraclePrice = vaultData.configs.oraclePriceOperate;
     console.log(`[FLUID] getPositionByNftId oracle price (raw): ${oraclePrice.toString()}`);
 
     const position: FluidUserPosition = {
@@ -602,7 +602,7 @@ export async function getFluidOraclePrice(
       args: [XAUT_USDT_VAULT as Address],
     });
 
-    const rawOraclePrice = vaultData.configs.oraclePrice;
+    const rawOraclePrice = vaultData.configs.oraclePriceOperate;
     const priceUsd = convertOraclePriceToUsd(rawOraclePrice);
 
     console.log(`[FLUID] getFluidOraclePrice: raw=${rawOraclePrice.toString()}, USD=${priceUsd.toFixed(2)}`);

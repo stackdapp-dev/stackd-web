@@ -14,6 +14,7 @@ import {
   createPublicClient,
   createWalletClient,
   custom,
+  fallback,
   http,
 } from "viem";
 import { arbitrum, mainnet } from "viem/chains";
@@ -124,13 +125,19 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   // Ethereum mainnet public client
-  // Uses NEXT_PUBLIC_ETHEREUM_RPC_URL if set, falls back to Cloudflare public RPC
+  // Uses NEXT_PUBLIC_ETHEREUM_RPC_URL if set, falls back to public RPCs
+  // Note: Cloudflare ETH RPC cannot handle complex contract calls (Fluid resolver),
+  // so we use LlamaRPC with publicnode as fallback
   const [ethereumPublicClient] = useState<PublicClient>(() =>
     createPublicClient({
       chain: mainnet,
-      transport: http(
-        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || "https://cloudflare-eth.com"
-      ),
+      transport: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL
+        ? http(process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL)
+        : fallback([
+            http("https://eth.llamarpc.com"),
+            http("https://ethereum-rpc.publicnode.com"),
+            http("https://1rpc.io/eth"),
+          ]),
     })
   );
 
