@@ -530,7 +530,10 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         } else if (mode === "addCollateral") {
           result = await fluid.supply(amountBigInt);
         } else if (mode === "repay") {
-          result = await fluid.repay(amountBigInt);
+          // Use max repay when repaying >= current debt to avoid Fluid's
+          // Vault__UserDebtTooLow error (dust debt < 10000 raw units).
+          const isMaxRepay = safeAmount >= currentBorrowedAmount;
+          result = await fluid.repay(amountBigInt, isMaxRepay);
         }
       } else {
         // Use Compound protocol for WBTC

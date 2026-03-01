@@ -486,18 +486,26 @@ export function encodeFluidBorrow(
   return encodeFluidOperateData(nftId, BigInt(0), amount, recipient);
 }
 
+// Fluid vault sentinel value: passing type(int256).min as newDebt_ triggers
+// full debt repayment, computing the exact payback amount on-chain.
+// This avoids Vault__UserDebtTooLow (31027) errors when repaying near-full debt.
+const INT256_MIN = -(2n ** 255n);
+
 /**
  * Encode a repay debt operation
  * @param nftId - Position NFT ID
  * @param amount - Amount to repay (positive value, will be negated)
  * @param recipient - Address (typically the user's address)
+ * @param isMaxRepay - If true, uses type(int256).min to repay all debt exactly
  */
 export function encodeFluidRepay(
   nftId: bigint,
   amount: bigint,
-  recipient: Address
+  recipient: Address,
+  isMaxRepay: boolean = false
 ): Hex {
-  return encodeFluidOperateData(nftId, BigInt(0), -amount, recipient);
+  const debtDelta = isMaxRepay ? INT256_MIN : -amount;
+  return encodeFluidOperateData(nftId, BigInt(0), debtDelta, recipient);
 }
 
 /**

@@ -184,7 +184,7 @@ type UseFluidResult = {
   supply: (amount: bigint) => Promise<TransactionResult>;
   withdraw: (amount: bigint) => Promise<TransactionResult>;
   borrow: (amount: bigint) => Promise<TransactionResult>;
-  repay: (amount: bigint) => Promise<TransactionResult>;
+  repay: (amount: bigint, isMaxRepay?: boolean) => Promise<TransactionResult>;
   supplyAndBorrow: (collateralAmount: bigint, borrowAmount: bigint) => Promise<TransactionResult>;
   approve: (token: Address, amount: bigint, spender?: Address) => Promise<TransactionResult>;
   allowance: (token: Address, spender?: Address) => Promise<bigint | null>;
@@ -531,7 +531,7 @@ export function useFluid(): UseFluidResult {
   );
 
   const repay = useCallback(
-    async (amount: bigint): Promise<TransactionResult> => {
+    async (amount: bigint, isMaxRepay: boolean = false): Promise<TransactionResult> => {
       if (!nftId) {
         return { txHash: null, error: "No active position found. Cannot repay without nftId." };
       }
@@ -540,7 +540,7 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
-        const data = encodeFluidRepay(nftId, amount, acct as Address);
+        const data = encodeFluidRepay(nftId, amount, acct as Address, isMaxRepay);
         const result = await sendSponsoredTransaction({
           to: XAUT_USDT_VAULT as Address,
           data,
