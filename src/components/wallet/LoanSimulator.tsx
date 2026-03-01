@@ -55,7 +55,7 @@ interface LoanSimulatorProps {
  */
 export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC", onComplete }: LoanSimulatorProps) {
   const router = useRouter();
-  const { refetchBalances, wbtcBalance, usdtBalance } = useWalletBalanceContext();
+  const { refetchBalances, wbtcBalance, usdtBalance, chainBalances } = useWalletBalanceContext();
   const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
   const getPrice = useGetTokenPrice();
   const compound = useCompound();
@@ -169,8 +169,11 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           inputLabel: "Repay Amount (USDT)",
           tokenSymbol: "USDT",
           actionButtonText: "Repay Loan",
-          // Max is borrowed amount for simulation - wallet balance checked at action time
-          maxValue: currentBorrowedAmount,
+          // Cap at user's USDT balance to prevent attempting repay with insufficient funds
+          // (vault computes exact on-chain debt including accrued interest via INT256_MIN)
+          // For XAUT (Fluid on Ethereum mainnet), use Ethereum-specific USDT balance
+          // since combined usdtBalance includes Arbitrum USDT which can't be used for Fluid repay
+          maxValue: Math.min(currentBorrowedAmount, isXaut ? (chainBalances.ethereum?.USDT ?? 0) : usdtBalance),
           isRiskReducing: true,
           warningText: "This will reduce your borrowed amount and liquidation risk.",
           successIcon: true,
@@ -204,7 +207,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           useSlider: true, // Enable slider for borrow mode
         };
     }
-  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.withdrawableFromDepositedBtc, collateralSymbol, isXaut, xautAvailableToWithdraw, xautBalance]);
+  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.withdrawableFromDepositedBtc, collateralSymbol, isXaut, xautAvailableToWithdraw, xautBalance, chainBalances]);
 
   // Simulator state - store input as string (empty for placeholder to show)
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "");
@@ -212,9 +215,16 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   // Sandbox mode - custom collateral input (empty string allows placeholder to show)
   const [sandboxCollateral, setSandboxCollateral] = useState("");
 
+  // Sandbox mode - custom collateral price (empty string uses live API price)
+  const [sandboxCollateralPrice, setSandboxCollateralPrice] = useState("");
+
   // Parse input value for calculations
   const parsedInput = parseFloat(inputValue) || 0;
   const parsedSandboxCollateral = parseFloat(sandboxCollateral) || 0;
+  const parsedSandboxCollateralPrice = parseFloat(sandboxCollateralPrice) || 0;
+
+  // Effective price for simulate mode: use custom price if provided, else live API price
+  const simulateModeCollateralPrice = parsedSandboxCollateralPrice > 0 ? parsedSandboxCollateralPrice : effectiveCollateralPrice;
 
   // Calculate simulated values based on mode
   const { simulatedCollateral, simulatedBorrow } = useMemo(() => {
@@ -254,7 +264,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       return simulateLoan({
         collateralWbtc: 0,
         borrowedUsd: 0,
-        btcPrice: effectiveCollateralPrice,
+        btcPrice: simulateModeCollateralPrice,
         maxLtv: effectiveMaxLtv,
         liquidationRatio: effectiveLiquidationRatio,
         borrowApr: effectiveBorrowApr,
@@ -268,16 +278,16 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       liquidationRatio,
       borrowApr,
     });
-  }, [mode, currentCollateralAmount, currentBorrowedAmount, collateralPrice, maxLtv, liquidationRatio, borrowApr, effectiveCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
+  }, [mode, currentCollateralAmount, currentBorrowedAmount, collateralPrice, maxLtv, liquidationRatio, borrowApr, simulateModeCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
 
   // Calculate simulated result
   const simulatedResult = useMemo((): SimulationResult => {
-    // In simulate mode, use effective (sandbox-selected) values
+    // In simulate mode, use effective (sandbox-selected) values and custom price if provided
     if (mode === "simulate") {
       return simulateLoan({
         collateralWbtc: simulatedCollateral,
         borrowedUsd: simulatedBorrow,
-        btcPrice: effectiveCollateralPrice,
+        btcPrice: simulateModeCollateralPrice,
         maxLtv: effectiveMaxLtv,
         liquidationRatio: effectiveLiquidationRatio,
         borrowApr: effectiveBorrowApr,
@@ -291,7 +301,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       liquidationRatio,
       borrowApr,
     });
-  }, [mode, simulatedCollateral, simulatedBorrow, collateralPrice, maxLtv, liquidationRatio, borrowApr, effectiveCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
+  }, [mode, simulatedCollateral, simulatedBorrow, collateralPrice, maxLtv, liquidationRatio, borrowApr, simulateModeCollateralPrice, effectiveMaxLtv, effectiveLiquidationRatio, effectiveBorrowApr]);
 
   // Calculate max borrow with safety buffer for borrow mode
   const maxBorrow = useMemo(() => {
@@ -299,12 +309,12 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
       return simulatedResult.borrowCapacity * 0.99;
     }
     if (mode === "simulate") {
-      // Max borrow based on sandbox collateral value - use EFFECTIVE price/LTV for sandbox mode
-      const collateralUsd = parsedSandboxCollateral * effectiveCollateralPrice;
+      // Max borrow based on sandbox collateral value - use custom price if provided
+      const collateralUsd = parsedSandboxCollateral * simulateModeCollateralPrice;
       return collateralUsd * (effectiveMaxLtv / 100) * 0.99;
     }
     return modeConfig.maxValue;
-  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue, parsedSandboxCollateral, effectiveCollateralPrice, effectiveMaxLtv]);
+  }, [mode, simulatedResult.borrowCapacity, modeConfig.maxValue, parsedSandboxCollateral, simulateModeCollateralPrice, effectiveMaxLtv]);
 
   // Check if value has changed
   const hasChanges = useMemo(() => {
@@ -389,6 +399,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
     setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "");
     if (mode === "simulate") {
       setSandboxCollateral("");
+      setSandboxCollateralPrice("");
     }
   }, [mode, currentBorrowedAmount]);
 
@@ -522,7 +533,19 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         } else if (mode === "addCollateral") {
           result = await fluid.supply(amountBigInt);
         } else if (mode === "repay") {
-          result = await fluid.repay(amountBigInt);
+          // Use max repay when repaying >= current debt to avoid Fluid's
+          // Vault__UserDebtTooLow error (dust debt < 10000 raw units).
+          // $0.01 buffer: on-chain debt accrues interest since last fetch and
+          // float rounding can make safeAmount microscopically < currentBorrowedAmount.
+          const isMaxRepay = safeAmount >= currentBorrowedAmount - 0.01;
+          // Pre-flight: when doing max repay, vault computes exact on-chain debt
+          // (including accrued interest) which may exceed user's USDT balance
+          if (isMaxRepay && usdtBalance < currentBorrowedAmount) {
+            throw new Error(
+              `Insufficient USDT to repay full debt. Balance: ${formatCurrency(usdtBalance)}, Debt: ~${formatCurrency(currentBorrowedAmount)}. Repay a smaller amount or add more USDT.`
+            );
+          }
+          result = await fluid.repay(amountBigInt, isMaxRepay);
         }
       } else {
         // Use Compound protocol for WBTC
@@ -678,7 +701,34 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">{effectiveCollateralSymbol}</span>
                 </div>
                 <p className="text-white/40 text-xs mt-1 text-right">
-                  ≈ {formatCurrency(parsedSandboxCollateral * getPrice(effectiveCollateralSymbol))}
+                  ≈ {formatCurrency(parsedSandboxCollateral * simulateModeCollateralPrice)}
+                </p>
+              </div>
+
+              {/* Collateral Price (USD) Input */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white/70 text-sm">Collateral Price (USD)</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 text-sm">$</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={sandboxCollateralPrice}
+                    onChange={(e) => setSandboxCollateralPrice(e.target.value)}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-lg pl-8",
+                      "bg-white/5 border border-white/10",
+                      "text-white font-semibold text-right pr-4",
+                      "focus:outline-none focus:border-purple-500/50",
+                      "placeholder:text-white/30"
+                    )}
+                    placeholder={formatAmount(effectiveCollateralPrice, 0)}
+                  />
+                </div>
+                <p className="text-white/40 text-xs mt-1 text-right">
+                  Live price: {formatCurrency(effectiveCollateralPrice)}
                 </p>
               </div>
 

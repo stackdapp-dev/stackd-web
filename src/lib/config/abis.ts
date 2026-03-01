@@ -105,11 +105,15 @@ export const ERC20_ABI = [
 ] as const;
 
 // Fluid VaultResolver ABI - for reading position data
+// Updated to v2 resolver (Fluid upgraded contracts, old 0x93CAB... deprecated)
 export const FLUID_VAULT_RESOLVER_ADDR =
-  "0x93CAB6529aD849b2583EBAe32D13817A2F38cEb4" as const; // Fluid VaultResolver on Ethereum mainnet
+  "0xA5C3E16523eeeDDcC34706b0E6bE88b4c6EA95cC" as const; // Fluid VaultResolver v2 on Ethereum mainnet
 
 // ABI for getVaultEntireData - returns VaultEntireData with borrow rate info
-// Verified working structure from Etherscan contract source
+// Updated to match v2 resolver structure:
+// - Token fields are now tuples (token0/token1) for smart collateral/debt support
+// - oraclePrice split into oraclePriceOperate and oraclePriceLiquidate
+// - New fields: isSmartCol, isSmartDebt, operateImplementation, deployer, vaultType
 // borrowRateVault is in basis points (10000 = 100%, so 515 = 5.15% APR)
 export const FLUID_VAULT_RESOLVER_ABI = [
   {
@@ -121,25 +125,36 @@ export const FLUID_VAULT_RESOLVER_ABI = [
         type: "tuple",
         components: [
           { name: "vault", type: "address" },
-          // ConstantViews struct (from IFluidVaultT1)
+          { name: "isSmartCol", type: "bool" },
+          { name: "isSmartDebt", type: "bool" },
+          // ConstantViews struct (v2 - tokens are tuples)
           {
             name: "constantVariables", type: "tuple", components: [
               { name: "liquidity", type: "address" },
               { name: "factory", type: "address" },
+              { name: "operateImplementation", type: "address" },
               { name: "adminImplementation", type: "address" },
               { name: "secondaryImplementation", type: "address" },
-              { name: "supplyToken", type: "address" },
-              { name: "borrowToken", type: "address" },
-              { name: "supplyDecimals", type: "uint8" },
-              { name: "borrowDecimals", type: "uint8" },
+              { name: "deployer", type: "address" },
+              { name: "supply", type: "address" },
+              { name: "borrow", type: "address" },
+              { name: "supplyToken", type: "tuple", components: [
+                { name: "token0", type: "address" },
+                { name: "token1", type: "address" },
+              ]},
+              { name: "borrowToken", type: "tuple", components: [
+                { name: "token0", type: "address" },
+                { name: "token1", type: "address" },
+              ]},
               { name: "vaultId", type: "uint256" },
-              { name: "liquiditySupplyExchangePriceSlot", type: "bytes32" },
-              { name: "liquidityBorrowExchangePriceSlot", type: "bytes32" },
-              { name: "liquidityUserSupplySlot", type: "bytes32" },
-              { name: "liquidityUserBorrowSlot", type: "bytes32" },
+              { name: "vaultType", type: "uint256" },
+              { name: "supplyExchangePriceSlot", type: "bytes32" },
+              { name: "borrowExchangePriceSlot", type: "bytes32" },
+              { name: "userSupplySlot", type: "bytes32" },
+              { name: "userBorrowSlot", type: "bytes32" },
             ]
           },
-          // Configs struct
+          // Configs struct (v2 - oraclePrice split into operate/liquidate)
           {
             name: "configs", type: "tuple", components: [
               { name: "supplyRateMagnifier", type: "uint16" },
@@ -151,8 +166,10 @@ export const FLUID_VAULT_RESOLVER_ABI = [
               { name: "liquidationPenalty", type: "uint16" },
               { name: "borrowFee", type: "uint16" },
               { name: "oracle", type: "address" },
-              { name: "oraclePrice", type: "uint256" },
+              { name: "oraclePriceOperate", type: "uint256" },
+              { name: "oraclePriceLiquidate", type: "uint256" },
               { name: "rebalancer", type: "address" },
+              { name: "lastUpdateTimestamp", type: "uint256" },
             ]
           },
           // ExchangePricesAndRates struct - contains borrowRateVault!
@@ -166,11 +183,12 @@ export const FLUID_VAULT_RESOLVER_ABI = [
               { name: "liquidityBorrowExchangePrice", type: "uint256" },
               { name: "vaultSupplyExchangePrice", type: "uint256" },
               { name: "vaultBorrowExchangePrice", type: "uint256" },
-              { name: "supplyRateVault", type: "uint256" },
-              { name: "borrowRateVault", type: "uint256" },
               { name: "supplyRateLiquidity", type: "uint256" },
               { name: "borrowRateLiquidity", type: "uint256" },
-              { name: "rewardsRate", type: "uint256" },
+              { name: "supplyRateVault", type: "uint256" },
+              { name: "borrowRateVault", type: "uint256" },
+              { name: "rewardsOrFeeRateSupply", type: "uint256" },
+              { name: "rewardsOrFeeRateBorrow", type: "uint256" },
             ]
           },
           // TotalSupplyAndBorrow struct
@@ -178,13 +196,13 @@ export const FLUID_VAULT_RESOLVER_ABI = [
             name: "totalSupplyAndBorrow", type: "tuple", components: [
               { name: "totalSupplyVault", type: "uint256" },
               { name: "totalBorrowVault", type: "uint256" },
-              { name: "totalSupplyLiquidity", type: "uint256" },
-              { name: "totalBorrowLiquidity", type: "uint256" },
+              { name: "totalSupplyLiquidityOrDex", type: "uint256" },
+              { name: "totalBorrowLiquidityOrDex", type: "uint256" },
               { name: "absorbedSupply", type: "uint256" },
               { name: "absorbedBorrow", type: "uint256" },
             ]
           },
-          // LimitsAndAvailability struct (7 fields)
+          // LimitsAndAvailability struct
           {
             name: "limitsAndAvailability", type: "tuple", components: [
               { name: "withdrawLimit", type: "uint256" },
@@ -193,6 +211,7 @@ export const FLUID_VAULT_RESOLVER_ABI = [
               { name: "borrowLimit", type: "uint256" },
               { name: "borrowableUntilLimit", type: "uint256" },
               { name: "borrowable", type: "uint256" },
+              { name: "borrowLimitUtilization", type: "uint256" },
               { name: "minimumBorrowing", type: "uint256" },
             ]
           },
@@ -216,7 +235,7 @@ export const FLUID_VAULT_RESOLVER_ABI = [
               ]},
             ]
           },
-          // UserSupplyData struct (9 fields)
+          // UserSupplyData struct
           {
             name: "liquidityUserSupplyData", type: "tuple", components: [
               { name: "modeWithInterest", type: "bool" },
@@ -228,9 +247,11 @@ export const FLUID_VAULT_RESOLVER_ABI = [
               { name: "baseWithdrawalLimit", type: "uint256" },
               { name: "withdrawableUntilLimit", type: "uint256" },
               { name: "withdrawable", type: "uint256" },
+              { name: "decayEndTimestamp", type: "uint256" },
+              { name: "decayAmount", type: "uint256" },
             ]
           },
-          // UserBorrowData struct (10 fields)
+          // UserBorrowData struct
           {
             name: "liquidityUserBorrowData", type: "tuple", components: [
               { name: "modeWithInterest", type: "bool" },
@@ -243,6 +264,7 @@ export const FLUID_VAULT_RESOLVER_ABI = [
               { name: "maxBorrowLimit", type: "uint256" },
               { name: "borrowableUntilLimit", type: "uint256" },
               { name: "borrowable", type: "uint256" },
+              { name: "borrowLimitUtilization", type: "uint256" },
             ]
           },
         ],

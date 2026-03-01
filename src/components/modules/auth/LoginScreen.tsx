@@ -26,7 +26,7 @@ const LoginScreen = () => {
           dotColor="#f59e0b"
           className="mb-8"
         >
-          ALPHA
+          Alpha - Invite Only Testing
         </Badge>
 
         {/* Stack'd Logo - sized to match button container width (max-w-xs = 320px) */}
@@ -109,7 +109,7 @@ const LoginScreen = () => {
       {/* Login Buttons Container - 30% smaller, positioned lower */}
       <div
         data-testid="login-buttons-container"
-        className="w-full max-w-xs flex flex-col gap-3"
+        className="w-full max-w-xs flex flex-col gap-3 overflow-hidden"
       >
         {/* Connect External Wallet - Primary Action (30% smaller) */}
         <Button
@@ -129,7 +129,7 @@ const LoginScreen = () => {
         <Button
           data-testid="login-other-options-button"
           variant="outline"
-          className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-white/20 hover:border-white/30 text-white/80 hover:text-white hover:bg-[#1a1a1a]"
+          className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-white/20 hover:border-white/30 text-white/80 hover:text-white hover:bg-[#1a1a1a] hover:scale-100"
           onClick={() => setShowOtherOptions(!showOtherOptions)}
         >
           Other Login Options
@@ -148,7 +148,7 @@ const LoginScreen = () => {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-3 overflow-hidden"
+              className="flex flex-col gap-3 overflow-x-hidden pt-3 -mt-3"
             >
               {/* Login with Email */}
               <div className="relative">
@@ -164,7 +164,7 @@ const LoginScreen = () => {
                 <Button
                   data-testid="login-email-button"
                   variant="outline"
-                  className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
+                  className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a] hover:scale-100"
                   onClick={() => login({ loginMethods: ["email"] })}
                 >
                   <Mail
@@ -190,7 +190,7 @@ const LoginScreen = () => {
                 <Button
                   data-testid="login-passkey-button"
                   variant="outline"
-                  className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a]"
+                  className="w-full text-base font-semibold h-10 bg-[#1a1a1a] border-amber-900/60 hover:border-amber-800/80 text-amber-500 hover:text-amber-400 hover:bg-[#1a1a1a] hover:scale-100"
                   onClick={() => login({ loginMethods: ["passkey"] })}
                 >
                   <KeyRound

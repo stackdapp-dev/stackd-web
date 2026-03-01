@@ -184,7 +184,7 @@ type UseFluidResult = {
   supply: (amount: bigint) => Promise<TransactionResult>;
   withdraw: (amount: bigint) => Promise<TransactionResult>;
   borrow: (amount: bigint) => Promise<TransactionResult>;
-  repay: (amount: bigint) => Promise<TransactionResult>;
+  repay: (amount: bigint, isMaxRepay?: boolean) => Promise<TransactionResult>;
   supplyAndBorrow: (collateralAmount: bigint, borrowAmount: bigint) => Promise<TransactionResult>;
   approve: (token: Address, amount: bigint, spender?: Address) => Promise<TransactionResult>;
   allowance: (token: Address, spender?: Address) => Promise<bigint | null>;
@@ -202,15 +202,11 @@ async function fetchFluidData(
   account: string
 ): Promise<FluidData> {
   const userAddress = account as Address;
-  console.log("[FLUID FETCH] Starting fetch for account:", account);
-
   try {
-    console.log("[FLUID FETCH] Calling getUserPositions...");
     const { positions, vaultsData } = await getUserPositions(
       publicClient,
       userAddress
     );
-    console.log("[FLUID FETCH] Got response:", { positionsCount: positions.length, vaultsCount: vaultsData.length });
 
     // Find XAUT collateral position
     // Match by checking if the supply token is XAUT and borrow token is USDT
@@ -220,21 +216,10 @@ async function fetchFluidData(
     let matchingVaultData: FluidVaultData | undefined;
     let matchedBorrowToken: string | undefined;
 
-    // Debug: Log all positions found
-    console.log("[FLUID] Total positions found:", positions.length);
-
     for (let i = 0; i < positions.length; i++) {
       const vaultData = vaultsData[i];
       const borrowTokenAddress = vaultData.borrowToken.toLowerCase();
       const borrowTokenSymbol = SUPPORTED_BORROW_TOKENS[borrowTokenAddress];
-
-      // Debug: Log each vault's tokens
-      console.log(`[FLUID] Position ${i}:`, {
-        supplyToken: vaultData.supplyToken,
-        borrowToken: vaultData.borrowToken,
-        borrowTokenSymbol: borrowTokenSymbol || "NOT_SUPPORTED",
-        isXaut: vaultData.supplyToken.toLowerCase() === xautAddress,
-      });
 
       // Check if this vault uses XAUT as collateral and a supported borrow token (USDT)
       if (
@@ -251,7 +236,6 @@ async function fetchFluidData(
     // If no XAUT position with supported borrow token found, return vault config (not zeros!)
     // This is critical for NEW loan creation - we need maxLtv to calculate max borrow amounts
     if (!matchingPosition || !matchingVaultData || !matchedBorrowToken) {
-      console.log("[FLUID] No XAUT position found, fetching vault config for new loan creation");
       const vaultConfig = await getXautVaultConfig(publicClient);
       // Also fetch oracle price for new loan creation
       const oraclePriceData = await getFluidOraclePrice(publicClient);
@@ -281,15 +265,6 @@ async function fetchFluidData(
       oraclePrice: oraclePriceUsd,
     };
 
-    // Debug logging
-    console.log("[FLUID] Account:", account);
-    console.log("[FLUID] NFT ID:", matchingPosition.nftId.toString());
-    console.log("[FLUID] Collateral Raw:", matchingPosition.supply.toString());
-    console.log("[FLUID] Borrow Raw:", matchingPosition.borrow.toString());
-    console.log("[FLUID] Max LTV:", result.maxLtv, "%");
-    console.log("[FLUID] Liquidation Ratio:", result.liquidationRatio, "%");
-    console.log("[FLUID] Borrow APR:", result.borrowApr, "%");
-
     return result;
   } catch (error) {
     console.error("[FLUID] Error fetching positions:", error);
@@ -317,13 +292,6 @@ export function useFluid(): UseFluidResult {
 
   // Transaction lock to prevent duplicate submissions
   const transactionInProgress = useRef(false);
-
-  // Debug: Log query prerequisites
-  console.log("[FLUID HOOK] ethereumPublicClient:", !!ethereumPublicClient);
-  console.log("[FLUID HOOK] walletClient?.account?.address:", walletClient?.account?.address);
-  console.log("[FLUID HOOK] activeWalletAddress:", activeWalletAddress);
-  console.log("[FLUID HOOK] acct:", acct);
-  console.log("[FLUID HOOK] query enabled:", !!ethereumPublicClient && !!acct);
 
   // Use TanStack Query for data fetching with caching
   const { data, isLoading, error, refetch } = useQuery({
@@ -359,15 +327,6 @@ export function useFluid(): UseFluidResult {
 
   // Determine if user has an active position
   const hasPosition = collateralRaw > BigInt(0) || borrowRaw > BigInt(0);
-
-  // Debug logging for USD calculations
-  console.log("[FLUID] XAUT Price:", xautPrice);
-  console.log(`[FLUID] ${borrowToken} Price:`, borrowTokenPrice);
-  console.log("[FLUID] Collateral Amount:", collateralAmount, "XAUT");
-  console.log("[FLUID] Collateral USD:", collateralUsd);
-  console.log(`[FLUID] Borrow Amount:`, borrowAmount, borrowToken);
-  console.log("[FLUID] Borrow USD:", borrowUsd);
-  console.log("[FLUID] Net Loan Value:", netLoanValue);
 
   const suppliedAssets: Asset[] = useMemo(
     () => [
@@ -496,20 +455,6 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
-        // DEBUG: Log position state at withdrawal time
-        console.log("[FLUID WITHDRAW DEBUG] ==================");
-        console.log("[FLUID WITHDRAW DEBUG] Position state at withdrawal:");
-        console.log("[FLUID WITHDRAW DEBUG] - collateralRaw:", collateralRaw.toString());
-        console.log("[FLUID WITHDRAW DEBUG] - borrowRaw:", borrowRaw.toString());
-        console.log("[FLUID WITHDRAW DEBUG] - maxLtv:", maxLtv);
-        console.log("[FLUID WITHDRAW DEBUG] - xautPrice (external):", xautPrice);
-        console.log("[FLUID WITHDRAW DEBUG] - oraclePrice (Fluid):", oraclePrice);
-        console.log("[FLUID WITHDRAW DEBUG] - borrowTokenPrice:", borrowTokenPrice);
-        console.log("[FLUID WITHDRAW DEBUG] - acct (from walletClient or activeWalletAddress):", acct);
-        console.log("[FLUID WITHDRAW DEBUG] - activeWalletAddress:", activeWalletAddress);
-        console.log("[FLUID WITHDRAW DEBUG] - Addresses match:", acct === activeWalletAddress);
-        console.log("[FLUID WITHDRAW DEBUG] ==================");
-
         // Pre-flight position health check to prevent "Execution reverted" errors
         // Use oracle price when available (matches what Fluid uses on-chain)
         const collateralDecimals = getTokenMetadata(COLLATERAL_TOKEN).decimals;
@@ -528,45 +473,10 @@ export function useFluid(): UseFluidResult {
         );
 
         if (!validation.valid) {
-          console.log("[FLUID WITHDRAW] Pre-flight validation failed:", validation.error);
           return { txHash: null, error: validation.error };
         }
 
-        console.log("[FLUID WITHDRAW] Pre-flight validation passed");
-
-        // Debug logging for withdrawal issue investigation
-        const negativeAmount = -amount;
-        console.log("[FLUID WITHDRAW DEBUG] ==================");
-        console.log("[FLUID WITHDRAW DEBUG] Input amount (bigint):", amount.toString());
-        console.log("[FLUID WITHDRAW DEBUG] Input amount (hex):", "0x" + amount.toString(16));
-        console.log("[FLUID WITHDRAW DEBUG] Negative amount (bigint):", negativeAmount.toString());
-        console.log("[FLUID WITHDRAW DEBUG] Negative amount (hex):", negativeAmount < 0n
-          ? "-0x" + (-negativeAmount).toString(16)
-          : "0x" + negativeAmount.toString(16));
-        console.log("[FLUID WITHDRAW DEBUG] NFT ID:", nftId.toString());
-        console.log("[FLUID WITHDRAW DEBUG] Recipient:", acct);
-        console.log("[FLUID WITHDRAW DEBUG] Vault address:", XAUT_USDT_VAULT);
-
         const data = encodeFluidWithdraw(nftId, amount, acct as Address);
-        console.log("[FLUID WITHDRAW DEBUG] Encoded calldata:", data);
-        console.log("[FLUID WITHDRAW DEBUG] Calldata length:", data.length, "chars");
-
-        // Decode and verify the calldata structure
-        // First 4 bytes (8 hex chars after 0x) = function selector
-        // Next 32 bytes = nftId, next 32 = collateralDelta, next 32 = debtDelta, next 32 = recipient
-        const selector = data.slice(0, 10);
-        const param1 = data.slice(10, 74);  // nftId
-        const param2 = data.slice(74, 138); // collateralDelta (should be negative)
-        const param3 = data.slice(138, 202); // debtDelta (should be 0)
-        const param4 = data.slice(202, 266); // recipient address
-
-        console.log("[FLUID WITHDRAW DEBUG] Function selector:", selector);
-        console.log("[FLUID WITHDRAW DEBUG] Param 1 (nftId):", "0x" + param1);
-        console.log("[FLUID WITHDRAW DEBUG] Param 2 (collateralDelta):", "0x" + param2);
-        console.log("[FLUID WITHDRAW DEBUG] Param 3 (debtDelta):", "0x" + param3);
-        console.log("[FLUID WITHDRAW DEBUG] Param 4 (recipient):", "0x" + param4);
-        console.log("[FLUID WITHDRAW DEBUG] ==================");
-
         const result = await sendSponsoredTransaction({
           to: XAUT_USDT_VAULT as Address,
           data,
@@ -575,20 +485,18 @@ export function useFluid(): UseFluidResult {
         });
 
         if (result.error) {
-          console.error("[FLUID WITHDRAW DEBUG] Transaction error:", result.error);
           return { txHash: null, error: result.error };
         }
-        console.log("[FLUID WITHDRAW DEBUG] Transaction success:", result.hash);
         return { txHash: result.hash as Hex, error: null };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown withdraw error";
-        console.error("[FLUID WITHDRAW DEBUG] Exception:", err);
+        console.error("[FLUID] Withdraw failed:", errorMessage);
         return { txHash: null, error: errorMessage };
       } finally {
         transactionInProgress.current = false;
       }
     },
-    [nftId, acct, sendSponsoredTransaction, collateralRaw, borrowRaw, maxLtv, xautPrice, borrowTokenPrice, borrowToken, oraclePrice, activeWalletAddress]
+    [nftId, acct, sendSponsoredTransaction, collateralRaw, borrowRaw, maxLtv, xautPrice, borrowTokenPrice, borrowToken, oraclePrice]
   );
 
   const borrow = useCallback(
@@ -623,7 +531,7 @@ export function useFluid(): UseFluidResult {
   );
 
   const repay = useCallback(
-    async (amount: bigint): Promise<TransactionResult> => {
+    async (amount: bigint, isMaxRepay: boolean = false): Promise<TransactionResult> => {
       if (!nftId) {
         return { txHash: null, error: "No active position found. Cannot repay without nftId." };
       }
@@ -631,8 +539,30 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: "No account connected" };
       }
 
+      // When doing max repay, vault computes exact on-chain debt (including accrued
+      // interest) via INT256_MIN and pulls that amount via safeTransferFrom.
+      // Pre-flight check: verify user has enough USDT to avoid FluidSafeTransferError (71001).
+      if (isMaxRepay && ethereumPublicClient) {
+        try {
+          const usdtBalance = await ethereumPublicClient.readContract({
+            address: ETHEREUM_TOKEN_ADDRESSES.USDT as Address,
+            abi: ERC20_ABI,
+            functionName: "balanceOf",
+            args: [acct as Address],
+          }) as bigint;
+          if (usdtBalance < borrowRaw && borrowRaw > 0n) {
+            return {
+              txHash: null,
+              error: `Insufficient USDT to repay full debt. Balance: ${formatUnits(usdtBalance, 6)} USDT, Debt: ~${formatUnits(borrowRaw, 6)} USDT. Repay a partial amount or add more USDT.`,
+            };
+          }
+        } catch (err) {
+          console.warn("[FLUID] Pre-flight USDT balance check failed, proceeding:", err);
+        }
+      }
+
       try {
-        const data = encodeFluidRepay(nftId, amount, acct as Address);
+        const data = encodeFluidRepay(nftId, amount, acct as Address, isMaxRepay);
         const result = await sendSponsoredTransaction({
           to: XAUT_USDT_VAULT as Address,
           data,
@@ -650,7 +580,7 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [nftId, acct, sendSponsoredTransaction]
+    [nftId, acct, sendSponsoredTransaction, ethereumPublicClient, borrowRaw]
   );
 
   const approve = useCallback(
@@ -664,6 +594,36 @@ export function useFluid(): UseFluidResult {
       }
 
       try {
+        // USDT on Ethereum mainnet has a non-standard approve() that reverts if
+        // currentAllowance > 0 and newAmount > 0. Reset to 0 first if needed.
+        const isUSDT = token.toLowerCase() === ETHEREUM_TOKEN_ADDRESSES.USDT.toLowerCase();
+        if (isUSDT && ethereumPublicClient && amount > 0n) {
+          const currentAllowance = await ethereumPublicClient.readContract({
+            address: token,
+            abi: ERC20_ABI,
+            functionName: "allowance",
+            args: [acct as Address, spender],
+          }) as bigint;
+
+          if (currentAllowance > 0n) {
+            console.log("[FLUID] USDT: existing allowance detected, resetting to 0 first...");
+            const resetData = encodeApproveData(spender, 0n);
+            const resetResult = await sendSponsoredTransaction({
+              to: token,
+              data: resetData,
+              chainId: mainnet.id,
+              forceNoSponsor: true,
+            });
+            if (resetResult.error) {
+              return { txHash: null, error: `USDT allowance reset failed: ${resetResult.error}` };
+            }
+            // Wait for reset to be mined before sending the real approval
+            if (resetResult.hash) {
+              await ethereumPublicClient.waitForTransactionReceipt({ hash: resetResult.hash as Hex });
+            }
+          }
+        }
+
         const data = encodeApproveData(spender, amount);
         const result = await sendSponsoredTransaction({
           to: token,
@@ -682,7 +642,7 @@ export function useFluid(): UseFluidResult {
         return { txHash: null, error: errorMessage };
       }
     },
-    [acct, sendSponsoredTransaction]
+    [acct, sendSponsoredTransaction, ethereumPublicClient]
   );
 
   const allowance = useCallback(
