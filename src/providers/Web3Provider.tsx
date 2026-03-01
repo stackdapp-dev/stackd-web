@@ -124,12 +124,12 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   // Ethereum mainnet public client
-  // Uses NEXT_PUBLIC_ETHEREUM_RPC_URL if set, falls back to a reliable public RPC
+  // Uses NEXT_PUBLIC_ETHEREUM_RPC_URL if set, falls back to Cloudflare public RPC
   const [ethereumPublicClient] = useState<PublicClient>(() =>
     createPublicClient({
       chain: mainnet,
       transport: http(
-        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || "https://eth.llamarpc.com"
+        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || "https://cloudflare-eth.com"
       ),
     })
   );
