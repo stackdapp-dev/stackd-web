@@ -50,3 +50,10 @@ test-results/
 
 # Service Worker (auto-generated)
 public/sw.js
+
+*.png
+.playwright-mcp/
+
+.claude/worktrees/
+
+console-logs.txt

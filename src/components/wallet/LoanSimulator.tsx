@@ -55,7 +55,7 @@ interface LoanSimulatorProps {
  */
 export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC", onComplete }: LoanSimulatorProps) {
   const router = useRouter();
-  const { refetchBalances, wbtcBalance, usdtBalance } = useWalletBalanceContext();
+  const { refetchBalances, wbtcBalance, usdtBalance, chainBalances } = useWalletBalanceContext();
   const { loanCalcs, refetchLoanData } = useLoanCalculationsContext();
   const getPrice = useGetTokenPrice();
   const compound = useCompound();
@@ -169,8 +169,11 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           inputLabel: "Repay Amount (USDT)",
           tokenSymbol: "USDT",
           actionButtonText: "Repay Loan",
-          // Max is borrowed amount for simulation - wallet balance checked at action time
-          maxValue: currentBorrowedAmount,
+          // Cap at user's USDT balance to prevent attempting repay with insufficient funds
+          // (vault computes exact on-chain debt including accrued interest via INT256_MIN)
+          // For XAUT (Fluid on Ethereum mainnet), use Ethereum-specific USDT balance
+          // since combined usdtBalance includes Arbitrum USDT which can't be used for Fluid repay
+          maxValue: Math.min(currentBorrowedAmount, isXaut ? (chainBalances.ethereum?.USDT ?? 0) : usdtBalance),
           isRiskReducing: true,
           warningText: "This will reduce your borrowed amount and liquidation risk.",
           successIcon: true,
@@ -204,7 +207,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
           useSlider: true, // Enable slider for borrow mode
         };
     }
-  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.withdrawableFromDepositedBtc, collateralSymbol, isXaut, xautAvailableToWithdraw, xautBalance]);
+  }, [mode, wbtcBalance, usdtBalance, currentBorrowedAmount, breakdown.withdrawableFromDepositedBtc, collateralSymbol, isXaut, xautAvailableToWithdraw, xautBalance, chainBalances]);
 
   // Simulator state - store input as string (empty for placeholder to show)
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "");
@@ -532,7 +535,16 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         } else if (mode === "repay") {
           // Use max repay when repaying >= current debt to avoid Fluid's
           // Vault__UserDebtTooLow error (dust debt < 10000 raw units).
-          const isMaxRepay = safeAmount >= currentBorrowedAmount;
+          // $0.01 buffer: on-chain debt accrues interest since last fetch and
+          // float rounding can make safeAmount microscopically < currentBorrowedAmount.
+          const isMaxRepay = safeAmount >= currentBorrowedAmount - 0.01;
+          // Pre-flight: when doing max repay, vault computes exact on-chain debt
+          // (including accrued interest) which may exceed user's USDT balance
+          if (isMaxRepay && usdtBalance < currentBorrowedAmount) {
+            throw new Error(
+              `Insufficient USDT to repay full debt. Balance: ${formatCurrency(usdtBalance)}, Debt: ~${formatCurrency(currentBorrowedAmount)}. Repay a smaller amount or add more USDT.`
+            );
+          }
           result = await fluid.repay(amountBigInt, isMaxRepay);
         }
       } else {
