@@ -28,10 +28,10 @@ export function formatAmount(
   const abs = Math.abs(num);
   // Tiny positive numbers: show '< 0.0001' for values > 0 and < 0.0001
   if (abs > 0 && abs < 0.0001) return `< 0.0001`;
-  // Cap maximum decimals to 4 to avoid very long fractional displays
+  // Cap decimals to valid range (0-4) and ensure min <= max
   const maxDecimals = Math.min(4, Math.max(0, decimals));
   return num.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: Math.min(2, maxDecimals),
     maximumFractionDigits: maxDecimals,
   });
 }
@@ -51,9 +51,10 @@ export function formatCurrency(
     return `${currencySymbol}${abbreviateNumber(num, 1)}`;
   }
   // For smaller numbers, show with requested decimals (no grouping abbreviation)
+  const safeDecimals = Math.max(0, decimals);
   return `${currencySymbol}${num.toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: safeDecimals,
+    maximumFractionDigits: safeDecimals,
   })}`;
 }
 
@@ -64,9 +65,10 @@ export function formatPercent(
   if (value === null || value === undefined) return `0%`;
   const num = Number(value);
   if (!Number.isFinite(num)) return `0%`;
+  const safeDecimals = Math.max(0, decimals);
   return `${Number(value).toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: safeDecimals,
+    maximumFractionDigits: safeDecimals,
   })}%`;
 }
 
