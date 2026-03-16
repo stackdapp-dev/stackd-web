@@ -80,6 +80,21 @@ describe("formatAmount", () => {
     it("should respect custom decimals", () => {
         expect(formatAmount(1.123456, 2)).toBe("1.12");
     });
+
+    it("should not throw RangeError when decimals is 0", () => {
+        expect(() => formatAmount(100000, 0)).not.toThrow();
+        expect(formatAmount(100000, 0)).toBe("100,000");
+    });
+
+    it("should not throw RangeError when decimals is 1", () => {
+        expect(() => formatAmount(1234.5, 1)).not.toThrow();
+        expect(formatAmount(1234.5, 1)).toBe("1,234.5");
+    });
+
+    it("should not throw RangeError when decimals is negative", () => {
+        expect(() => formatAmount(1234, -1)).not.toThrow();
+        expect(formatAmount(1234, -1)).toBe("1,234");
+    });
 });
 
 describe("formatCurrency", () => {
@@ -110,6 +125,16 @@ describe("formatCurrency", () => {
     it("should not abbreviate when disabled", () => {
         expect(formatCurrency(5000, 2, "$", false)).toBe("$5,000.00");
     });
+
+    it("should not throw RangeError when decimals is 0", () => {
+        expect(() => formatCurrency(100, 0)).not.toThrow();
+        expect(formatCurrency(100, 0, "$", false)).toBe("$100");
+    });
+
+    it("should not throw RangeError when decimals is negative", () => {
+        expect(() => formatCurrency(100, -1)).not.toThrow();
+        expect(formatCurrency(100, -1, "$", false)).toBe("$100");
+    });
 });
 
 describe("formatPercent", () => {
@@ -131,6 +156,11 @@ describe("formatPercent", () => {
 
     it("should respect custom decimals", () => {
         expect(formatPercent(33.3333, 1)).toBe("33.3%");
+    });
+
+    it("should not throw RangeError when decimals is negative", () => {
+        expect(() => formatPercent(50, -1)).not.toThrow();
+        expect(formatPercent(50, -1)).toBe("50%");
     });
 });
 
