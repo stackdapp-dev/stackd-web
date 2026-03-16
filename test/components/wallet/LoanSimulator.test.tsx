@@ -578,42 +578,59 @@ describe("SimulatorGauge Component", () => {
 
 describe("LoanSimulator Collateral Input - Simulate Mode", () => {
     /**
-     * Tests for collateral input behavior in simulate mode
-     * The collateral input should use a placeholder "0" instead of an actual value
-     * so when users tap the field, it's empty and ready for input
+     * Tests for collateral input behavior in simulate mode.
+     *
+     * The collateral input defaults to "1" so the borrow slider is usable
+     * immediately on page load (maxBorrow > 0 when collateral > 0).
      *
      * Implementation details (LoanSimulator.tsx):
-     * - sandboxCollateral state should initialize to "" (empty string)
-     * - Input has placeholder="0" which shows when value is empty
-     * - handleReset should set sandboxCollateral to "" (not "0")
-     *
-     * Note: Full component tests pending due to jsdom compatibility.
-     * Component behavior is verified via E2E tests.
+     * - sandboxCollateral state initializes to "1"
+     * - handleReset resets sandboxCollateral to "1"
+     * - This applies to both WBTC and XAUT collateral types
      */
 
-    it("should have empty initial value for sandbox collateral input", () => {
-        // sandboxCollateral state initializes to "" (empty string)
-        // This allows placeholder "0" to display instead of actual "0" value
-        // User can start typing immediately without needing to clear the field
-        expect(true).toBe(true);
+    it("should default sandboxCollateral to '1' so slider is enabled on load", async () => {
+        const fs = await import("fs");
+        const path = await import("path");
+        const componentPath = path.resolve(
+            process.cwd(),
+            "src/components/wallet/LoanSimulator.tsx"
+        );
+        const componentCode = fs.readFileSync(componentPath, "utf-8");
+        // sandboxCollateral must initialize to "1" (not "" or "0")
+        // so parsedSandboxCollateral > 0 and maxBorrow > 0 on first render
+        const sandboxCollateralInit = componentCode.match(
+            /\[sandboxCollateral,\s*setSandboxCollateral\]\s*=\s*useState\s*\(([^)]+)\)/
+        );
+        expect(sandboxCollateralInit).not.toBeNull();
+        expect(sandboxCollateralInit![1].trim()).toBe('"1"');
     });
 
-    it("should show placeholder '0' when collateral input is empty", () => {
-        // The input element has placeholder="0" attribute
-        // When value is empty string, browser displays placeholder
-        expect(true).toBe(true);
+    it("should reset sandboxCollateral to '1' on reset (not empty string)", async () => {
+        const fs = await import("fs");
+        const path = await import("path");
+        const componentPath = path.resolve(
+            process.cwd(),
+            "src/components/wallet/LoanSimulator.tsx"
+        );
+        const componentCode = fs.readFileSync(componentPath, "utf-8");
+        // handleReset should set sandboxCollateral back to "1"
+        // so the slider remains usable after reset
+        expect(componentCode).toContain('setSandboxCollateral("1")');
     });
 
-    it("should allow user to type value directly without clearing '0' first", () => {
-        // Since value starts as "" (not "0"), user typing "0.5" results in "0.5"
-        // Previously, value was "0" so typing "0.5" would result in "00.5"
-        expect(true).toBe(true);
-    });
-
-    it("should reset collateral input to empty string on reset", () => {
-        // handleReset sets sandboxCollateral to "" (not "0")
-        // This maintains consistent UX where placeholder shows after reset
-        expect(true).toBe(true);
+    it("should enable borrow slider when default collateral is set", async () => {
+        const fs = await import("fs");
+        const path = await import("path");
+        const componentPath = path.resolve(
+            process.cwd(),
+            "src/components/wallet/LoanSimulator.tsx"
+        );
+        const componentCode = fs.readFileSync(componentPath, "utf-8");
+        // maxBorrow calculation: collateralUsd = parsedSandboxCollateral * price
+        // With sandboxCollateral="1", parsedSandboxCollateral=1, so maxBorrow > 0
+        // The slider disabled condition checks maxBorrow <= 0
+        expect(componentCode).toMatch(/disabled=\{maxBorrow\s*<=\s*0\}/);
     });
 });
 
