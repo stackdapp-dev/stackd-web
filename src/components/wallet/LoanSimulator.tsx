@@ -641,8 +641,73 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
         {/* Input Field */}
         <div className="mt-6">
           {mode === "simulate" ? (
-            /* Sandbox Mode - Collateral Type Selector + Collateral Input + Borrow Slider */
+            /* Sandbox Mode - Borrow Slider + Collateral Type Selector + Collateral Input */
             <div className="flex flex-col gap-6">
+              {/* Borrow Amount Slider */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <TokenIcon symbol="USDT" width={24} height={24} />
+                    <span className="text-white/70 text-sm">Borrow Amount (USDT)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setInputValue(String(maxBorrow))}
+                    className="text-amber-500 text-xs hover:text-amber-400 transition-colors"
+                  >
+                    Max: {formatCurrency(maxBorrow, 0, "$", false)}
+                  </button>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-center mb-3">
+                  <span className="text-white font-semibold text-2xl">
+                    {formatCurrency(parsedInput, 0, "$", false)}
+                  </span>
+                </div>
+                <div className="px-1">
+                  <input
+                    type="range"
+                    min="0"
+                    max={maxBorrow || 1}
+                    step={maxBorrow / 100 || 1}
+                    value={parsedInput}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    disabled={maxBorrow <= 0}
+                    className={cn(
+                      "w-full h-2 rounded-full appearance-none cursor-pointer bg-white/10",
+                      "[&::-webkit-slider-thumb]:appearance-none",
+                      "[&::-webkit-slider-thumb]:w-5",
+                      "[&::-webkit-slider-thumb]:h-5",
+                      "[&::-webkit-slider-thumb]:rounded-full",
+                      "[&::-webkit-slider-thumb]:bg-amber-500",
+                      "[&::-webkit-slider-thumb]:shadow-lg",
+                      "[&::-webkit-slider-thumb]:border-2",
+                      "[&::-webkit-slider-thumb]:border-white/20",
+                      "[&::-moz-range-thumb]:w-5",
+                      "[&::-moz-range-thumb]:h-5",
+                      "[&::-moz-range-thumb]:rounded-full",
+                      "[&::-moz-range-thumb]:bg-amber-500",
+                      "[&::-moz-range-thumb]:border-2",
+                      "[&::-moz-range-thumb]:border-white/20",
+                      "disabled:opacity-50"
+                    )}
+                    style={{
+                      background: maxBorrow > 0
+                        ? `linear-gradient(to right, rgb(245 158 11) 0%, rgb(245 158 11) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) 100%)`
+                        : "rgba(255,255,255,0.1)"
+                    }}
+                  />
+                  <div className="flex justify-between text-white/40 text-xs mt-2">
+                    <span>$0</span>
+                    <span>{formatCurrency(maxBorrow, 0, "$", false)}</span>
+                  </div>
+                </div>
+                {maxBorrow <= 0 && parsedSandboxCollateral === 0 && (
+                  <p className="text-white/40 text-xs mt-2 text-center">
+                    Enter collateral amount to enable borrowing
+                  </p>
+                )}
+              </div>
+
               {/* Collateral Type Selector */}
               <div className="flex gap-2">
                 <button
@@ -732,70 +797,6 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
                 </p>
               </div>
 
-              {/* Borrow Amount Slider */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <TokenIcon symbol="USDT" width={24} height={24} />
-                    <span className="text-white/70 text-sm">Borrow Amount (USDT)</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setInputValue(String(maxBorrow))}
-                    className="text-amber-500 text-xs hover:text-amber-400 transition-colors"
-                  >
-                    Max: {formatCurrency(maxBorrow, 0, "$", false)}
-                  </button>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-center mb-3">
-                  <span className="text-white font-semibold text-2xl">
-                    {formatCurrency(parsedInput, 0, "$", false)}
-                  </span>
-                </div>
-                <div className="px-1">
-                  <input
-                    type="range"
-                    min="0"
-                    max={maxBorrow || 1}
-                    step={maxBorrow / 100 || 1}
-                    value={parsedInput}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    disabled={maxBorrow <= 0}
-                    className={cn(
-                      "w-full h-2 rounded-full appearance-none cursor-pointer bg-white/10",
-                      "[&::-webkit-slider-thumb]:appearance-none",
-                      "[&::-webkit-slider-thumb]:w-5",
-                      "[&::-webkit-slider-thumb]:h-5",
-                      "[&::-webkit-slider-thumb]:rounded-full",
-                      "[&::-webkit-slider-thumb]:bg-amber-500",
-                      "[&::-webkit-slider-thumb]:shadow-lg",
-                      "[&::-webkit-slider-thumb]:border-2",
-                      "[&::-webkit-slider-thumb]:border-white/20",
-                      "[&::-moz-range-thumb]:w-5",
-                      "[&::-moz-range-thumb]:h-5",
-                      "[&::-moz-range-thumb]:rounded-full",
-                      "[&::-moz-range-thumb]:bg-amber-500",
-                      "[&::-moz-range-thumb]:border-2",
-                      "[&::-moz-range-thumb]:border-white/20",
-                      "disabled:opacity-50"
-                    )}
-                    style={{
-                      background: maxBorrow > 0
-                        ? `linear-gradient(to right, rgb(245 158 11) 0%, rgb(245 158 11) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) ${(parsedInput / maxBorrow) * 100}%, rgba(255,255,255,0.1) 100%)`
-                        : "rgba(255,255,255,0.1)"
-                    }}
-                  />
-                  <div className="flex justify-between text-white/40 text-xs mt-2">
-                    <span>$0</span>
-                    <span>{formatCurrency(maxBorrow, 0, "$", false)}</span>
-                  </div>
-                </div>
-                {maxBorrow <= 0 && parsedSandboxCollateral === 0 && (
-                  <p className="text-white/40 text-xs mt-2 text-center">
-                    Enter collateral amount to enable borrowing
-                  </p>
-                )}
-              </div>
             </div>
           ) : (
             <>
