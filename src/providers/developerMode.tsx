@@ -16,7 +16,7 @@ export function DeveloperModeProvider({ children }: { children: React.ReactNode 
   const [developerMode, setDeveloperModeState] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw == null ? true : raw === "true";
+      return raw == null ? false : raw === "true";
     } catch {
       return true;
     }
