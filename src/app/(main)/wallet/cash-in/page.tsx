@@ -6,15 +6,17 @@ import Card from "@/components/ui/card";
 import { useWeb3 } from "@/providers/Web3Provider";
 import { QRCodeSVG } from "qrcode.react";
 import React, { useState } from "react";
-import { arbitrum } from "viem/chains";
+
 import { useDeveloperMode } from "@/providers/developerMode";
 import { useHasXautPosition } from "@/hooks/useHasXautPosition";
 
 type TabType = "crypto" | "otc";
+type NetworkType = "ethereum" | "arbitrum";
 
 export default function CashInPage() {
     const { walletClient, activeWalletAddress } = useWeb3();
     const [activeTab, setActiveTab] = useState<TabType>("crypto");
+    const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>("ethereum");
 
     // Developer mode and XAUT position detection for conditional hiding
     const { developerMode } = useDeveloperMode();
@@ -23,10 +25,12 @@ export default function CashInPage() {
     // Hide XAUT if developerMode=true AND hasXautPosition=false
     const shouldShowXaut = !developerMode || hasXautPosition;
 
-    // Conditional warning text based on shouldShowXaut
-    const warningText = shouldShowXaut
-        ? "Send only WBTC, ETH, XAUT and USDT to this address. Sending any other asset may result in permanent loss."
-        : "Send only WBTC, ETH and USDT to this address. Sending any other asset may result in permanent loss.";
+    // Conditional warning text based on network and shouldShowXaut
+    const warningText = selectedNetwork === "ethereum"
+        ? "Send only XAUT, USDT and ETH to this address. Sending any other asset may result in permanent loss."
+        : shouldShowXaut
+            ? "Send only WBTC, ETH, XAUT and USDT to this address. Sending any other asset may result in permanent loss."
+            : "Send only WBTC, ETH and USDT to this address. Sending any other asset may result in permanent loss.";
 
     const address = walletClient?.account?.address || activeWalletAddress;
 
@@ -103,7 +107,14 @@ export default function CashInPage() {
                                 <p className="text-white/40 text-xs uppercase tracking-wider">
                                     Network
                                 </p>
-                                <p className="text-white font-medium">{arbitrum.name}</p>
+                                <select
+                                    value={selectedNetwork}
+                                    onChange={(e) => setSelectedNetwork(e.target.value as NetworkType)}
+                                    className="bg-transparent text-white font-medium mt-1 outline-none cursor-pointer appearance-none pr-6 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M2%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_center]"
+                                >
+                                    <option value="ethereum" className="bg-zinc-900 text-white">Ethereum ERC20</option>
+                                    <option value="arbitrum" className="bg-zinc-900 text-white">Arbitrum One</option>
+                                </select>
                             </div>
                             <div className="text-right">
                                 <p className="text-white/40 text-xs uppercase tracking-wider">
