@@ -18,7 +18,7 @@ export function DeveloperModeProvider({ children }: { children: React.ReactNode 
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw == null ? false : raw === "true";
     } catch {
-      return true;
+      return false;
     }
   });
 
