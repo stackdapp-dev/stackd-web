@@ -124,6 +124,32 @@ function parseApiError(errorString: string): string {
     return errorString;
 }
 
+interface QuoteSlippageParams {
+    sellAmount: string;
+    sellDecimals: number;
+    buyAmount: string;
+    buyDecimals: number;
+    sellTokenUsd: number;
+    buyTokenUsd: number;
+}
+
+/**
+ * Calculates estimated price impact of a quote by comparing the quoted
+ * exchange rate against a reference rate derived from USD prices.
+ * Returns slippage percentage (positive = worse than market), or null if inputs are invalid.
+ */
+export function calculateQuoteSlippage(params: QuoteSlippageParams): number | null {
+    const { sellAmount, sellDecimals, buyAmount, buyDecimals, sellTokenUsd, buyTokenUsd } = params;
+
+    const sell = parseFloat(sellAmount) / Math.pow(10, sellDecimals);
+    const buy = parseFloat(buyAmount) / Math.pow(10, buyDecimals);
+
+    if (sell <= 0 || buy <= 0 || sellTokenUsd <= 0 || buyTokenUsd <= 0) return null;
+
+    const expectedOutput = (sell * sellTokenUsd) / buyTokenUsd;
+    return ((expectedOutput - buy) / expectedOutput) * 100;
+}
+
 /**
  * Validates that a fresh quote hasn't slipped beyond the user's max tolerance.
  * Returns the slippage percentage, or throws if it exceeds maxSlippagePct.
