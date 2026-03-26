@@ -47,6 +47,7 @@ export default function ConvertPage() {
     const { assets, refetchBalances, chainBalances } = useWalletBalanceContext();
 
     const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>("arbitrum");
+    const [maxSlippage, setMaxSlippage] = useState("1.0");
     const chainId = NETWORK_CHAIN_IDS[selectedNetwork];
     const availableTokens = NETWORK_TOKENS[selectedNetwork];
 
@@ -57,13 +58,12 @@ export default function ConvertPage() {
         getQuote,
         executeSwap,
         getDestAmount,
-    } = useGaslessSwap(chainId);
+    } = useGaslessSwap(chainId, parseFloat(maxSlippage) || 1.0);
 
     const [fromToken, setFromToken] = useState<string>(availableTokens[0]);
     const [toToken, setToToken] = useState<string>(availableTokens[1]);
     const [amount, setAmount] = useState("");
     const [isSwapping, setIsSwapping] = useState(false);
-    const [maxSlippage, setMaxSlippage] = useState("1.0");
 
     // Reset tokens when network changes
     useEffect(() => {
