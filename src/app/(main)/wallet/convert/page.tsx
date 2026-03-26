@@ -63,6 +63,7 @@ export default function ConvertPage() {
     const [toToken, setToToken] = useState<string>(availableTokens[1]);
     const [amount, setAmount] = useState("");
     const [isSwapping, setIsSwapping] = useState(false);
+    const [maxSlippage, setMaxSlippage] = useState("1.0");
 
     // Reset tokens when network changes
     useEffect(() => {
@@ -287,9 +288,9 @@ export default function ConvertPage() {
                 </Card>
             </div>
 
-            {/* Exchange Rate & Fee */}
+            {/* Exchange Rate, Slippage & Fee */}
             <Card appearance="glassDark" padding="default">
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                         <span className="text-white/60">Exchange Rate</span>
                         <span className="text-white font-medium">
@@ -297,8 +298,26 @@ export default function ConvertPage() {
                         </span>
                     </div>
                     <div className="flex justify-between items-center">
+                        <span className="text-white/60">Max Slippage</span>
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="number"
+                                value={maxSlippage}
+                                onChange={(e) => setMaxSlippage(e.target.value)}
+                                min="0.1"
+                                max="50"
+                                step="0.1"
+                                className="w-14 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-white text-right text-sm font-medium outline-none focus:border-amber-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="text-white/60 text-sm">%</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-between items-center">
                         <span className="text-white/60">Fee</span>
-                        <span className="text-white font-medium">0.3%</span>
+                        <span className="font-medium">
+                            <span className="text-white/40 line-through mr-2">0.3%</span>
+                            <span className="text-green-400">FREE</span>
+                        </span>
                     </div>
                 </div>
             </Card>
