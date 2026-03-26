@@ -212,8 +212,8 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   // Simulator state - store input as string (empty for placeholder to show)
   const [inputValue, setInputValue] = useState(mode === "borrow" ? String(currentBorrowedAmount) : "");
 
-  // Sandbox mode - custom collateral input (empty string allows placeholder to show)
-  const [sandboxCollateral, setSandboxCollateral] = useState("");
+  // Sandbox mode - custom collateral input (default "1" so slider is usable on load)
+  const [sandboxCollateral, setSandboxCollateral] = useState("1");
 
   // Sandbox mode - custom collateral price (empty string uses live API price)
   const [sandboxCollateralPrice, setSandboxCollateralPrice] = useState("");
@@ -398,7 +398,7 @@ export default function LoanSimulator({ mode = "borrow", collateralType = "WBTC"
   const handleReset = useCallback(() => {
     setInputValue(mode === "borrow" ? String(currentBorrowedAmount) : "");
     if (mode === "simulate") {
-      setSandboxCollateral("");
+      setSandboxCollateral("1");
       setSandboxCollateralPrice("");
     }
   }, [mode, currentBorrowedAmount]);

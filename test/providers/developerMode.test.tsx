@@ -9,7 +9,7 @@
  *
  * Requirements:
  * - localStorage key: "stackd:developerMode"
- * - Default value: true (enabled by default for new users)
+ * - Default value: false (alpha features visible by default)
  * - Export: { developerMode: boolean, setDeveloperMode: (v: boolean) => void, toggle: () => void }
  * - Hook: useDeveloperMode()
  * - Provider: DeveloperModeProvider
@@ -71,7 +71,7 @@ describe("DeveloperModeProvider", () => {
   });
 
   describe("Default State", () => {
-    it("should default to true when localStorage is empty", async () => {
+    it("should default to false when localStorage is empty", async () => {
       const { DeveloperModeProvider, useDeveloperMode } = await import(
         "@/providers/developerMode"
       );
@@ -82,7 +82,7 @@ describe("DeveloperModeProvider", () => {
 
       const { result } = renderHook(() => useDeveloperMode(), { wrapper });
 
-      expect(result.current.developerMode).toBe(true);
+      expect(result.current.developerMode).toBe(false);
     });
 
     it("should read true from localStorage if set", async () => {
@@ -119,7 +119,7 @@ describe("DeveloperModeProvider", () => {
   });
 
   describe("setDeveloperMode", () => {
-    it("should update state when setDeveloperMode(false) is called from default true", async () => {
+    it("should update state when setDeveloperMode(true) is called from default false", async () => {
       const { DeveloperModeProvider, useDeveloperMode } = await import(
         "@/providers/developerMode"
       );
@@ -130,13 +130,13 @@ describe("DeveloperModeProvider", () => {
 
       const { result } = renderHook(() => useDeveloperMode(), { wrapper });
 
-      expect(result.current.developerMode).toBe(true);
+      expect(result.current.developerMode).toBe(false);
 
       act(() => {
-        result.current.setDeveloperMode(false);
+        result.current.setDeveloperMode(true);
       });
 
-      expect(result.current.developerMode).toBe(false);
+      expect(result.current.developerMode).toBe(true);
     });
 
     it("should persist to localStorage when setDeveloperMode is called", async () => {
@@ -182,7 +182,7 @@ describe("DeveloperModeProvider", () => {
   });
 
   describe("toggle", () => {
-    it("should flip state from true to false (default state)", async () => {
+    it("should flip state from false to true (default state)", async () => {
       const { DeveloperModeProvider, useDeveloperMode } = await import(
         "@/providers/developerMode"
       );
@@ -193,13 +193,13 @@ describe("DeveloperModeProvider", () => {
 
       const { result } = renderHook(() => useDeveloperMode(), { wrapper });
 
-      expect(result.current.developerMode).toBe(true);
+      expect(result.current.developerMode).toBe(false);
 
       act(() => {
         result.current.toggle();
       });
 
-      expect(result.current.developerMode).toBe(false);
+      expect(result.current.developerMode).toBe(true);
     });
 
     it("should flip state from true to false", async () => {
@@ -235,17 +235,18 @@ describe("DeveloperModeProvider", () => {
 
       const { result } = renderHook(() => useDeveloperMode(), { wrapper });
 
-      act(() => {
-        result.current.toggle();
-      });
-
-      expect(localStorageMock["stackd:developerMode"]).toBe("false");
-
+      // Default is false, first toggle → true
       act(() => {
         result.current.toggle();
       });
 
       expect(localStorageMock["stackd:developerMode"]).toBe("true");
+
+      act(() => {
+        result.current.toggle();
+      });
+
+      expect(localStorageMock["stackd:developerMode"]).toBe("false");
     });
   });
 
@@ -286,10 +287,10 @@ describe("DeveloperModeProvider", () => {
         <DeveloperModeProvider>{children}</DeveloperModeProvider>
       );
 
-      // Should not throw, should default to true
+      // Should not throw, should default to false
       const { result } = renderHook(() => useDeveloperMode(), { wrapper });
 
-      expect(result.current.developerMode).toBe(true);
+      expect(result.current.developerMode).toBe(false);
     });
 
     it("should gracefully handle localStorage.setItem errors", async () => {
