@@ -124,6 +124,31 @@ function parseApiError(errorString: string): string {
     return errorString;
 }
 
+/**
+ * Validates that a fresh quote hasn't slipped beyond the user's max tolerance.
+ * Returns the slippage percentage, or throws if it exceeds maxSlippagePct.
+ */
+export function validateSlippage(
+    originalBuyAmount: string,
+    freshBuyAmount: string,
+    maxSlippagePct: number
+): number {
+    const originalBuy = parseFloat(originalBuyAmount);
+    const freshBuy = parseFloat(freshBuyAmount);
+
+    if (originalBuy <= 0 || freshBuy <= 0) return 0;
+
+    const slippagePct = ((originalBuy - freshBuy) / originalBuy) * 100;
+
+    if (slippagePct > maxSlippagePct) {
+        throw new Error(
+            `Price moved ${slippagePct.toFixed(2)}% which exceeds your max slippage of ${maxSlippagePct}%. Try again or increase slippage tolerance.`
+        );
+    }
+
+    return slippagePct;
+}
+
 export function useGaslessSwap(chainId: number = 42161, maxSlippagePct: number = 1.0) {
     const { walletClient, activeWalletAddress, switchToNetwork } = useWeb3();
     const [isLoading, setIsLoading] = useState(false);
@@ -252,15 +277,8 @@ export function useGaslessSwap(chainId: number = 42161, maxSlippagePct: number =
             }
 
             // Slippage guard: reject if fresh quote deviates too much from original
-            const originalBuy = parseFloat(quote.buyAmount);
-            const freshBuy = parseFloat(freshQuote.buyAmount);
-            if (originalBuy > 0 && freshBuy > 0) {
-                const slippagePct = ((originalBuy - freshBuy) / originalBuy) * 100;
-                console.log(`[Swap] Slippage check: original=${originalBuy}, fresh=${freshBuy}, slippage=${slippagePct.toFixed(2)}%, max=${maxSlippagePct}%`);
-                if (slippagePct > maxSlippagePct) {
-                    throw new Error(`Price moved ${slippagePct.toFixed(2)}% which exceeds your max slippage of ${maxSlippagePct}%. Try again or increase slippage tolerance.`);
-                }
-            }
+            const slippagePct = validateSlippage(quote.buyAmount, freshQuote.buyAmount, maxSlippagePct);
+            console.log(`[Swap] Slippage check: ${slippagePct.toFixed(2)}% (max ${maxSlippagePct}%)`);
 
             const submitPayload: Record<string, unknown> = {
                 chainId,
