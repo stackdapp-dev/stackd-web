@@ -331,7 +331,7 @@ export default function ConvertPage() {
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-white/60">Est. Slippage</span>
-                        <span className={`font-medium ${slippageExceeded ? "text-red-400" : "text-white"}`}>
+                        <span className={`font-medium ${slippageExceeded ? "text-red-400" : estimatedSlippage !== null ? "text-green-400" : "text-white"}`}>
                             {estimatedSlippage !== null
                                 ? `${estimatedSlippage.toFixed(2)}%`
                                 : "—"}
