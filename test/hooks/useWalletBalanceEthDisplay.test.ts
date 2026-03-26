@@ -55,18 +55,21 @@ describe("useWalletBalance - ETH Display for All Users", () => {
   });
 
   describe("Ethereum mainnet ETH balance", () => {
-    it("should use ethereumData.ethBalance instead of arbitrumData.ethBalance", () => {
-      // The ETH balance should come from Ethereum mainnet since that's where
+    it("should use ethereumData.ethBalance for the top-level ethBalance variable", () => {
+      // The top-level ETH balance should come from Ethereum mainnet since that's where
       // gas is needed for Fluid/XAUT operations
+      // Note: arbitrumData?.ethBalance may appear in chainBalances for per-chain tracking,
+      // but the main ethBalance variable must use ethereumData
 
-      // Should NOT have: arbitrumData?.ethBalance
-      // Should HAVE: ethereumData?.ethBalance
-
-      const usesArbitrumEth = hookCode.includes("arbitrumData?.ethBalance");
       const usesEthereumEth = hookCode.includes("ethereumData?.ethBalance");
-
-      expect(usesArbitrumEth).toBe(false);
       expect(usesEthereumEth).toBe(true);
+
+      // Inside useWalletBalance function, the ethBalance assignment should reference ethereumData
+      const hookFnStart = hookCode.indexOf("export function useWalletBalance");
+      const hookBody = hookCode.slice(hookFnStart);
+      const ethBalanceLine = hookBody.match(/const ethBalance = .+/);
+      expect(ethBalanceLine).not.toBeNull();
+      expect(ethBalanceLine![0]).toContain("ethereumData");
     });
   });
 

@@ -16,7 +16,7 @@ import {
 } from "@/lib/swap";
 import type { SwapProviderName, SupportedChainId } from "@/lib/swap";
 
-// Token addresses for convenience (Arbitrum)
+// Token addresses by chain
 const TOKENS: Record<string, Record<number, string>> = {
     WBTC: {
         1: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", // Ethereum
@@ -25,6 +25,13 @@ const TOKENS: Record<string, Record<number, string>> = {
     USDT: {
         1: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // Ethereum
         42161: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", // Arbitrum
+    },
+    XAUT: {
+        1: "0x68749665FF8D2d112Fa859AA293F07A622782F38", // Ethereum
+    },
+    ETH: {
+        1: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // Native ETH
+        42161: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // Native ETH
     },
 };
 
