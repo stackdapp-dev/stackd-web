@@ -13,25 +13,43 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { parseUnits } from "viem";
 import { toast } from "react-toastify";
 
-// Available tokens for swapping
-const SWAP_TOKENS = ["WBTC", "USDT"] as const;
-type SwapToken = (typeof SWAP_TOKENS)[number];
+type NetworkType = "ethereum" | "arbitrum";
+
+// Available tokens per network
+const NETWORK_TOKENS: Record<NetworkType, string[]> = {
+    arbitrum: ["WBTC", "ETH", "USDT"],
+    ethereum: ["XAUT", "USDT", "ETH"],
+};
+
+const NETWORK_CHAIN_IDS: Record<NetworkType, number> = {
+    arbitrum: 42161,
+    ethereum: 1,
+};
 
 // Token display names
-const TOKEN_NAMES: Record<SwapToken, string> = {
+const TOKEN_NAMES: Record<string, string> = {
     WBTC: "Wrapped Bitcoin",
     USDT: "Tether USD",
+    ETH: "Ethereum",
+    XAUT: "Tether Gold",
 };
 
 // Token decimals
-const TOKEN_DECIMALS: Record<SwapToken, number> = {
+const TOKEN_DECIMALS: Record<string, number> = {
     WBTC: 8,
     USDT: 6,
+    ETH: 18,
+    XAUT: 6,
 };
 
 export default function ConvertPage() {
     const router = useRouter();
-    const { assets, refetchBalances } = useWalletBalanceContext();
+    const { assets, refetchBalances, chainBalances } = useWalletBalanceContext();
+
+    const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>("arbitrum");
+    const chainId = NETWORK_CHAIN_IDS[selectedNetwork];
+    const availableTokens = NETWORK_TOKENS[selectedNetwork];
+
     const {
         quote,
         isLoading,
@@ -39,23 +57,29 @@ export default function ConvertPage() {
         getQuote,
         executeSwap,
         getDestAmount,
-    } = useGaslessSwap();
+    } = useGaslessSwap(chainId);
 
-    const [fromToken, setFromToken] = useState<SwapToken>("WBTC");
-    const [toToken, setToToken] = useState<SwapToken>("USDT");
+    const [fromToken, setFromToken] = useState<string>(availableTokens[0]);
+    const [toToken, setToToken] = useState<string>(availableTokens[1]);
     const [amount, setAmount] = useState("");
     const [isSwapping, setIsSwapping] = useState(false);
 
-    // Get token balances
-    const fromBalance = useMemo(() => {
-        const asset = assets.find((a) => a.symbol === fromToken);
-        return asset?.amount || 0;
-    }, [assets, fromToken]);
+    // Reset tokens when network changes
+    useEffect(() => {
+        const tokens = NETWORK_TOKENS[selectedNetwork];
+        setFromToken(tokens[0]);
+        setToToken(tokens[1]);
+        setAmount("");
+    }, [selectedNetwork]);
 
-    const toBalance = useMemo(() => {
-        const asset = assets.find((a) => a.symbol === toToken);
-        return asset?.amount || 0;
-    }, [assets, toToken]);
+    // Get chain-specific token balances
+    const getChainBalance = useCallback((token: string): number => {
+        const balances = selectedNetwork === "arbitrum" ? chainBalances.arbitrum : chainBalances.ethereum;
+        return balances[token] || 0;
+    }, [chainBalances, selectedNetwork]);
+
+    const fromBalance = useMemo(() => getChainBalance(fromToken), [getChainBalance, fromToken]);
+    const toBalance = useMemo(() => getChainBalance(toToken), [getChainBalance, toToken]);
 
     // Calculate output amount from quote
     const outputAmount = useMemo(() => {
@@ -142,6 +166,23 @@ export default function ConvertPage() {
         <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
             <PageHeader title="Convert" />
 
+            {/* Network Selector */}
+            <Card appearance="glassDark" padding="default">
+                <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wider">
+                        Network
+                    </p>
+                    <select
+                        value={selectedNetwork}
+                        onChange={(e) => setSelectedNetwork(e.target.value as NetworkType)}
+                        className="bg-transparent text-white font-medium mt-1 outline-none cursor-pointer appearance-none pr-6 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M2%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_center]"
+                    >
+                        <option value="arbitrum" className="bg-zinc-900 text-white">Arbitrum One</option>
+                        <option value="ethereum" className="bg-zinc-900 text-white">Ethereum ERC20</option>
+                    </select>
+                </div>
+            </Card>
+
             {/* From Token */}
             <div>
                 <p className="text-amber-500 text-xs font-medium uppercase tracking-wider mb-2">
@@ -152,7 +193,23 @@ export default function ConvertPage() {
                         <div className="flex items-center gap-3">
                             <TokenIcon symbol={fromToken} width={40} height={40} />
                             <div>
-                                <p className="text-white font-semibold">{fromToken}</p>
+                                <select
+                                    value={fromToken}
+                                    onChange={(e) => {
+                                        const newFrom = e.target.value;
+                                        setFromToken(newFrom);
+                                        if (newFrom === toToken) {
+                                            const other = availableTokens.find(t => t !== newFrom);
+                                            if (other) setToToken(other);
+                                        }
+                                        setAmount("");
+                                    }}
+                                    className="bg-transparent text-white font-semibold outline-none cursor-pointer appearance-none pr-5 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%2210%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M2%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_center]"
+                                >
+                                    {availableTokens.map(t => (
+                                        <option key={t} value={t} className="bg-zinc-900 text-white">{t}</option>
+                                    ))}
+                                </select>
                                 <p className="text-white/50 text-sm">{TOKEN_NAMES[fromToken]}</p>
                             </div>
                         </div>
@@ -200,7 +257,23 @@ export default function ConvertPage() {
                         <div className="flex items-center gap-3">
                             <TokenIcon symbol={toToken} width={40} height={40} />
                             <div>
-                                <p className="text-white font-semibold">{toToken}</p>
+                                <select
+                                    value={toToken}
+                                    onChange={(e) => {
+                                        const newTo = e.target.value;
+                                        setToToken(newTo);
+                                        if (newTo === fromToken) {
+                                            const other = availableTokens.find(t => t !== newTo);
+                                            if (other) setFromToken(other);
+                                        }
+                                        setAmount("");
+                                    }}
+                                    className="bg-transparent text-white font-semibold outline-none cursor-pointer appearance-none pr-5 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%2210%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M2%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_center]"
+                                >
+                                    {availableTokens.map(t => (
+                                        <option key={t} value={t} className="bg-zinc-900 text-white">{t}</option>
+                                    ))}
+                                </select>
                                 <p className="text-white/50 text-sm">{TOKEN_NAMES[toToken]}</p>
                             </div>
                         </div>

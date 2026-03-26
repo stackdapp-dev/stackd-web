@@ -133,7 +133,7 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
   // Use Ethereum mainnet ETH balance (needed for Fluid/XAUT gas on Ethereum)
   const ethBalance = ethereumData?.ethBalance ?? 0;
 
-  // Track chain-specific balances for multi-chain tokens
+  // Track chain-specific balances for multi-chain tokens (including native ETH)
   const chainBalances = useMemo((): ChainBalances => {
     const arbitrum: Record<string, number> = {};
     const ethereum: Record<string, number> = {};
@@ -144,6 +144,9 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
         arbitrum[symbol] = data.balance;
       });
     }
+    if (arbitrumData?.ethBalance !== undefined) {
+      arbitrum.ETH = arbitrumData.ethBalance;
+    }
 
     // Ethereum balances
     if (ethereumData?.tokenBalances) {
@@ -151,9 +154,12 @@ export function useWalletBalance(tokenPrices: Record<string, { usd: number }> = 
         ethereum[symbol] = data.balance;
       });
     }
+    if (ethereumData?.ethBalance !== undefined) {
+      ethereum.ETH = ethereumData.ethBalance;
+    }
 
     return { arbitrum, ethereum };
-  }, [arbitrumData?.tokenBalances, ethereumData?.tokenBalances]);
+  }, [arbitrumData?.tokenBalances, arbitrumData?.ethBalance, ethereumData?.tokenBalances, ethereumData?.ethBalance]);
 
   // Merge token balances from both chains (for tokens that exist on both, sum them)
   const tokenBalances = useMemo(() => {

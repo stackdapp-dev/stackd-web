@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const OX_API_URL = "https://api.0x.org";
-const ARBITRUM_CHAIN_ID = 42161;
 
-// Token addresses on Arbitrum
-const TOKENS: Record<string, string> = {
-    WBTC: "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
-    USDT: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
-};
-
-const TOKEN_DECIMALS: Record<string, number> = {
-    WBTC: 8,
-    USDT: 6,
+// Token addresses by chain
+const TOKENS: Record<string, Record<number, string>> = {
+    WBTC: {
+        1: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        42161: "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+    },
+    USDT: {
+        1: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        42161: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+    },
+    XAUT: {
+        1: "0x68749665FF8D2d112Fa859AA293F07A622782F38",
+    },
+    ETH: {
+        1: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+        42161: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+    },
 };
 
 // GET /api/0x - Get gasless quote
@@ -21,6 +28,7 @@ export async function GET(request: NextRequest) {
     const buyToken = searchParams.get("buyToken");
     const sellAmount = searchParams.get("sellAmount");
     const taker = searchParams.get("taker");
+    const chainIdStr = searchParams.get("chainId") || "42161";
 
     // Get API key from env
     const apiKey = process.env.OX_API_KEY;
@@ -39,12 +47,14 @@ export async function GET(request: NextRequest) {
         );
     }
 
+    const chainId = parseInt(chainIdStr);
+
     try {
-        const sellTokenAddress = TOKENS[sellToken] || sellToken;
-        const buyTokenAddress = TOKENS[buyToken] || buyToken;
+        const sellTokenAddress = TOKENS[sellToken]?.[chainId] || sellToken;
+        const buyTokenAddress = TOKENS[buyToken]?.[chainId] || buyToken;
 
         const params = new URLSearchParams({
-            chainId: ARBITRUM_CHAIN_ID.toString(),
+            chainId: chainId.toString(),
             sellToken: sellTokenAddress,
             buyToken: buyTokenAddress,
             sellAmount,

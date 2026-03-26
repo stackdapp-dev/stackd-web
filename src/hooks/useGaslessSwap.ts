@@ -124,8 +124,8 @@ function parseApiError(errorString: string): string {
     return errorString;
 }
 
-export function useGaslessSwap() {
-    const { walletClient, activeWalletAddress, ensureCorrectNetwork } = useWeb3();
+export function useGaslessSwap(chainId: number = 42161) {
+    const { walletClient, activeWalletAddress, switchToNetwork } = useWeb3();
     const [isLoading, setIsLoading] = useState(false);
     const [quote, setQuote] = useState<Quote | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -151,6 +151,7 @@ export function useGaslessSwap() {
                     buyToken,
                     sellAmount,
                     taker: activeWalletAddress,
+                    chainId: chainId.toString(),
                 });
 
                 console.log("[Swap] Fetching quote:", params.toString());
@@ -181,7 +182,7 @@ export function useGaslessSwap() {
                 setIsLoading(false);
             }
         },
-        [activeWalletAddress]
+        [activeWalletAddress, chainId]
     );
 
     // Split signature for 0x API format
@@ -217,9 +218,9 @@ export function useGaslessSwap() {
         try {
             // Ensure wallet is on the correct network before signing
             // This fixes the "chainId should be same as current chainId" error
-            // when external wallets are connected to a different network (e.g., Ethereum)
-            console.log("[0x] Ensuring correct network...");
-            await ensureCorrectNetwork();
+            // when external wallets are connected to a different network
+            console.log("[0x] Ensuring correct network for chain", chainId, "...");
+            await switchToNetwork(chainId);
             console.log("[0x] Network check passed");
 
             // CRITICAL: Fetch a fresh quote right before signing
@@ -230,6 +231,7 @@ export function useGaslessSwap() {
                 buyToken: quote.buyToken,
                 sellAmount: quote.sellAmount,
                 taker: activeWalletAddress,
+                chainId: chainId.toString(),
             });
 
             const freshQuoteResponse = await fetch(`/api/0x?${params}`);
@@ -250,7 +252,7 @@ export function useGaslessSwap() {
             }
 
             const submitPayload: Record<string, unknown> = {
-                chainId: 42161,
+                chainId,
             };
 
             // Sign approval if needed (using fresh quote data)
@@ -334,7 +336,7 @@ export function useGaslessSwap() {
         } finally {
             setIsLoading(false);
         }
-    }, [quote, walletClient, activeWalletAddress, ensureCorrectNetwork]);
+    }, [quote, walletClient, activeWalletAddress, switchToNetwork, chainId]);
 
     // Get destination amount from quote
     const getDestAmount = useCallback(

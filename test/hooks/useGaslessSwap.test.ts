@@ -212,12 +212,8 @@ describe("useGaslessSwap - Network Switching Tests", () => {
         });
     });
 
-    describe("Current implementation verification (expected to fail)", () => {
-        // These tests read the actual implementation and verify it contains the bug
-        // They will pass once the implementation is fixed
-
-        it("executeSwap should call ensureCorrectNetwork (implementation check)", async () => {
-            // Read the actual implementation
+    describe("Network switching implementation verification", () => {
+        it("executeSwap should call switchToNetwork with chainId (implementation check)", async () => {
             const fs = await import("fs");
             const path = await import("path");
 
@@ -232,34 +228,39 @@ describe("useGaslessSwap - Network Switching Tests", () => {
             if (executeSwapMatch) {
                 const executeSwapCode = executeSwapMatch[0];
 
-                // Check if ensureCorrectNetwork is called
-                const hasNetworkCheck = executeSwapCode.includes("ensureCorrectNetwork");
-
-                // This test documents the EXPECTED behavior
-                // Currently this will FAIL because the bug exists
-                expect(hasNetworkCheck).toBe(true);
+                // Check if switchToNetwork is called with chainId
+                const hasNetworkSwitch = executeSwapCode.includes("switchToNetwork(chainId)");
+                expect(hasNetworkSwitch).toBe(true);
             }
         });
 
-        it("should import ensureCorrectNetwork from useWeb3", async () => {
+        it("should import switchToNetwork from useWeb3", async () => {
             const fs = await import("fs");
             const path = await import("path");
 
             const hookPath = path.resolve(process.cwd(), "src/hooks/useGaslessSwap.ts");
             const hookCode = fs.readFileSync(hookPath, "utf-8");
 
-            // Check if ensureCorrectNetwork is destructured from useWeb3
+            // Check if switchToNetwork is destructured from useWeb3
             const useWeb3Destructure = hookCode.match(/const \{[^}]*\} = useWeb3\(\)/);
 
             expect(useWeb3Destructure).not.toBeNull();
 
             if (useWeb3Destructure) {
                 const destructured = useWeb3Destructure[0];
-                const hasEnsureCorrectNetwork = destructured.includes("ensureCorrectNetwork");
-
-                // This test documents the EXPECTED behavior
-                expect(hasEnsureCorrectNetwork).toBe(true);
+                expect(destructured).toContain("switchToNetwork");
             }
+        });
+
+        it("should accept chainId parameter", async () => {
+            const fs = await import("fs");
+            const path = await import("path");
+
+            const hookPath = path.resolve(process.cwd(), "src/hooks/useGaslessSwap.ts");
+            const hookCode = fs.readFileSync(hookPath, "utf-8");
+
+            // The hook should accept a chainId parameter
+            expect(hookCode).toContain("export function useGaslessSwap(chainId:");
         });
     });
 
