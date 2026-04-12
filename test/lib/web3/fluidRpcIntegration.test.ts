@@ -29,10 +29,10 @@ import {
 // XAUT/USDT vault on Ethereum mainnet
 const XAUT_USDT_VAULT = '0xEce156BeD5aF2621b80b87ff4fE8fD3A929E3644';
 
-// Skip these tests in CI unless a dedicated RPC URL is provided
+// Skip these tests unless a dedicated RPC URL is provided
 // Public RPC endpoints are unreliable and can cause flaky test failures
-const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL;
-const shouldSkip = process.env.CI === 'true' && !ETHEREUM_RPC_URL;
+const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL ?? process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL;
+const shouldSkip = !ETHEREUM_RPC_URL;
 
 // Create a public client for Ethereum mainnet
 const publicClient = createPublicClient({
