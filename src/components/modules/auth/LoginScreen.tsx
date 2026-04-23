@@ -33,7 +33,7 @@ const LoginScreen = () => {
         <div className="flex items-center gap-3 mb-8">
           <Image
             src="/login-logo.png"
-            alt="Stack'd Logo"
+            alt="ArCa Logo"
             width={280}
             height={45}
             priority

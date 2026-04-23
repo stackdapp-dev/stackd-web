@@ -61,7 +61,7 @@ export default function EarlyAccessModal() {
 
                     {/* Description */}
                     <p className="text-white/70 leading-relaxed">
-                        Stack&apos;d is in Alpha testing before our full launch. Please report
+                        ArCa is in Alpha testing before our full launch. Please report
                         any bugs via the Menu → Contact Us page or by clicking the ?
                         button at the lower right of your screen.
                     </p>

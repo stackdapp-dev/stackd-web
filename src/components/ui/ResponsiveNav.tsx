@@ -129,13 +129,13 @@ const DesktopNav = ({ items, pathname, onNavigate, onPrefetch }: NavProps) => {
                 <div className="flex items-center gap-2 pr-4 border-r border-white/10" data-testid="stackd-logo">
                     <Image
                         src="/logo.png"
-                        alt="Stack'd"
+                        alt="ArCa"
                         width={24}
                         height={24}
                         className="w-6 h-6"
                     />
                     <span className="text-[#ffa02d] font-semibold text-lg tracking-tight">
-                        STACK&apos;D
+                        ARCA
                     </span>
                 </div>
 

@@ -56,12 +56,12 @@ export default function RewardsSimulatorModal({
             timePeriodMonths: 12,
         });
 
-        const shareText = `Check out Stack'd! With ${result.totalNetwork} referrals, I could earn ${formatSimulatorCurrency(yearlyResult.estimatedEarnings)} per year in passive income. Join me: `;
+        const shareText = `Check out ArCa! With ${result.totalNetwork} referrals, I could earn ${formatSimulatorCurrency(yearlyResult.estimatedEarnings)} per year in passive income. Join me: `;
 
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: "Stack'd Rewards Potential",
+                    title: "ArCa Rewards Potential",
                     text: shareText,
                     url: window.location.origin,
                 });

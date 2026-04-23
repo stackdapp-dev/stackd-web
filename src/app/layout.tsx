@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Stack'd",
+  title: "ArCa",
   description: "Spend BTC Without Selling",
 };
 

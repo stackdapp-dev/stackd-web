@@ -73,7 +73,7 @@ test.describe("Desktop Navigation", () => {
     });
 
 
-    test("should display STACK'D logo on desktop", async ({ page }) => {
+    test("should display ARCA logo on desktop", async ({ page }) => {
         await page.goto("/wallet");
         await page.waitForLoadState("domcontentloaded");
 

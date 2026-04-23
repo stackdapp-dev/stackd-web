@@ -74,7 +74,7 @@ export function VisaCard({
                         <div className="w-3 h-0.5 bg-gradient-to-r from-orange-400 to-orange-500" />
                         <div className="w-4 h-0.5 bg-gradient-to-r from-orange-400 to-orange-500" />
                     </div>
-                    <span className="text-white font-bold text-lg tracking-wide">STACK&apos;D</span>
+                    <span className="text-white font-bold text-lg tracking-wide">ARCA</span>
                 </div>
 
                 {/* EMV Chip */}

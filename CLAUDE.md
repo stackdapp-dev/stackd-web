@@ -1,90 +1,67 @@
-# CLAUDE.md - Project Rules
+## Version Bumping is MANDATORY
 
-## Approval Levels
+**CRITICAL: Every push to remote MUST include a version bump.**
 
-### Auto-executable (Level 1)
-- Style adjustments (no logic change)
-- Adding comments
-- Minor bug fixes **— TDD cycle still applies; write a failing test first**
-
-### Requires approval (Level 3)
-- Multiple file changes
-- Architectural changes
-- Dependency changes
-
-## Workflow Rules
-- **Follow the TDD Mandate below — tests before implementation, always**
-- Always run the full test suite before committing (`pnpm test`)
-- Think hard before complex changes
-- Always run all tests and build locally and successfully before pushing commits to remote
-- Run tasks in parallel by spinning off sub agents when possible
-
-## TDD Mandate (applies to ALL code changes, solo or agent-spawned)
-
-**No implementation code may be written until tests are written and confirmed failing.**
-
-### The Cycle (mandatory for every functional change)
-1. **INVESTIGATE** — Read existing code and understand the current state
-2. **WRITE TESTS** — Write tests describing the expected behavior
-3. **VERIFY FAIL** — Run the tests. They MUST fail. Show the failure output.
-   - If they pass before implementation: your tests don't test new behavior — rewrite them
-4. **IMPLEMENT** — Write the minimal code to make the failing tests pass
-5. **VERIFY PASS** — Run the new tests. They MUST pass.
-6. **REGRESSION** — Run the FULL test suite (`pnpm test`). Nothing else should break.
-7. **COMMIT** — Only commit after all tests are green
-
-### Applies to
-- Bug fixes (even "minor" ones)
-- New features
-- Refactors
-- Hook/component/utility changes
-
-### Test commands
-- Unit tests: `pnpm test:unit`
-- Full suite: `pnpm test`
-- Coverage: `pnpm test:coverage`
-
-### Hard rules
-- Do NOT commit source changes without a corresponding test change
-- Do NOT skip VERIFY FAIL — a test that passes before you write code is not testing the right thing
-- Changing tests to make them pass without fixing the implementation is FORBIDDEN
-
-## TDD Anti-Patterns (FORBIDDEN)
-
-| Pattern | Why Forbidden |
-|---------|---------------|
-| Writing implementation before tests | Core TDD violation — behavior is untested |
-| Skipping VERIFY FAIL step | Can't prove the test captures new behavior |
-| Changing tests to fix a failing suite | Hides bugs; only change tests with user approval |
-| Committing without running full suite | Regressions compound; broken windows accumulate |
-| Treating "minor" bugs as exempt from TDD | All behavior changes need test coverage |
+Bump `DEV_VERSION` in `packages/stackd-perps/client/modules/app/components/AppVersion.tsx` by incrementing the patch number (rightmost digit) with every commit that is pushed. Example: `0.2.7` → `0.2.8`. This is how we verify deployed code matches what was pushed. Never push without bumping.
 
 ---
 
-## Forbidden Actions
-- Do not modify production configs
-- Do not change database schemas without approval
+## TDD is MANDATORY — No Exceptions
+
+**CRITICAL: Every code change MUST follow Test-Driven Development. This is the #1 priority requirement.**
+
+Before writing ANY implementation code:
+1. **Write failing tests first** that describe the expected behavior
+2. **Run them — they MUST fail** (proves the behavior doesn't exist yet)
+3. **Then implement** the minimal code to make tests pass
+4. **Run the full suite** — nothing else should break
+5. **Commit** with tests and implementation together
+
+**Never commit code without tests. Never write implementation before tests.**
+
+If you catch yourself writing code without tests first, STOP and write the tests. This applies to:
+- Bug fixes (write a test that reproduces the bug, then fix it)
+- New features (write tests that describe the feature, then build it)
+- Refactors (ensure existing tests cover the behavior, then refactor)
+
+Test locations:
+- `packages/stackd-perps/__tests__/` — Unit tests for the frontend app
+- `packages/api/src/services/*.test.ts` — API service tests
+- `packages/web/src/**/*.test.ts` — Web app tests
 
 ---
 
-## Local Development
+## GitHub Authentication
 
-### Port Configuration
-- **Always run local dev on port 3000**
-- If port 3000 is in use, kill the existing process first:
-  ```bash
-  lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-  npm run dev
-  ```
-- Never run on alternative ports without explicit approval
+**CRITICAL: Run BOTH of these at the START of every session AND before every commit/push.**
+
+This repo is owned by the `stackdapp-dev` GitHub account. The Vercel deployment integration (Hobby plan) requires commits to come from `stackdapp-dev <dev@stackdapp.co>`. If you push as a different user (e.g. `chris247474`), Vercel will block the deployment with "commit author does not have contributing access."
+
+```bash
+# 1. Switch GitHub CLI auth
+gh auth switch --user stackdapp-dev
+
+# 2. Set git commit author (REQUIRED — gh auth does NOT change git author)
+export GIT_AUTHOR_NAME="stackdapp-dev"
+export GIT_AUTHOR_EMAIL="dev@stackdapp.co"
+export GIT_COMMITTER_NAME="stackdapp-dev"
+export GIT_COMMITTER_EMAIL="dev@stackdapp.co"
+```
+
+Run BOTH steps before:
+- `git commit` (author is baked into the commit — wrong author = blocked deployment)
+- `git push`
+- `gh pr create`
+- Any other GitHub/git operations
+
+**Verify before pushing:** `git log -1 --format='%an <%ae>'` should show `stackdapp-dev <dev@stackdapp.co>`
+
 
 ---
 
-# Orchestrated Agent Team Pattern
+## Orchestrated Agent Team Pattern
 
-## Overview
-
-This section defines a reusable pattern for coordinating multi-agent software development using Claude Code. An **orchestrator agent** manages the entire workflow, delegating work to **parallel agents** that follow Test-Driven Development (TDD). Parallel agents may further delegate isolated, trivial subtasks to **sub-agents**. Every level of the hierarchy enforces shared contracts, worktree isolation, and TDD discipline to produce criteria-adherent code.
+This project uses an orchestrated agent team pattern for coordinating multi-agent software development. An **orchestrator agent** manages the entire workflow, delegating work to **parallel agents** that follow Test-Driven Development (TDD). Parallel agents may further delegate isolated, trivial subtasks to **sub-agents**. Every level of the hierarchy enforces shared contracts, worktree isolation, and TDD discipline to produce criteria-adherent code.
 
 ---
 
@@ -94,15 +71,15 @@ This section defines a reusable pattern for coordinating multi-agent software de
 ORCHESTRATOR (Opus 4.6 extended thinking)
 │  Owns: planning, contracts, PR review, merge gating, context forwarding
 │
-├── Parallel Agent A (Sonnet 4.6 or Opus 4.6 — see Model Selection, own worktree + feature branch)
+├── Parallel Agent A (sonnet 4.6 extended thinking, own worktree + feature branch)
 │   │  Owns: TDD cycle, PR to develop, sub-agent coordination
-│   ├── Sub-Agent A1 (Haiku 4.5, commits to Agent A's branch)
-│   └── Sub-Agent A2 (Haiku 4.5, commits to Agent A's branch)
+│   ├── Sub-Agent A1 (Haiku 4.5 extended thinking, commits to Agent A's branch)
+│   └── Sub-Agent A2 (Haiku 4.5 extended thinking, commits to Agent A's branch)
 │
-├── Parallel Agent B (Sonnet 4.6 or Opus 4.6 — see Model Selection, own worktree + feature branch)
-│   └── Sub-Agent B1 (Haiku 4.5, commits to Agent B's branch)
+├── Parallel Agent B (sonnet 4.6 extended thinking, own worktree + feature branch)
+│   └── Sub-Agent B1 (Haiku 4.5 extended thinking, commits to Agent B's branch)
 │
-└── Parallel Agent C (Sonnet 4.6, own worktree + feature branch)
+└── Parallel Agent C (sonnet 4.6 extended thinking, own worktree + feature branch)
     └── (no sub-agents — task is small enough)
 ```
 
@@ -118,13 +95,13 @@ The orchestrator is the main Claude Code session. It never writes feature code d
 6. **Feeds context forward** — provides actual merged code (not specs) to downstream agents
 7. **Cleans up** — removes worktrees after merging each phase
 
-### 1.2 Parallel Agents (Sonnet 4.6 or Opus 4.6 — see Model Selection)
+### 1.2 Parallel Agents (sonnet 4.6 Extended Thinking)
 
 Each parallel agent works in its own git worktree on its own feature branch. It:
 
 1. **Follows TDD strictly** — investigate → write failing tests → minimal logic to pass → run all tests
 2. **Creates a PR to develop** when complete (does NOT merge — orchestrator merges)
-3. **May spawn sub-agents** for isolated, parallelizable subtasks (see Section 4 for criteria)
+3. **May spawn sub-agents** for isolated, parallelizable subtasks (see Section 2 for criteria)
 4. **Owns sub-agent coordination** — handles merge conflicts from sub-agents, runs full test suite before PR
 5. **Commits are atomic and well-described** — each commit should represent a logical unit of work
 
@@ -193,16 +170,6 @@ Every agent and sub-agent follows the same TDD cycle. No code is written without
 - **Minimal implementation.** Don't gold-plate. Write the least code needed to make tests green.
 - **No skipping the regression run.** Every commit must have a passing full suite. Broken windows compound.
 
-### Bugfix Workflow
-For bugfixes:
-- **No sub agents needed** — proceed directly with TDD
-- Checkout from develop, create a bugfix branch and worktree
-- Write a test that reproduces the bug (test should fail)
-- Fix the bug to make the test pass
-- Pull develop into bugfix branch, resolve conflicts
-- Run entire test suite
-- Create PR to develop
-
 ---
 
 ## 4. Git Branching & Worktree Strategy
@@ -214,7 +181,7 @@ claude/feat-<phase#><agent-letter>-<description>    # features
 claude/fix-<description>                             # bug fixes
 ```
 
-Examples: `claude/feat-1a-auth-service`, `claude/feat-2b-api-routes`, `claude/fix-login-race`
+Examples: `claude/feat-1a-postgres-store`, `claude/feat-2b-strategy-routes`, `claude/fix-login-race`
 
 ### Worktree Isolation (REQUIRED for parallel agents)
 
@@ -227,8 +194,8 @@ Parallel agents share the host filesystem. If one agent checks out a branch, it 
 git branch claude/feat-1a-description develop
 git branch claude/feat-1b-description develop
 
-git worktree add ../<repo-name>-feat-1a claude/feat-1a-description
-git worktree add ../<repo-name>-feat-1b claude/feat-1b-description
+git worktree add ../nado-arb-bot-feat-1a claude/feat-1a-description
+git worktree add ../nado-arb-bot-feat-1b claude/feat-1b-description
 ```
 
 **Worktree naming convention:**
@@ -243,8 +210,8 @@ Worktrees live as **siblings of the main repo directory** (one level up), not in
 
 **Worktree cleanup (orchestrator does this AFTER merging each phase):**
 ```bash
-git worktree remove ../<repo-name>-feat-1a
-git worktree remove ../<repo-name>-feat-1b
+git worktree remove ../nado-arb-bot-feat-1a
+git worktree remove ../nado-arb-bot-feat-1b
 ```
 
 ### PR & Merge Protocol
@@ -271,43 +238,13 @@ Each parallel agent's workflow ends with a PR to `develop`:
 
 ## 5. Model Strategy & Token Efficiency
 
-### Intelligent Model Selection
+### Model Assignment
 
-Choose the model based on task characteristics, not just hierarchy position. The right model depends on what the task demands.
-
-| Role | Default Model | Upgrade/Downgrade Criteria |
-|------|---------------|---------------------------|
-| **Orchestrator** | **Opus 4.6** (always) | Never downgrade — orchestration requires the strongest reasoning |
-| **Parallel agents** | **Sonnet 4.6** (default) | Upgrade to **Opus 4.6** when criteria below are met |
-| **Sub-agents** | **Haiku 4.5** (default) | Upgrade to **Sonnet 4.6** for moderate complexity (see below) |
-
-### When to Upgrade a Parallel Agent to Opus 4.6
-
-Use Opus 4.6 for a parallel agent when **2+ of these apply**:
-
-- **Significant investigation required** — the task involves debugging, root cause analysis, or exploring unfamiliar code paths before implementation can begin
-- **Cross-cutting concerns** — the task touches multiple modules, requires understanding system-wide implications, or involves architectural decisions within its scope
-- **Complex state management** — the task involves intricate state machines, race conditions, concurrency, or distributed system coordination
-- **Ambiguous requirements** — the acceptance criteria leave room for interpretation, requiring judgment calls about the right approach
-- **High integration risk** — the task's output will be consumed by many other modules, so getting the interface right is critical
-
-Use Sonnet 4.6 (the default) when the task is:
-- Well-scoped with clear contracts and acceptance criteria
-- Standard feature implementation following established patterns
-- CRUD operations, API endpoints, UI components with clear specs
-- Tasks where the "what" is clear even if the "how" requires effort
-
-### When to Upgrade a Sub-Agent to Sonnet 4.6
-
-Use Sonnet 4.6 instead of Haiku 4.5 for a sub-agent when:
-- The subtask requires reading and understanding moderate amounts of existing code
-- The subtask involves non-trivial logic (not just boilerplate/mechanical)
-- The subtask needs to make judgment calls about edge cases
-
-Keep Haiku 4.5 (the default) for sub-agents when:
-- The task is purely mechanical (add fields, write simple validators, create boilerplate)
-- The instructions are completely unambiguous
-- No existing code needs to be understood beyond a few lines
+| Role | Model | Reasoning |
+|------|-------|-----------|
+| **Orchestrator** | Opus 4.6 extended thinking | Architectural decisions, PR review, integration debugging, context management |
+| **Parallel agents** | sonnet 4.6 extended thinking | Well-scoped tasks with clear contracts — capable enough at ~5x less cost |
+| **Sub-agents** | Haiku 4.5 extended thinking | Trivial, isolated subtasks — mechanical work at ~25x less cost than Opus |
 
 ### Token Efficiency Rules
 
@@ -317,41 +254,24 @@ Keep Haiku 4.5 (the default) for sub-agents when:
 4. **Feed actual code, not prose descriptions.** Reading a 200-line file into a prompt is cheaper than the agent guessing wrong and needing a retry.
 5. **Orchestrator should batch reviews.** Review multiple agent outputs in sequence rather than spawning review sub-agents.
 6. **Kill agents that are stuck.** If an agent is spinning (repeated failures, wrong approach), terminate it, adjust the prompt, and relaunch. Don't let it burn tokens.
-7. **Model cost awareness.** Opus 4.6 costs ~5x Sonnet 4.6, and Sonnet 4.6 costs ~5x Haiku 4.5. Only upgrade when the task complexity genuinely demands it — a well-prompted Sonnet 4.6 handles most implementation work.
 
 ### Task Tool Configuration
 
 ```python
-# Parallel agent (default — well-scoped task)
+# Parallel agent
 Task(
     description="Build auth service",
     prompt="...",
     subagent_type="general-purpose",
-    model="sonnet"  # Sonnet 4.6
+    model="sonnet"
 )
 
-# Parallel agent (upgraded — complex/ambiguous task)
-Task(
-    description="Design event sourcing pipeline",
-    prompt="...",
-    subagent_type="general-purpose",
-    model="opus"  # Opus 4.6 — significant investigation + cross-cutting
-)
-
-# Sub-agent (default — trivial/mechanical task)
+# Sub-agent (spawned BY a parallel agent)
 Task(
     description="Add input validators",
     prompt="...",
     subagent_type="general-purpose",
-    model="haiku"  # Haiku 4.5
-)
-
-# Sub-agent (upgraded — moderate complexity)
-Task(
-    description="Implement retry logic with backoff",
-    prompt="...",
-    subagent_type="general-purpose",
-    model="sonnet"  # Sonnet 4.6 — non-trivial logic, edge cases
+    model="haiku"
 )
 ```
 
@@ -375,9 +295,7 @@ PHASE 1 — Independent Work (Parallel Agents)
 ┌─────────────────────────────────────────────────────────────────┐
 │ Agent A: [Task Name]          │ Agent B: [Task Name]            │
 │ Branch: claude/feat-1a-xxx    │ Branch: claude/feat-1b-xxx      │
-│ Model: Sonnet 4.6             │ Model: Opus 4.6                 │
-│ Rationale: clear specs, CRUD  │ Rationale: ambiguous reqs,      │
-│                               │   cross-cutting concerns        │
+│ Model: sonnet 4.6 ET          │ Model: sonnet 4.6 ET            │
 │ Deps: Phase 0 contracts       │ Deps: Phase 0 contracts         │
 │ Sub-agents:                   │ Sub-agents:                     │
 │   └── A1: [subtask] (Haiku)   │   └── (none)                   │
@@ -391,7 +309,6 @@ PHASE 2 — Dependent Work (Parallel where possible)
 ┌─────────────────────────────────────────────────────────────────┐
 │ Agent C: [Task Name]          │ Agent D: [Task Name]            │
 │ Depends on: Agent A's output  │ Depends on: Agent B's output    │
-│ Model: Sonnet 4.6             │ Model: Sonnet 4.6               │
 │ Context: [merged files from A]│ Context: [merged files from B]  │
 └─────────────────────────────────────────────────────────────────┘
 GATE: Orchestrator reviews PRs, merges to develop, runs full suite
@@ -409,7 +326,6 @@ PHASE 3 — Integration (Sequential, Orchestrator or single agent)
 - **Dependencies are explicit** — "Depends on: Agent A's output" not "depends on auth"
 - **Manual testing is flagged** — tasks requiring human verification are marked, not buried
 - **Token estimates drive decisions** — if a sub-agent task estimates higher token cost than inline, don't spawn it
-- **Model choice is justified** — each agent's model assignment includes a brief rationale
 - **The matrix is a living document** — update it as work progresses and reality diverges from plan
 
 ---
@@ -420,34 +336,49 @@ Before any agent starts, the orchestrator defines the interfaces that all agents
 
 ### What Goes in Contracts
 
-Define shared enums, data models, and module interfaces/protocols in a single location that all agents import from. For this TypeScript/React project, this means exported `interface` and `type` definitions.
+Define shared enums, data models, and module interfaces/protocols in a single location that all agents import from. The language and framework will vary by project — the example below uses Python, but the same principles apply to TypeScript interfaces, Go interfaces, Rust traits, Java interfaces, etc.
 
-```typescript
-// Example: TypeScript
-// src/contracts/index.ts (or contracts/ directory for larger scopes)
+```python
+# Example: Python (adapt to your project's language/framework)
+# src/<project>/contracts.py (or contracts/ package for larger projects)
 
-// --- Shared Enums ---
-export enum Status { ... }
+from abc import ABC, abstractmethod
+from typing import Protocol, Optional
+from dataclasses import dataclass
+from enum import Enum
+from datetime import datetime
 
-// --- Shared Data Models ---
-export interface SomeInput { ... }
-export interface SomeOutput { ... }
+# --- Shared Enums ---
+class Status(str, Enum): ...
 
-// --- Module Interfaces (what each module must expose) ---
-export interface ServiceA {
-  doThing(input: SomeInput): Promise<SomeOutput>;
-}
+# --- Shared Data Models ---
+@dataclass(frozen=True)
+class SomeInput: ...
 
-export interface ServiceB {
-  doOtherThing(id: string): Promise<SomeOutput | null>;
-}
+@dataclass
+class SomeOutput: ...
+
+# --- Module Protocols (what each module must expose) ---
+class ServiceA(Protocol):
+    """Interface that module A must implement."""
+    async def do_thing(self, input: SomeInput) -> SomeOutput: ...
+
+class ServiceB(Protocol):
+    """Interface that module B must implement."""
+    async def do_other_thing(self, id: str) -> Optional[SomeOutput]: ...
 ```
+
+**Language-specific equivalents:**
+- **TypeScript**: `interfaces.ts` with exported `interface` and `type` definitions
+- **Go**: `contracts.go` with exported `interface` types
+- **Rust**: `traits.rs` with `pub trait` definitions and shared `struct`/`enum` types
+- **Java/Kotlin**: `contracts/` package with `interface` definitions and shared DTOs
 
 ### Contract Rules
 
 - Contracts are committed to `develop` before any agent branch is created
 - All agents import from contracts — they do NOT define their own versions of shared types
-- If an agent needs a type not in contracts, define it locally and flag it: `// TODO: promote to shared contracts if other modules need this`
+- If an agent needs a type not in contracts, define it locally and flag it: `# TODO: promote to shared contracts if other modules need this`
 - Contract changes require orchestrator approval and a rebase of all active agent branches
 
 ---
@@ -490,21 +421,18 @@ Follow this cycle for every piece of functionality:
 6. Commit with a descriptive message
 
 ## Sub-Agent Policy
-You MAY spawn sub-agents ONLY when ALL of these are true:
+You MAY spawn sub-agents (model: haiku) ONLY when ALL of these are true:
 - The subtask is parallelizable (no dependency on other concurrent work)
 - The subtask is isolated (single module/file, no cross-cutting concerns)
 - The subtask is small (completable in one focused pass)
 - The subtask requires no complex investigation
 - The token savings justify the coordination overhead
 
-Default sub-agent model: haiku. Upgrade to sonnet if the subtask involves
-non-trivial logic, edge case handling, or understanding moderate existing code.
-
 Sub-agents commit to YOUR branch in YOUR worktree. You handle their merge conflicts
 and run the full test suite before creating your PR.
 
 ## Interface Compliance
-- Your public API MUST match the interface defined in the shared contracts
+- Your public API MUST match the Protocol/ABC defined in the shared contracts
 - Use the shared data models for all cross-module data
 - Do NOT define your own versions of shared types
 
@@ -550,7 +478,7 @@ ALL file operations MUST use this directory. You are committing to the parent ag
 
 ### MODE: Feature Requests
 
-**When the user asks for a new feature or capability:**
+**When I ask for a new feature or capability:**
 
 1. **Validate the Why**
    - Is this solving a real problem or feature creep?
@@ -562,6 +490,8 @@ ALL file operations MUST use this directory. You are committing to the parent ag
    - Identify shared contracts needed (Section 7)
    - Flag tasks requiring manual testing
    - Write test cases FIRST (what success looks like)
+   - Write tests that match the intended logic, make sure the tests fail on current logic that is non-compliant, then write or revise the current logic to match the test
+   - If it is a large task or epic-level feature request, break down the task into subtasks and mark which of these subtasks needs manual testing vs what can be built following TDD by a parallel agent or sub-agent
    - API contract/interface design
    - Edge cases and failure modes
    - Dependencies and breaking changes
@@ -573,7 +503,7 @@ ALL file operations MUST use this directory. You are committing to the parent ag
 
 4. **Delivery Format**
    - Priority assessment (high/medium/low with reasoning)
-   - Orchestration matrix with token estimates and model rationale
+   - Orchestration matrix with token estimates
    - Risk analysis (what could go wrong)
    - Code with tests, not just pseudocode
 
@@ -582,18 +512,20 @@ ALL file operations MUST use this directory. You are committing to the parent ag
 - Adds complexity without proportional value
 - Conflicts with existing architecture
 
+---
+
 ### MODE: Bug Fixes
 
-**When the user reports a bug or broken behavior:**
+**When I report a bug or broken behavior:**
 
 1. **Confirm the Bug**
-   - Reproduce the issue from the description
-   - Distinguish: actual bug vs expected behavior user doesn't like
+   - Reproduce the issue from my description
+   - Distinguish: actual bug vs expected behavior I don't like
    - Assess severity: critical (blocks work), major (workaround exists), minor (cosmetic)
 
 2. **Root Cause Analysis**
    - Don't just fix symptoms
-   - Show *why* it broke (what assumption failed)
+   - Show me *why* it broke (what assumption failed)
    - Check if other areas have the same vulnerability
 
 3. **Fix Approach (TDD — no sub-agents for bug fixes)**
@@ -601,8 +533,9 @@ ALL file operations MUST use this directory. You are committing to the parent ag
    - Write failing test that captures the bug
    - Minimal change to make test pass
    - Verify no regressions
-   - Pull develop into bugfix branch, resolve conflicts
-   - Run entire test suite
+   - Run tests specific to the changes to be sure nothing else has broken
+   - Pull develop into bugfix branch, resolve any merge conflicts
+   - Run entire test suite to ensure nothing else has broken
    - Create PR to develop
 
 4. **Delivery Format**
@@ -611,35 +544,71 @@ ALL file operations MUST use this directory. You are committing to the parent ag
    - Fix with before/after test results
    - Prevention: how to avoid this class of bug going forward
 
+5. For bug fixes, there is no need for sub-agents. Proceed by following TDD and write unit, integration, and E2E tests (for logic libraries, API requests, UI-level interactions respectively) to avoid regressions of the same bug in the future.
+
 **Red flags to call out:**
 - If the "bug" is actually a feature request in disguise
 - If fixing properly requires architectural changes (then it's a refactor, not a patch)
-- If the fix is papering over a deeper design flaw
+- If I'm papering over a deeper system design flaw
+
+---
 
 ### MODE: Research Tasks
 
-**When the user asks for analysis, strategy, or exploration:**
+**When I ask for analysis, strategy, or exploration:**
 
 1. **Clarify the Decision**
-   - What is the user actually trying to decide?
-   - What's the time horizon?
+   - What am I actually trying to decide?
+   - What's the time horizon (next week vs next quarter)?
 
 2. **Research Approach**
-   - Primary sources over summaries
+   - Primary sources over summaries when possible
    - Quantitative data over anecdotes
    - Recent data for evolving domains
 
-3. **Delivery Format**
-   - Executive summary (2-3 sentences)
+3. **Analysis Structure**
    - Key findings (3-5 bullets, no fluff)
+   - Opportunity costs of each option
+   - Risks I'm underestimating
    - Recommended action with specific next steps
-   - What is unknown (gaps in available data)
 
-### MODE: Miscellaneous
+4. **Delivery Format**
+   - Executive summary (2-3 sentences)
+   - Data-backed insights (cite sources)
+   - Prioritized action plan (immediate/24hr/ongoing)
+   - What I don't know (gaps in available data)
 
-1. **Classify First** — Is this actually a feature/bug/research in disguise?
-2. **Bias toward action** — deliver usable output, not theoretical frameworks
-3. **Clear next action** — what should the user do with this output?
+**Red flags to call out:**
+- If I'm researching instead of executing (analysis paralysis)
+- If the question is too broad to be actionable
+- If I'm looking for validation rather than truth
+
+---
+
+### MODE: Miscellaneous Tasks
+
+**When the task doesn't fit above categories:**
+
+1. **Classify First**
+   - Is this actually feature/bug/research in disguise?
+   - Is this strategic (affects business direction) or tactical (execution detail)?
+   - Is this urgent or am I procrastinating something harder?
+
+2. **Execution Approach**
+   - Bias toward action over perfection
+   - Deliver usable output, not theoretical frameworks
+   - Show working examples, not abstract descriptions
+
+3. **Delivery Format**
+   - Depends on task type, but always:
+   - Clear next action (what do I do with this output?)
+   - Time estimate if it's a multi-step process
+   - Dependencies (what else needs to happen first)
+
+**Red flags to call out:**
+- If task is actually multiple tasks that should be separated
+- If I'm asking you to do something I should delegate to a specialist
+- If this is busy work avoiding higher-leverage activities
 
 ---
 
@@ -652,12 +621,11 @@ ALL file operations MUST use this directory. You are committing to the parent ag
 | **No orchestrator review** | Agent output goes straight to dependent agents without verification | Orchestrator reviews every PR before merge |
 | **Copy-paste context** | Describing interfaces in prose → agents guess wrong | Feed actual merged code as context |
 | **Parallel everything** | Running dependent agents in parallel with stubs → integration failures | Wait for real implementations, then feed forward |
-| **Always using Opus for agents** | Burns quota ~5x faster for tasks Sonnet 4.6 handles equally well | Default to Sonnet 4.6, upgrade to Opus only when complexity warrants it |
-| **Always using Haiku for sub-agents** | Haiku fails on non-trivial logic, causing retries that waste more tokens | Upgrade sub-agents to Sonnet 4.6 when the subtask has real logic |
+| **All-Opus sub-agents** | Burns quota ~5x faster for tasks Sonnet handles equally well | Sonnet for parallel agents, Haiku for sub-agents |
 | **Parallel agents in same directory** | One checkout moves the working tree for all others | Git worktrees: one per parallel agent |
 | **Sub-agents on their own branches** | Coordination overhead exceeds benefit | Sub-agents commit to parent agent's branch |
 | **Changing tests to fix merge failures** | Tests encode intended behavior — changing them hides bugs | Fix implementation to match tests; only change tests with user approval |
-| **Spawning sub-agents for complex tasks** | Haiku can't handle investigation or cross-cutting concerns | Keep complex work in the parallel agent (Sonnet 4.6 or Opus 4.6) |
+| **Spawning sub-agents for complex tasks** | Haiku can't handle investigation or cross-cutting concerns | Keep complex work in the parallel agent (Sonnet) |
 | **No parallelization matrix** | Ad-hoc agent spawning leads to dependency violations and wasted tokens | Always produce the matrix before launching agents |
 
 ---
@@ -667,7 +635,6 @@ ALL file operations MUST use this directory. You are committing to the parent ag
 - [ ] Scope of work is defined with acceptance criteria
 - [ ] Orchestration & Parallelization Matrix is complete (Section 6)
 - [ ] Shared contracts are written and committed to develop (Section 7)
-- [ ] Model assignments are justified for each agent (default Sonnet 4.6, upgrades documented)
 - [ ] Branches are created for all Phase 1 agents
 - [ ] Worktrees are created and verified (`git -C <path> branch --show-current`)
 - [ ] Each agent's prompt includes: worktree path, branch name, contracts, task, TDD protocol

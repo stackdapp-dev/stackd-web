@@ -124,7 +124,58 @@ function parseApiError(errorString: string): string {
     return errorString;
 }
 
-export function useGaslessSwap(chainId: number = 42161) {
+interface QuoteSlippageParams {
+    sellAmount: string;
+    sellDecimals: number;
+    buyAmount: string;
+    buyDecimals: number;
+    sellTokenUsd: number;
+    buyTokenUsd: number;
+}
+
+/**
+ * Calculates estimated price impact of a quote by comparing the quoted
+ * exchange rate against a reference rate derived from USD prices.
+ * Returns slippage percentage (positive = worse than market), or null if inputs are invalid.
+ */
+export function calculateQuoteSlippage(params: QuoteSlippageParams): number | null {
+    const { sellAmount, sellDecimals, buyAmount, buyDecimals, sellTokenUsd, buyTokenUsd } = params;
+
+    const sell = parseFloat(sellAmount) / Math.pow(10, sellDecimals);
+    const buy = parseFloat(buyAmount) / Math.pow(10, buyDecimals);
+
+    if (sell <= 0 || buy <= 0 || sellTokenUsd <= 0 || buyTokenUsd <= 0) return null;
+
+    const expectedOutput = (sell * sellTokenUsd) / buyTokenUsd;
+    return ((expectedOutput - buy) / expectedOutput) * 100;
+}
+
+/**
+ * Validates that a fresh quote hasn't slipped beyond the user's max tolerance.
+ * Returns the slippage percentage, or throws if it exceeds maxSlippagePct.
+ */
+export function validateSlippage(
+    originalBuyAmount: string,
+    freshBuyAmount: string,
+    maxSlippagePct: number
+): number {
+    const originalBuy = parseFloat(originalBuyAmount);
+    const freshBuy = parseFloat(freshBuyAmount);
+
+    if (originalBuy <= 0 || freshBuy <= 0) return 0;
+
+    const slippagePct = ((originalBuy - freshBuy) / originalBuy) * 100;
+
+    if (slippagePct > maxSlippagePct) {
+        throw new Error(
+            `Price moved ${slippagePct.toFixed(2)}% which exceeds your max slippage of ${maxSlippagePct}%. Try again or increase slippage tolerance.`
+        );
+    }
+
+    return slippagePct;
+}
+
+export function useGaslessSwap(chainId: number = 42161, maxSlippagePct: number = 1.0) {
     const { walletClient, activeWalletAddress, switchToNetwork } = useWeb3();
     const [isLoading, setIsLoading] = useState(false);
     const [quote, setQuote] = useState<Quote | null>(null);
@@ -251,6 +302,10 @@ export function useGaslessSwap(chainId: number = 42161) {
                 throw new Error("No trade data in fresh quote");
             }
 
+            // Slippage guard: reject if fresh quote deviates too much from original
+            const slippagePct = validateSlippage(quote.buyAmount, freshQuote.buyAmount, maxSlippagePct);
+            console.log(`[Swap] Slippage check: ${slippagePct.toFixed(2)}% (max ${maxSlippagePct}%)`);
+
             const submitPayload: Record<string, unknown> = {
                 chainId,
             };
@@ -336,7 +391,7 @@ export function useGaslessSwap(chainId: number = 42161) {
         } finally {
             setIsLoading(false);
         }
-    }, [quote, walletClient, activeWalletAddress, switchToNetwork, chainId]);
+    }, [quote, walletClient, activeWalletAddress, switchToNetwork, chainId, maxSlippagePct]);
 
     // Get destination amount from quote
     const getDestAmount = useCallback(

@@ -47,7 +47,7 @@ export function InstallBanner() {
                     <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden">
                         <img
                             src="/logo.png"
-                            alt="Stack'd"
+                            alt="ArCa"
                             className="w-full h-full object-cover"
                         />
                     </div>
@@ -55,7 +55,7 @@ export function InstallBanner() {
                     {/* Text */}
                     <div className="flex-1 min-w-0">
                         <p className="font-semibold text-foreground text-sm">
-                            Add Stack&apos;d to Home Screen
+                            Add ArCa to Home Screen
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
                             Get the full app experience

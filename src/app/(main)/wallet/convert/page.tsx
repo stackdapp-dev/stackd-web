@@ -6,7 +6,8 @@ import Card from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWalletBalanceContext } from "@/hooks/useWalletBalanceContext";
 import { formatAmount } from "@/lib/utils";
-import { useGaslessSwap } from "@/hooks/useGaslessSwap";
+import { useGaslessSwap, calculateQuoteSlippage } from "@/hooks/useGaslessSwap";
+import { useGetTokenPrice } from "@/providers/TokenPriceProvider";
 import { ArrowDownUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -47,6 +48,7 @@ export default function ConvertPage() {
     const { assets, refetchBalances, chainBalances } = useWalletBalanceContext();
 
     const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>("arbitrum");
+    const [maxSlippage, setMaxSlippage] = useState("1.0");
     const chainId = NETWORK_CHAIN_IDS[selectedNetwork];
     const availableTokens = NETWORK_TOKENS[selectedNetwork];
 
@@ -57,7 +59,7 @@ export default function ConvertPage() {
         getQuote,
         executeSwap,
         getDestAmount,
-    } = useGaslessSwap(chainId);
+    } = useGaslessSwap(chainId, parseFloat(maxSlippage) || 1.0);
 
     const [fromToken, setFromToken] = useState<string>(availableTokens[0]);
     const [toToken, setToToken] = useState<string>(availableTokens[1]);
@@ -100,6 +102,22 @@ export default function ConvertPage() {
         const rate = destAmount / srcAmount;
         return `1 ${fromToken} = ${formatAmount(rate)} ${toToken}`;
     }, [quote, fromToken, toToken]);
+
+    // Calculate estimated slippage from quote vs market prices
+    const getTokenPrice = useGetTokenPrice();
+    const estimatedSlippage = useMemo(() => {
+        if (!quote) return null;
+        return calculateQuoteSlippage({
+            sellAmount: quote.sellAmount,
+            sellDecimals: TOKEN_DECIMALS[fromToken],
+            buyAmount: quote.buyAmount,
+            buyDecimals: TOKEN_DECIMALS[toToken],
+            sellTokenUsd: getTokenPrice(fromToken),
+            buyTokenUsd: getTokenPrice(toToken),
+        });
+    }, [quote, fromToken, toToken, getTokenPrice]);
+
+    const slippageExceeded = estimatedSlippage !== null && estimatedSlippage > (parseFloat(maxSlippage) || 1.0);
 
     // Fetch quote when amount changes
     useEffect(() => {
@@ -160,7 +178,7 @@ export default function ConvertPage() {
 
     // Validation
     const parsedAmount = parseFloat(amount) || 0;
-    const canConvert = parsedAmount > 0 && parsedAmount <= fromBalance && quote && !isSwapping;
+    const canConvert = parsedAmount > 0 && parsedAmount <= fromBalance && quote && !isSwapping && !slippageExceeded;
 
     return (
         <div className="w-full max-w-xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6 pt-[calc(80px+env(safe-area-inset-top)+0.5rem)]">
@@ -287,9 +305,9 @@ export default function ConvertPage() {
                 </Card>
             </div>
 
-            {/* Exchange Rate & Fee */}
+            {/* Exchange Rate, Slippage & Fee */}
             <Card appearance="glassDark" padding="default">
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                         <span className="text-white/60">Exchange Rate</span>
                         <span className="text-white font-medium">
@@ -297,8 +315,34 @@ export default function ConvertPage() {
                         </span>
                     </div>
                     <div className="flex justify-between items-center">
+                        <span className="text-white/60">Max Slippage</span>
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="number"
+                                value={maxSlippage}
+                                onChange={(e) => setMaxSlippage(e.target.value)}
+                                min="0.1"
+                                max="50"
+                                step="0.1"
+                                className="w-14 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-white text-right text-sm font-medium outline-none focus:border-amber-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="text-white/60 text-sm">%</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-white/60">Est. Slippage</span>
+                        <span className={`font-medium ${slippageExceeded ? "text-red-400" : estimatedSlippage !== null ? "text-green-400" : "text-white"}`}>
+                            {estimatedSlippage !== null
+                                ? `${estimatedSlippage.toFixed(2)}%`
+                                : "—"}
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center">
                         <span className="text-white/60">Fee</span>
-                        <span className="text-white font-medium">0.3%</span>
+                        <span className="font-medium">
+                            <span className="text-white/40 line-through mr-2">0.3%</span>
+                            <span className="text-green-400">FREE</span>
+                        </span>
                     </div>
                 </div>
             </Card>
@@ -315,9 +359,13 @@ export default function ConvertPage() {
                 onClick={handleConvert}
                 disabled={!canConvert}
                 size="lg"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`w-full font-semibold disabled:cursor-not-allowed ${
+                    slippageExceeded
+                        ? "bg-red-400/30 text-red-300 hover:bg-red-400/30 disabled:opacity-100"
+                        : "bg-amber-500 hover:bg-amber-600 text-black disabled:opacity-50"
+                }`}
             >
-                {isSwapping ? "Converting..." : "Convert"}
+                {isSwapping ? "Converting..." : slippageExceeded ? "Try Lower Slippage" : "Convert"}
             </Button>
         </div>
     );

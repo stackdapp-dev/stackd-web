@@ -90,7 +90,7 @@ test.describe("Splash Screen - Animation Flow", () => {
         await expect(splashScreen).toBeHidden({ timeout: 5000 });
 
         // Referral gate should now be visible
-        const referralGate = page.getByText("Join Stack'd");
+        const referralGate = page.getByText("Join ArCa");
         await expect(referralGate).toBeVisible({ timeout: 2000 });
     });
 
@@ -136,7 +136,7 @@ test.describe("Splash Screen - Session Behavior", () => {
         await expect(splashScreen).toBeHidden({ timeout: 5000 });
 
         // Referral gate should be visible
-        const referralGate = page.getByText("Join Stack'd");
+        const referralGate = page.getByText("Join ArCa");
         await expect(referralGate).toBeVisible({ timeout: 2000 });
 
         // Refresh the page
@@ -145,7 +145,7 @@ test.describe("Splash Screen - Session Behavior", () => {
 
         // Splash should NOT show on second visit (session storage should prevent it)
         // Should go directly to referral gate
-        await expect(page.getByText("Join Stack'd")).toBeVisible({ timeout: 2000 });
+        await expect(page.getByText("Join ArCa")).toBeVisible({ timeout: 2000 });
         await expect(page.getByTestId("splash-screen")).not.toBeVisible();
     });
 });
