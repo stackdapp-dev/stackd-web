@@ -123,7 +123,7 @@ const WithdrawViaOTC = () => {
           </li>
           <li>Ensure your bank account name is correct.</li>
           <li>
-            Transactions are handled by Stack’d licensed OTC partner for secure
+            Transactions are handled by ArCa licensed OTC partner for secure
             conversion and settlement.
           </li>
           <li>

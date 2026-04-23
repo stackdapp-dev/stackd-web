@@ -70,7 +70,7 @@ describe("ResponsiveNav", () => {
             expect(nav.className).toMatch(/top-/);
         });
 
-        it("should display STACK'D logo on desktop", async () => {
+        it("should display ARCA logo on desktop", async () => {
             const { ResponsiveNav } = await import("@/components/ui/ResponsiveNav");
             render(<ResponsiveNav />);
 

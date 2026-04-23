@@ -240,7 +240,7 @@ const ReviewOrder = () => {
           <Label htmlFor="acknowledge">
             I acknowledge that all information provided above is accurate and
             final, and I authorize the payment processor to proceed with my USDT
-            transfer. Stack’d will not be responsible for any incorrect or
+            transfer. ArCa will not be responsible for any incorrect or
             incomplete recipient details.
           </Label>
         </div>

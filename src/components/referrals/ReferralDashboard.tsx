@@ -99,7 +99,7 @@ export function ReferralDashboard() {
         const link = `${window.location.origin}?ref=${referralCode}`;
         if (navigator.share) {
             await navigator.share({
-                title: "Join Stack'd",
+                title: "Join ArCa",
                 text: "Get 1% discounted borrowing with my referral!",
                 url: link,
             });

@@ -63,7 +63,7 @@ describe("EarlyAccessModal", () => {
             render(<EarlyAccessModal />);
 
             expect(
-                screen.getByText(/Stack'd is in Alpha testing before our full launch/i)
+                screen.getByText(/ArCa is in Alpha testing before our full launch/i)
             ).toBeInTheDocument();
         });
 
