@@ -25,11 +25,11 @@ test.describe("Login Screen - UI Elements", () => {
         await expect(betaBadge).toContainText("Alpha - Invite Only Testing");
     });
 
-    test("should display the Stack'd logo", async ({ page }) => {
+    test("should display the ArCa logo", async ({ page }) => {
         await page.goto("/");
         await page.waitForLoadState("domcontentloaded");
 
-        const logo = page.getByAltText("Stack'd Logo");
+        const logo = page.getByAltText("ArCa Logo");
         await expect(logo).toBeVisible();
     });
 

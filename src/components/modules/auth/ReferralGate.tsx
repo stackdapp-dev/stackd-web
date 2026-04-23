@@ -50,12 +50,12 @@ const ReferralGate = ({ onValidated, initialError, validateCode, isLoading }: Re
 
     return (
         <div className="flex pt-24 flex-col gap-8 items-center px-8 min-h-screen bg-black">
-            <Image src="/login-logo.png" alt="Stack'd Logo" width={164} height={26} />
+            <Image src="/login-logo.png" alt="ArCa Logo" width={164} height={26} />
 
             <div className="flex flex-col items-center gap-4 text-center max-w-sm">
-                <h1 className="text-2xl font-bold text-white">Join Stack&apos;d</h1>
+                <h1 className="text-2xl font-bold text-white">Join ArCa</h1>
                 <p className="text-white/60">
-                    Stack&apos;d is invite-only. Enter a referral code to get started.
+                    ArCa is invite-only. Enter a referral code to get started.
                 </p>
             </div>
 
@@ -92,7 +92,7 @@ const ReferralGate = ({ onValidated, initialError, validateCode, isLoading }: Re
             </form>
 
             <p className="text-center text-sm text-white/50 max-w-sm">
-                Don&apos;t have a code? Ask a friend who uses Stack&apos;d for their referral link.
+                Don&apos;t have a code? Ask a friend who uses ArCa for their referral link.
             </p>
         </div>
     );
